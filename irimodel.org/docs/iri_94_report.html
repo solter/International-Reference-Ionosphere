@@ -1,0 +1,242 @@
+<html>
+<head>
+<title>The High Latitudes in the International Reference Ionosphere
+(IRI)</title>
+</head>
+<body>
+<hr width=50%>
+<center>
+<h1>The High Latitudes in the International Reference Ionosphere (IRI)</h1>
+</center>
+<hr width=50%>
+
+<center>
+COSPAR Scientific Assembly, Hamburg, FRG, July 20-21 1994<br>
+Meeting Report / Dieter Bilitza
+</center>
+
+<p>
+The 1994 IRI meeting was part of the 30th General Assembly of the Committee on
+Space Research
+(COSPAR) that took place in Hamburg, FRG from July 11 to 21. The meeting had 10
+well-attended
+sessions including 9 invited papers, 17 contributed papers, and 10 posters. The
+sessions titles
+were: Data for High-Latitude Modeling, Results from Theoretical Models at High
+Latitudes,
+Mapping of Ionospheric Characteristics, Storm-time Updating and Indices,
+D-Region, High-Latitude
+Plasma Temperatures and Ion composition, IRI Comparisons, Improvements and
+Usage, Posters, and
+Final Discussion. 
+
+<p>
+Presentations at this workshop underlined the complex variation patterns and
+dependencies of
+ionospheric parameters in the high-latitude ionosphere. It is clear that a
+different treatment
+has to be chosen for this part of the globe. Regional mapping, storm-time
+updating and
+introduction of auroral boundaries and characteristics are needed to bring IRI
+closer to real
+conditions. As a result of the presentations and final discussions the following
+improvements
+will be introduced into IRI. [Responsible task members are listed in
+parentheses]
+
+<p>
+<B>Auroral oval boundaries:</B><br>
+ 
+In his workshop presentation, D. Bilitza (GSFC/HSTX) reviewed the existing
+models for the
+description of auroral oval boundaries. Following his recommendation, it was
+decided to
+introduce auroral boundaries into IRI in the form of the Holzworth & Meng (1975)
+parameterization of the Feldstein (1963) auroral ovals using corrected
+geomagnetic
+(CGM) coordinates. Magnetic activity is characterised through the 15-min Q
+index; the
+correlation between Q and Kp will be explored to help IRI users who prefer the
+more
+traditional Kp index. Besides its simplicity, the HMF model has the added
+advandage that
+it can be easily updated with measured boundary values where and when available.
+Auroral
+boundaries can be also defined through the level of precipitating particle flux.
+Models
+based on DMSP (Hardy et al., 1987) and NOAA/TIROS (Fuller-Rowell and Evans,
+1987) particle
+data were also discussed. They could provide the framework for future
+improvements of IRI.
+At the present stage the auroral boundary model in IRI will have the primary
+function of
+alerting users to the increased variability that can be expected within the
+auroral oval.
+[Bilitza; Bradley (U.K) will provide CGM related software]
+
+<p>
+<B>Polar ionization tongue, ionization hole and patches:</B><br>
+
+R. Schunk (USU, USA), D. Anderson (AFPL, USA) and D. Rees (UK) reported about
+their respective
+modelling efforts at high latitudes and implications for IRI. The high-latitude
+digisonde
+database was reviewed by B. Reinisch (ULCAR, USA). D. McEwen (Canada) presented
+observations
+of F layer patches and their convection over the polar cap. Schunk suggested
+that IRI should
+include mathematical parameterizations of the typical ionization features that
+are observed
+(and theoretically modelled) in the high-latitude ionosphere, e.g. the
+ionization tongue and
+hole, and the polar patches, even though the actual location, amplitude, and
+movement of these
+features are still fare from being predictable at this time. As a first step
+towards this goal,
+it was decided to follow a recommendation by D. Anderson and include his
+Parameterized Ionosphere
+Model (PIM) as a special high-latitude option in IRI; PIM is a physical-based
+model that includes
+the typical high-latitude ionization features; with real-time data input this
+model becomes part
+of the Parameterized Real-time Ionosphere Specification Model (PRISM). [Anderson
+will provide PIM code]
+
+<p>
+<B>
+Storm-time updating:</B><br>
+
+P. Kishcha discussed the analytical updating procedure that was developed by him
+and his
+colleagues at IZMIRAN (Moscow, Russia). The algorithm describes the ionospheric
+effects of
+magnetic storms and substorms on foF2 and hmf2 based on ionosonde data for 380
+storm events.
+It provides the delta-foF2 and -hmF2 in terms of time since storm onset,
+AE-index, solar activity,
+season, local time and geomagnetic latitude. It was decided to include the
+present version of the
+IZMIRAN model in IRI to allow storm-time updating at subauroral latitudes.
+[Kishcha will provide
+updating code] 
+
+<p>
+<B>D-region</B><br>
+
+The three prime IRI D-region modelling teams reported about their progress and
+results
+(A. Danilov, Russia; M. Friedrich, Austria; W. Singer, FRG). As a result of
+discussions at
+this meeting two new options will be introduced into IRI. The representation of
+the mid- and
+low-latitude D-region electron density in terms of neutral density developed by
+Friedrich and Tokar
+(1992) for users who have access to the required neutral densities. With the
+auroral updating as
+proposed by Friedrich during this workshop an extension to high-latitudes is
+possible; the auroral
+component depends on measured riometer absorption as input parameter. Another
+new option for mid-
+and low-latitudes will be the D-region model developed by A. Danilov (Russia)
+and his colleagues
+that allows the user to specify conditions of winter anomaly or stratospheric
+warming. Both models
+include also a specification of the transition height between molecular and
+cluster ions which will
+be useful for the IRI ion composition model. Merging the two D-region rocket
+data compilation
+(Friedrich's and Danilov's) into one joint D-region model for IRI is an
+important future goal
+of the working teams. [Friedrich and Danilov will provide their model codes]
+
+<p>
+<B>Presentations about ongoing IRI-related efforts</B><br>
+
+K. Oyama and his team at ISAS, Japan are continuing their efforts concerning the
+modeling of the
+topside plasma temperatures with the help of their OHZORA and AKEBONO in-situ
+probe data. Oyama
+presented temperature profiles up to plasmaspheric heights for different
+high-latitude ranges and
+times. This group is also working on improved global maps at 600 km. [Oyama]
+
+<p>
+In two invited talks by K. Schlegel (MPAe, FRG) and P.Collis (EISCAT) the
+potential of the
+EISCAT data base for ionospheric modeling and IRI was highlighted. EISCAT data
+will be the
+basis for a IRI improvement study in the high-latitude E-region. Initiated by K.
+Schlegel,
+this investigation will consider electron density as well as plasma
+temperatures.[Schlegel]
+
+<p>
+Work continues on developing a better representation for the half-density point
+(G-factor) at
+low latitudes based on digisonde observations, incoherent scatter data, and
+theoretical results
+[Reinisch (ULCAR,USA), Mahajan (NPL, India), Anderson (AFPL, USA)]
+
+<p>
+J. Grebowsky explained the GSFC comprehensive ion mass spectrometer data base
+(1964-84) that
+he and his colleagues at Goddard Space Flight Center have compiled. He discussed
+its potential
+for scientific studies and for a better representation of the IRI ion
+composition model in the
+lower ionosphere. [Grebowsky, Hoegy, Bilitza]
+
+<p>
+<B>F1-region task force activity at ICTP</B><br>
+
+During the Final Discussion session a brief report was given about the F1-Region
+Task Force
+Activity that took place at the Atmospheric Physics and Radio-propagation
+Laboratory (APRL)
+of the International Center for Theoretical Physics (ICTP) in Trieste, Italy in
+the weeks just
+preceding the IRI-COSPAR meeting. The APRL Director S. Radicella had invited a
+dozen scientists
+(a majority from developing countries) to discus the identification and
+deduction of F1-region
+parameters from ionograms and the global mapping of these parameters. The
+innovative format of
+bringing together data providers and modelers in front of computer terminals and
+informal
+round-table discussions was highly successful and result in several
+recommendations for
+improvements of the IRI model and for ionogram data reduction in general. The
+IRI group
+strongly endorsed the ICTP/APRL activity and encouraged a continuation and
+possible expansion
+of this interesting activity in the coming years.
+
+<p>
+<B>IRI Meetings, Publications and New Members</B><br>
+
+The first issue of the IRI Newsletter was published and distributed in June.
+Contribution
+and requests should be send to the editor K. Oyama (IRI Vice-chair). Ludmila
+Triskova from
+the Institute of Atmospheric Physics in Prague, Czech Republic was elected as
+new working group
+member. The papers of the 1992 and 1993 IRI Workshops were published in Advances
+in Space Research,
+Volume 14, Number 12 and  Volume 15, Number 2, respectively. The next IRI
+meeting will be held at
+the National Physical Laboratory in New Dehli, India from January 9 to 13, 1995.
+It will focus on
+"Low and Equatorial Latitudes in IRI". The IRI group proposed a 1-day session on
+"Quantitative
+Descriptions of Ionospheric Storm Effects" for the 1996 COSPAR meeting in
+Birmingham, U.K. and
+jointly with C.2 a 2-day session on "E- and D-Region Physics and Modeling". 
+
+<hr>
+<a href="iri_workshops.html">
+  <img alt="*" src="/bullet/red_bullet_half.gif"> Back to IRI workshops page</a><br>
+<a href="http://irimodel.org/">
+  <img alt="*" src="/bullet/red_bullet_half.gif"> Back to IRI homepage</a><br>
+
+</body>
+</html>

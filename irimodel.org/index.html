@@ -1,0 +1,354 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+      <title>International Reference Ionosphere</title>
+      
+      <meta name="description" content="International Reference Ionosphere software and support." />
+
+      <meta name="keywords" content="science, model, ionosphere, Earth" />
+<link rel="stylesheet" type="text/css" media="screen" href="/css/iri_template_7-2013.css" />
+
+<div id="contentwrapper">
+<img src="/images/banner-549.png" alt="IRI banner" style="float:left; margin:0;" />
+</br></p></p></br>
+
+<!--<h1>IRI - International Reference Ionosphere</h1>--></div>
+<div id="leftnav">
+<ul style="list-style:none;">
+<!--  <li id="lnone"><a href="ftp://spdf.gsfc.nasa.gov/pub/models/iri">IRI VIA FTP</a></li>-->
+  <li id="lntwo"><a href="#ftpweb">IRI VIA FTP</a></li>
+  <li id="lnthree"><a href="http://omniweb.gsfc.nasa.gov/vitmo/iri2012_vitmo.html">RUN ONLINE</a></li> 
+  <li id="lnfour"><a href="#references">REFERENCES</a></li>
+  <li id="lnfive"><a href="#links">LINKS</a></li>
+  <li id="lnsix"><a href="mailto:info@irimodel.org">CONTACT (info@irimodel.org)</a></li> 
+
+
+<!--</ul>-->
+<!--</div>-->
+
+<!-- Put page-specific style declarations between style tags below -->
+<style type="text/css" media="all">
+   #model_category_head { width:auto; height:auto; background-color:#ac1c23; margin:5px 0 0 0; color:#ccc; font-size:1.5em; font-style:italic; padding:10px 0 10px 20px;  }
+
+   .vertical_padding { padding-top:1em; }
+
+   .author_section * { font-style:italic; }
+
+   div.info_subhead strong { font-weight:600; }
+
+   .info_reference { margin-bottom: 0.5em; text-indent: -1em; padding-left:1em; }
+   .subsection { margin-bottom:1em; }
+</style>
+
+<!--<link media="print" href="/css/print.css" type="text/css" rel="stylesheet" />-->
+<link media="handheld" href="/css/handheld.css" type="text/css" rel="stylesheet" />
+
+</head>
+
+<body id="threebon">
+
+     <div id="paper">
+
+<div id="rightcontent"><a name="skipping"></a><!--
+**********************************
+**** START MAIN CONTENT HERE. ****
+**********************************
+-->
+<div style="clear:left;"></div>
+
+<!-- ..................... Start of Main Block for Model Descriptive Information  ...................... -->
+<div class="info_body">
+
+
+<!-- Model Title -->
+
+<!--<address style="padding:1em 0 1em 0;">
+D. Bilitza<br />
+School of Physics, Astronomy, and Computational Science<br />
+Space Weather Lab., George Mason University<br />
+Fairfax, Virginia<br />
+<a href="mailto:dbilitza@gmu.edu">dbilitza@gmu.edu</a>
+</address>-->
+<!--<div style="height:1em; border-top:1px solid #ccc;"> </div>-->
+</p>
+<div class="subsection">
+<b>BRIEF DESCRIPTION:</b></br>
+The International Reference Ionosphere (IRI) is an international project 
+sponsored by the Committee on Space Research (COSPAR) and the International
+Union of Radio Science (URSI). These organizations formed a Working Group 
+(members <a href="/docs/iri_members.html">list)</a> 
+<!--and <a href="/docs/iri_members.png"> on world map)</a>-->
+ in the late sixties to produce an empirical standard model of the ionosphere,
+based on all available data sources (<a href="/docs/iri_charter_doc.html">charter</a>). Several steadily improved editions of the
+model have been released. For given location, time and date, IRI provides monthly 
+averages of the electron density, electron temperature, ion temperature, and ion 
+composition in the ionospheric altitude range (see details below). <br>
+<p>
+The major data sources are the
+worldwide network of ionosondes, the powerful incoherent scatter radars
+(Jicamarca, Arecibo, Millstone Hill, Malvern, St. Santin), the ISIS and 
+Alouette topside sounders, and in situ instruments flown on many satellites and
+rockets. IRI is updated yearly during special <a href="/docs/iri_workshops.html">
+IRI Workshops</a> (e.g., during COSPAR general assembly). More information
+can be found in the <a href="/docs/iri_workshops.html">workshop reports</a>.
+</div><div class="subsection"> 
+
+
+The IRI model and software is updated according to the decisions of the IRI Working Group. The software package includes the FORTRAN subroutines, model coefficients (CCIR, URSI, IGRF), indices files (IG_RZ.DAT, APF107.DAT) and README and LICENSE files. The IRI build-up and formulas are described in detail in a 158-page NSSDC report by Bilitza (1990) (PDF accessible in REFERENCES).</div><div class="info_reference"> 
+</div>
+
+<!--An IRI Newsletter is published irregularly. Past and present issues are available from the 
+<a href="http://www.ted.isas.jaxa.jp/IRI_News/">Newsletter homepage</a>. Please contact the Newsletter
+editor <a href="mailto:oyama@isas.jaxa.jp">K. Oyama</a> 
+if you would like to be included on the distribution list. <br> -->
+<p><p>
+<!--An IRI listserver keeps the community informed about model updates, workshops, publication,
+and other IRI-related matters. To subscribe send a message (the content doesn't matter) to 
+<b>internationalreferenceionosphere-subscribe@lists.nasa.gov</b> and reply to the confirmation 
+message. -->
+</div><div class="subsection"> 
+An IRI listserver keeps the community informed about model updates, workshops, publication,
+and other IRI-related matters. To subscribe send a message to 
+<b><a href="mailto:info@irimodel.org">info@irimodel.org</a></b> with 'subscribe IRI your_email_address' in the SUBJECT line and your name, affiliation and mailing address in the body of the message.
+<p>
+<div class="subsection">
+<b>PARAMETERS:</b></br> 
+Electron density, electron temperature, ion temperature, 
+ion composition (O<sup>+</sup>, H<sup>+</sup>, He<sup>+</sup>, N<sup>+</sup>, NO<sup>+</sup>, O<sup>+</sup><sub>2</sub>, Cluster ions), equatorial vertical ion drift, vertical ionospheric electron content (vTEC; a user can select the ending height for the integration along the electron density profile), F1 probability, 
+spread-F probability, auroral boundaries, effects of ionospheric storms on F and E peak densities
+</div>
+
+<div class="subsection">
+<b>INPUTS:</b></br>
+<i><u>Required:</u></i> solar indices (F10.7 daily, 81-day, and 12-month running mean; sunspot number 12-month running mean), ionospheric index (ionosonde-based IG index 12-month running mean), magnetic index (3-h ap, daily ap). The indices are found internally by IRI for the user-specified date and time. In the case of F10.7D, F10.7_81, F10.7_12, R_12, and IG_12 a user can input his/her own values.<br> 
+<i><u>Optional:</u></i> The user can provide a number of input parameters and the IRI profiles will than be adjusted to these input parameters:</br>
+F2-peak height (hmF2) or propagation factor M3000F2, F2-peak plasmafrequency (foF2) or electron density (NmF2)</br>
+F1-ledge height (hmF1), plasmafrequency (foF1) or electron density (NmF1)</br>
+E-peak height (hmE), plasmafrequency (foE) or electron density (NmE)</br>
+D-ledge height (hmD), plasmafrequency (foD) or electron density (NmD)</br>
+</div>
+
+<div class="subsection">
+<b>HEIGHT RANGE:</b></br>
+<i>Electron density:</i> daytime: 65-2000km, nighttime: 80-2000km </br>
+<i>Electron and ion temperature:</i>  60-2500km (IRI-95 option: 60-3000km)</br>
+<i>Ion composition:</i> 75-2000km (DS95/DY85 option: 80-2000km) </br> 
+</div>
+
+<div class="subsection">
+<a name="ftpweb"></a>
+<b>AVAILABILITY:</b></br> 
+* Fortran source code: <a href="IRI-2016">IRI-2016</a> (02/17/2016), <a href="IRI-2012">IRI-2012</a>, <a href="IRI-2007">IRI-2007</a>,
+  <a href="IRI-2001">IRI-2001</a>, <a href="COMMON_FILES">Common files for all versions</a></br>  
+* Solar and Magnetic Indices (regularly updated): <a href="indices">Indices files</a> (03/10/2016)</br>
+* Online computation and plotting: <a href="http://omniweb.gsfc.nasa.gov/vitmo/iri2012_vitmo.html"> IRI-2012</a>, 
+<a href="http://omniweb.gsfc.nasa.gov/vitmo/iri_vitmo.html"> IRI-2007</a>, 
+<a href="http://iri.gsfc.nasa.gov/iri.html"> IRI-2001</a><br />
+* Real-time IRI foF2 & hmF2: <a href="http://giro.uml.edu/IRTAM/">IRTAM</a> IRI Real-Time Assimilative Mapping
+with GIRO digisonde data<br /> 
+* At Community Coordinated Modeling Center (CCMC): <a href="http://ccmc.gsfc.nasa.gov/models/modelinfo.php?model=IRI">IRI-2007</a> </br>
+<!--<a href="ftp://hanna.ccmc.gsfc.nasa.gov/pub/modelweb/ionospheric/iri/"> </b>-->
+<!-- <a href="http://ccmc.gsfc.nasa.gov/requests/requests.php"> -->
+* MATLAB version: <a href="http://www.mathworks.com/matlabcentral/fileexchange/34863-international-reference-ionosphere-iri-model"> IRI-2012</a> <br /> 
+* PC Windows version: <a href="http://umlcar.uml.edu/IRI-2001/">IRI-2001</a><br/>
+</div>
+
+<div class="faq_reference"><a name="links"></a>
+<b>FREQUENTLY ASKED QUESTIONS:</b> <a href="docs/iri_faq.html">FAQ</a><p/>
+</div>
+
+<div class="info_reference"><a name="links"></a>
+<b>RELATED LINKS:</b><br />
+* MIT: Real-time IRI worldmaps and movies (last 24 hours) 
+<a href="http://madrigal.haystack.mit.edu/models/IRI/index.html">
+link</a><br />
+* IPS: Maps of real-time TEC for <a href="http://www.ips.gov.au/Satellite/2/1/1">Australia-Asia</a>, 
+<a href="http://www.ips.gov.au/Satellite/2/1/2">North America</a>, 
+<a href="http://www.ips.gov.au/Satellite/2/1/3">Europe</a>, and 
+<a href="http://www.ips.gov.au/Satellite/2/1/4">Japan</a><br /> 
+* WDC Kyoto: Computation of ionospheric conductivities using IRI90 and CIRA72 models
+<a href="http://swdcwww.kugi.kyoto-u.ac.jp/ionocond/sigcal/index.html">link</a><br />
+* NASA LRC: Models page of LDEF Archive System
+<a href="http://setas-www.larc.nasa.gov/LDEF/RADIATION/rad_exp_models.html">link
+</a> <br />
+* SPENVIS: The SPace ENVironment Information System developed at 
+the Belgian Institute for Space Aeronomy for ESA/ESTEC
+<a href="http://www.spenvis.oma.be/">link</a> <br />
+* SWENET: ESA's Space Weather European NETwork (IRI TEC movies of previous 24 hours)
+<a href="http://www.esa-spaceweather.net/swenet/">link</a> <br />
+* U Leicester: IRI TEC maps 
+<a href="http://ion.le.ac.uk/remote_sensing/models.html">link</a>
+</div></br>
+
+<div class="info_reference"> <a name="references"></a>
+<b>REFERENCES (some can be accessed as PDF documents):</b></br>
+<a href="/docs/asr_list.html">List of IRI-dedicated issues of Advances in Space 
+Research</a>
+</div><div class="info_reference"> 
+K. Rawer, D. Bilitza, and S. Ramakrishnan, Goals and Status of the
+International Reference Ionosphere, Rev. Geophys., 16, 177-181, 1978.
+</div><div class="info_reference"> 
+K. Rawer, S. Ramakrishnan, and D. Bilitza, International Reference Ionosphere
+1978, International Union of Radio Science, URSI Special Report, 75 pp.,
+Bruxelles, Belgium, 1978.
+</div><div class="info_reference"> 
+K. Rawer, J. V. Lincoln, and R. O. Conkright, International Reference
+Ionosphere-IRI 79, World Data Center A for Solar-Terrestrial Physics, Report
+UAG-82, 245 pp., Boulder, Colorado, 1981.
+[<a href="ftp://ftp.ngdc.noaa.gov/STP/publications/stp_uag/uag_numbered/uag-082.pdf">PDF</a>]
+</div><div class="info_reference"> 
+K. Rawer and C. M. Minnis, Experience with and Proposed Improvements of the
+International Reference Ionosphere (IRI), World Data Center A for
+Solar-Terrestrial Physics, Report UAG-90, 235 pp., Boulder, Colorado, 1984.
+</div><div class="info_reference"> 
+D. Bilitza (ed.), International Reference Ionosphere 1990, NSSDC 90-22, 
+Greenbelt, Maryland, 1990.  
+[<a href="/docs/IRI1990pp0-84.pdf">PDF1: pages 0-84</a>, <a href="/docs/IRI1990pp85-end.pdf">PDF2: pages 85-end</a>]
+</div><div class="info_reference"> 
+D. Bilitza, K. Rawer, L. Bossy, and T. Gulyaeva, International 
+Reference Ionosphere - Past, Present, Future: I. Electron Density, Adv. Space Res. 13, #3, 
+3-13, 1993.
+[<a href="/docs/iri_1993_asr1.pdf">PDF</a>]
+</div><div class="info_reference"> 
+D. Bilitza, K. Rawer, L. Bossy, and T. Gulyaeva, International 
+Reference Ionosphere - Past, Present, Future: II. Plasma Temperatures, Ion Composition, and Ion Drift, Adv. Space Res. 13, #3, 
+15-23, 1993.
+[<a href="/docs/iri_1993_asr2.pdf">PDF</a>]
+</div><div class="info_reference"> 
+D. Bilitza and K. Rawer, International Reference Ionosphere, pp735-772, 
+in: The Upper Atmosphere - Data Analysis and Interpretation, W. Dieminger, 
+G. Hartmann and R. Leitinger (eds.), Springer-Verlag Berlin Heidelberg, 1996.
+</div><div class="info_reference">
+D. Bilitza, International Reference Ionosphere - Status 1995/96, 
+Adv. Space Res. 20, #9, 1751-1754, 1997.</div><div class="info_reference"> 
+D. Bilitza, International Reference Ionosphere 2000, 
+Radio Science 36, #2, 261-275, 2001. 
+[<a href="/docs/iri_2000_rs.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza, International Reference Ionosphere 2000: Examples of improvements and 
+new features, Adv. Space Res. 31, #3, 757-767, 2003.
+[<a href="/docs/iri_2003_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+B. Reinisch and D. Bilitza, Karl Rawer's life and the history of IRI, Adv. 
+Space Res. 34, #9, 1845-1950, doi:10.1016/j.asr.2004.09.002, 2004.
+[<a href="/docs/iri_2004_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza and Reinisch, B., International Reference Ionosphere 2007: 
+Improvements and new parameters, J. Adv. Space Res., 42, #4, 599-609, 
+doi:10.1016/j.asr.2007.07.048, 2008. 
+[<a href="/docs/iri_2007_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza, B. Reinisch, and J. Lastovicka, Progress in Observation-Based Ionospheric 
+Modeling: Space Weather, 6, S02002, doi:10.1029/2007SW000359, 2008.
+[<a href="http://www.agu.org/pubs/crossref/2008/2007SW000359.shtml">online</a>]
+</div><div class="info_reference">
+J. Fernandez, C. Mertens, D. Bilitza, X. Xu, J. Russell III, and M. Mlynczak, Feasibility 
+of developing an  ionospheric E-region electron density storm model using  TIMED/SABER 
+measurements, Adv. Space Res. 46,#8, 1070-1077, DOI: 10.1016/j.asr.2010.06.008, 2010. 
+[<a href="/docs/Mertens_2010_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+P. Nsumei, B. Reinisch, X. Huang, and D. Bilitza, Comparing topside and bottomside-measured 
+characteristics of the F2 layer peak, Adv. Space Res.46,#8, 974-983, 
+DOI:10.1016/j.asr.2010.06.027, 2010.  
+[<a href="/docs/Nsumei_2010_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+Y. Zhang, L. Paxton, and D. Bilitza, Near real-time assimilation of auroral peak E-region 
+density and equatorward boundary in IRI, , Adv. Space Res.46,#8, 1055-1063, 
+DOI:10.1016/j.asr.2010.06.029, 2010.  
+[<a href="/docs/Zhang_2010_asr.pdf">PDF</a>]
+</div><div class="info_reference">
+P. Richards, D. Bilitza, and D. Voglozin, Ion density calculator (IDC): A new efficient 
+model of ionospheric ion densities, Radio Sci., 45, RS5007, doi:10.1029/2009RS004332, 2010.
+[<a href="/docs/icd_2010_rs.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza, L.-A. McKinnell, B. Reinisch, and  T. Fuller-Rowell, The International Reference Ionosphere 
+(IRI) today and in the future, J. Geodesy, 85:909-920, DOI 10.1007/s00190-010-0427-x, 2011. 
+[<a href="/docs/11-JoG-IAG-IRI-bilitza.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza, Steven A Brown, Matthew Y. Wang, Jonas R. Souza, and Patrick A Roddy, Measurements 
+and IRI Model Predictions during the Recent Solar Minimum, J. Atmos. Solar-Terr. Phys., 86,
+99-106, doi:10.1016/j.jastp.2012.06.010, 2012. 
+[<a href="/docs/12-JASTP-IRI-bilitza.pdf">PDF</a>]
+</div><div class="info_reference">
+D. Bilitza, D. Altadill, Y. Zhang, C.  Mertens, V. Truhlik, P. Richards, L.-A. McKinnell, and B. Reinisch: The International Reference Ionosphere 2012 - a model of international collaboration, J. Space Weather Space Clim., 4, A07, 1-12, doi:10.1051/swsc/2014004, 2014.
+[<a href="/docs/14-SWSC-IRI-bilitza.pdf">PDF</a>]
+</div>
+</p>
+<!-- ..................... End of Main Block for Model Descriptive Information  ...................... -->
+
+<div style="border-bottom:2px solid #ccc; margin-bottom:1em;"></div>
+<p><p><p><p></br>
+
+
+<!--
+**********************************
+**** END MAIN CONTENT HERE.  ****
+********************************** -->
+</div>
+
+</div>
+<div id="leftcontent" style="margin-top:-56px;">
+
+<!--<div id="lefttitle"><a class="homeabs" href="/">IRI Home</a>-->
+
+<!-- ......................... Start of leftnav include for IRI site (JEGass)............................-->
+
+<div id="contentwrapper">
+<img src="/images/banner-549.png" alt="IRI banner" style="float:left; margin:0;" />
+</br></p></p></br>
+
+<!--<h1>IRI - International Reference Ionosphere</h1>--></div>
+<div id="leftnav">
+<ul style="list-style:none;"></br>
+  <li id="lntwo"><a href="#ftpweb">IRI VIA FTP</a></li>
+  <li id="lnthree"><a href="http://omniweb.gsfc.nasa.gov/vitmo/iri_vitmo.html">RUN ONLINE</a></li> 
+  <li id="lnfour"><a href="#references">REFERENCES</a></li>
+  <li id="lnfive"><a href="#links">LINKS</a></li>
+  <li id="lnsix"><a href="mailto:info@irimodel.org">CONTACT (info@irimodel.org)</a></li> 
+
+</ul>
+</div>
+
+<!-- ......................... End of left nav include for IRI site (JEGass)............................-->
+
+<EMBED SRC="/images/Ne_gla_h_ut_7_50_07c_WMV_V9.avi" WIDTH = "180" HEIGHT = "180" loop = "true" /><p> 
+<!--<embed src="/images/foF2_la_lo_ut_100.mpg" WIDTH = "180" HEIGHT = "180" loop = "true" autostart = "true" /> -->
+
+<!--<div style="margin:0 0 5px 0;"><img src="/images/tail-179.jpg" alt="Aurora and Shuttle tail" /></div>
+<div style="margin:0 0 5px 0;"><img src="/images/Fountain_effect-179.jpg" alt="Diagram of Fountain Effect" /></div>
+<div style="margin:0 0 5px 0;"><img src="/images/red_band-179.jpg" alt="Aurora from LEO" /></div>
+<div style="margin:0 0 5px 0;"><img src="/images/inpe-179.jpg" alt="IRI International Project Team" /></div>-->
+
+<!--<embed src="/images/Ne_gla_h_ut_7_50_07c_WMV_V9.wmv" WIDTH = 180 HEIGHT = 180 loop = "true" autostart = "true" /><p>-->
+<!--<EMBED SRC="/images/Ne_gla_h_ut_7_50_07c_WMV_V9.avi" WIDTH = "180" HEIGHT = "180" loop = "true" autostart = "true" />-->
+<!--<EMBED SRC="/images/Ne_gla_h_ut_7_50_07c_WMV_V9.mov" WIDTH = "180" HEIGHT = "180" loop = "true" autostart = "true" />-->
+<!--<embed src="/images/Ne_gla_h_ut_7_50_07c_WMV_V9.mpg" WIDTH = "180" HEIGHT = "180" loop = "true" autostart = "true" />--> 
+
+<!-- ......................... Start of header include "design1" for ModelWeb site (JEGass)............................-->
+<!--
+<div style="width:179px; margin:1px 0 0 0;">
+   <div style="float:left; width:89px; height:89px; background-color:#999; border-right:1px solid #fff; margin-bottom:1px;"> </div>
+   <div style="float:right; width:89px; height:89px; background-color:#333; margin-bottom:1px;"> </div>
+
+</div>
+
+<div style="width:179px;">
+   <div style="float:left; width:89px; height:89px; background-color:#ccc; border-right:1px solid #fff;"> </div>
+   <div style="float:right; width:89px; height:89px; background-color:#999;"> </div>
+</div>
+-->
+
+<!-- ......................... End of header include "design1" for ModelWeb site (JE Gass)............................-->
+
+</ul>
+</div>
+
+</div>
+
+<!-- ..................... End of include fragment footerfrag1 for Modelweb JEGass ......................... -->
+
+
+</div>
+</body>
+</html>
