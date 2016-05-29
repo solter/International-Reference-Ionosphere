@@ -1,44 +1,44 @@
-c iritest.for, version number can be found at the end of this comment.
-c-----------------------------------------------------------------------
-c
-c test program for the iri_web subroutine
-c
-c-version-mm/dd/yy ----------corrections--------------------------
-c 2000.01 05/07/01 initial version
-c 2000.02 07/11/01 line 210: do i=1,100 instead of i=2,100 (K. Tokar)
-c 2000.03 28/12/01 output oar(39) for IG12 (R. Conkright, NGDC, NOAA)
-c 2000.04 28/10/02 replace TAB/6 blanks, enforce 72/line (D. Simpson)
-c 2000.05 02/06/03 Ne(Te) only 300,400; foF1 and hmF1 output corr.
-c 2000.06 01/19/05 (.not.jf(20)) instead of (..jf(2)) (G. Schiralli)
-c 2005.01 05/06/06 included spread-F (jf(28)) and topside (jf(29)) options
-C 2007.00 05/18/07 Release of IRI-2007
-c 2007.02 10/31/08 outf(100) -> outf(500), numhei=numstp=500
-c 2007.03 02/12/09 added new D-region option (h=-3)
-c 2007.11 04/19/10 correct TEC for normal output  [Shunrong Zhang] 
-c
-C 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
-C 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
-C 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
-C 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
-C 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
-C 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
-C 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
-C 2012.00 03/21/12    PIKTAB=4 output for D-region
-C 2012.01 09/16/12 Corrected UT output (hour-25)
-C 2012.03 09/18/14 input JF(18): FIELDG not UT_LT          (A. Mazzella)
-C 2012.03 09/18/14 rzino, igino logical not real; and more (A. Mazzella)
-C 2012.03 09/18/14 jf defaults and special for piktab=3    (A. Mazzella)
-C 2012.03 09/23/14 jf(22): output option Ni in [m-3]/1.e9
-C 2012.03 09/23/14 jf(36:38) include in input choices
-C 2012.03 09/23/14 added output options for parameters oar(59:86) 
-C 2012.05 04/27/15 delete double line CHARACTER*9  pname(6)
-C 2015.01 06/30/15 scid=1.0E-9                              (A. Charisi)
-C 2015.01 06/30/15 jino-outf(9)&jio2-outf(8) write.jio2,jino(A. Charisi)
-C 2015.01 07/12/15 output of ion density/composition now with 3 digits
-C 2015.01 07/12/15 call read_ig_rz readapf107
-C 2015.02 08/13/15 delete COMMON/CONST2
-C 2015.02 08/13/15 ursifo=jf(5) just before IRI_SUB call
-C
+! iritest.for, version number can be found at the end of this comment.
+!-----------------------------------------------------------------------
+!
+! test program for the iri_web subroutine
+!
+!-version-mm/dd/yy ----------corrections--------------------------
+! 2000.01 05/07/01 initial version
+! 2000.02 07/11/01 line 210: do i=1,100 instead of i=2,100 (K. Tokar)
+! 2000.03 28/12/01 output oar(39) for IG12 (R. Conkright, NGDC, NOAA)
+! 2000.04 28/10/02 replace TAB/6 blanks, enforce 72/line (D. Simpson)
+! 2000.05 02/06/03 Ne(Te) only 300,400; foF1 and hmF1 output corr.
+! 2000.06 01/19/05 (.not.jf(20)) instead of (..jf(2)) (G. Schiralli)
+! 2005.01 05/06/06 included spread-F (jf(28)) and topside (jf(29)) options
+! 2007.00 05/18/07 Release of IRI-2007
+! 2007.02 10/31/08 outf(100) -> outf(500), numhei=numstp=500
+! 2007.03 02/12/09 added new D-region option (h=-3)
+! 2007.11 04/19/10 correct TEC for normal output  [Shunrong Zhang] 
+!
+! 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
+! 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
+! 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
+! 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
+! 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
+! 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
+! 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
+! 2012.00 03/21/12    PIKTAB=4 output for D-region
+! 2012.01 09/16/12 Corrected UT output (hour-25)
+! 2012.03 09/18/14 input JF(18): FIELDG not UT_LT          (A. Mazzella)
+! 2012.03 09/18/14 rzino, igino logical not real; and more (A. Mazzella)
+! 2012.03 09/18/14 jf defaults and special for piktab=3    (A. Mazzella)
+! 2012.03 09/23/14 jf(22): output option Ni in [m-3]/1.e9
+! 2012.03 09/23/14 jf(36:38) include in input choices
+! 2012.03 09/23/14 added output options for parameters oar(59:86) 
+! 2012.05 04/27/15 delete double line CHARACTER*9  pname(6)
+! 2015.01 06/30/15 scid=1.0E-9                              (A. Charisi)
+! 2015.01 06/30/15 jino-outf(9)&jio2-outf(8) write.jio2,jino(A. Charisi)
+! 2015.01 07/12/15 output of ion density/composition now with 3 digits
+! 2015.01 07/12/15 call read_ig_rz readapf107
+! 2015.02 08/13/15 delete COMMON/CONST2
+! 2015.02 08/13/15 ursifo=jf(5) just before IRI_SUB call
+!
       INTEGER           pad1(6),jdprof(77),piktab
       DIMENSION         outf(20,1000),oar(100,1000),jfi(6)
       LOGICAL		    jf(50),rzino,igino
@@ -78,17 +78,17 @@ C
 
       data jfi/8,9,13,14,15,16/
 
-c	  COMMON/const2/icalls,montho,nmono,iyearo,idaynro,ursifo,rzino,
-c     &	            igino,ut0
-c
-c		icalls=0
-c		montho=-1
-c		nmono=-1
-c		iyearo=-1
-c		idaynro=-1
-c		rzino=.true.
-c		igino=.true.
-c		ut0=-1
+!	  COMMON/const2/icalls,montho,nmono,iyearo,idaynro,ursifo,rzino,
+!     &	            igino,ut0
+!
+!		icalls=0
+!		montho=-1
+!		nmono=-1
+!		iyearo=-1
+!		idaynro=-1
+!		rzino=.true.
+!		igino=.true.
+!		ut0=-1
 
 		call read_ig_rz
         call readapf107
@@ -98,8 +98,8 @@ c		ut0=-1
         do 6249 i=1,100
 6249    oar(i,1)=-1.0
 
-c user input of IRI input parameters
-c
+! user input of IRI input parameters
+!
 1       print *,'jmag(=0/1,geog/geom),lati/deg,long/deg'
         read(5,*) jm,xlat,xlon
         print *,'year(yyyy),mmdd(or -ddd),iut(=0/1,LT/UT),hour'
@@ -134,33 +134,33 @@ c
                 enddo
           if(piktab.eq.4) jf(24)=.false.
         if(jchoice.eq.0) then
-c defaults for jf(1:50)
-c          jf(1)=.false.      ! f=no electron densities 
-c          jf(2)=.false.      ! f=no temperatures 
-c          jf(3)=.false.      ! f=no ion composition 
+! defaults for jf(1:50)
+!          jf(1)=.false.      ! f=no electron densities 
+!          jf(2)=.false.      ! f=no temperatures 
+!          jf(3)=.false.      ! f=no ion composition 
           jf(4)=.false.      ! t=B0table f=other models (f)
           jf(5)=.false.      ! t=CCIR  f=URSI foF2 model (f)
           jf(6)=.false.      ! t=DS95+DY85   f=RBV10+TTS03 (f)
-c          jf(7)=.false.      ! t=tops f10.7<188 f=unlimited (t)
+!          jf(7)=.false.      ! t=tops f10.7<188 f=unlimited (t)
           jf(21)=.false.     ! f=ion drift not computed (f)
-c          jf(22)=.false.     ! ion densities in m-3 (t)
+!          jf(22)=.false.     ! ion densities in m-3 (t)
           jf(23)=.false.     ! t=AEROS/ISIS f=TTS Te with PF10.7
-c          jf(24)=.false.     ! t=D-reg-IRI-1990 f=FT-2001 (t)
-c          jf(26)=.false.	  ! f=STORM model turned off (t)
+!          jf(24)=.false.     ! t=D-reg-IRI-1990 f=FT-2001 (t)
+!          jf(26)=.false.	  ! f=STORM model turned off (t)
           jf(28)=.false.	  ! f=spread-F not computed (f)
           jf(29)=.false.     ! t=old  f=New Topside options (f)
           jf(30)=.false.     ! t=corr f=NeQuick topside (f)
-c          jf(31)=.false.     ! t=B0ABT f=Gulyaeva (t)
+!          jf(31)=.false.     ! t=B0ABT f=Gulyaeva (t)
           jf(33)=.false. 	  ! f=auroral boundary off (f)
-c          jf(34)=.false. 	  ! t=messages on 
+!          jf(34)=.false. 	  ! t=messages on 
           jf(35)=.false. 	  ! f=auroral E-storm model off
-c          jf(36)=.false. 	  ! t=hmF2 w/out foF2_storm f=with
-c          jf(37)=.false. 	  ! t=topside w/out foF2_storm f=with
-c          jf(38)=.false. 	  ! t=WRITEs off in IRIFLIP f=on 
+!          jf(36)=.false. 	  ! t=hmF2 w/out foF2_storm f=with
+!          jf(37)=.false. 	  ! t=topside w/out foF2_storm f=with
+!          jf(38)=.false. 	  ! t=WRITEs off in IRIFLIP f=on 
           jf(39)=.false. 	  ! new hmF2 models 
-c          jf(40)=.false. 	  ! t=AMTB-model, f=Shubin-COSMIC model 
-c          jf(41)=.false. 	  ! COV=f(IG12) (IRI before Oct 2015) 
-c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance 
+!          jf(40)=.false. 	  ! t=AMTB-model, f=Shubin-COSMIC model 
+!          jf(41)=.false. 	  ! COV=f(IG12) (IRI before Oct 2015) 
+!          jf(42)=.false. 	  ! Te w/o PF10.7 dependance 
         else
           print *,'Compute Ne, T, Ni? (enter: t,t,t  if you want all)'
           read(5,*) jf(1),jf(2),jf(3)
@@ -268,9 +268,9 @@ c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance
               read(5,*) jf(12)
        endif
 
-c       if(piktab.gt.3) jf(24)=.false.
-c option to enter six additional parameters 
-c
+!       if(piktab.gt.3) jf(24)=.false.
+! option to enter six additional parameters 
+!
 
       if(PIKTAB.eq.3) then
         print *,'6 Parameters of your choice (number:1-86)'
@@ -289,11 +289,11 @@ c
         print *,'      foF2_storm/foF2_quiet [45]'
         print *,'      foE_storm/foE_quiet [47]' 
         print *,'      eqward auroral boundy CGM-Lat [58]'
-c        print *,'      solar zenith angle [23]'
-c        print *,'      modified dip latitude [27]' 
+!        print *,'      solar zenith angle [23]'
+!        print *,'      modified dip latitude [27]' 
         print *,'      Ap for current UT [51]' 
         read(5,*) (pad1(j),j=1,6)
-c change defaults for computation of specific parameters
+! change defaults for computation of specific parameters
         	jf(21)=.true.  ! spread-F prob. computed
         	jf(28)=.true.  ! vertical ion drift computed
         	jf(33)=.true.  ! auroral boundary computed
@@ -308,9 +308,9 @@ c change defaults for computation of specific parameters
             endif
       endif
        
-c option to enter measured values for NmF2, hmF2, NmF1, hmF1, NmE, hmE,
-c N(300), N(400), N(600) if available; 
-c
+! option to enter measured values for NmF2, hmF2, NmF1, hmF1, NmE, hmE,
+! N(300), N(400), N(600) if available; 
+!
           print *,' '
           print *,' '
           print *,' '
@@ -366,8 +366,8 @@ c
          endif
        endif
 
-c option to enter Ne for Te-Ne relationship
-c
+! option to enter Ne for Te-Ne relationship
+!
         if(jf(2).and..not.jf(10)) then
           var=vbeg
           do 1235 i=1,numstp 
@@ -377,8 +377,8 @@ c
 1235        var=var+vstp
           endif
 
-c option to enter F107D and/or PF107 
-c
+! option to enter F107D and/or PF107 
+!
             if(.not.jf(25)) then
                         print *,'User input for F107D:'
                         read(5,*) f107d
@@ -395,8 +395,8 @@ c
                                     enddo
                         endif
 
-c option to enter Rz12 and/or IG12
-c
+! option to enter Rz12 and/or IG12
+!
             if(.not.jf(17)) then
                         print *,'User input for Rz12'
                         read(5,*) oar(33,1)
@@ -413,8 +413,8 @@ c
                                     enddo
                         endif
 
-c end of user input
-c
+! end of user input
+!
 
         num1=(vend-vbeg)/vstp+1
         numstp=iabs(num1)
@@ -486,14 +486,14 @@ c
         jmag=jm
         mmdd=imd
 
-c calling IRI subroutine
-c 
+! calling IRI subroutine
+! 
         phour=hour
         call iri_web(jmag,jf,xlat,xlon,iy,mmdd,iut,hour,
      &          hxx,htec_max,ivar,vbeg,vend,vstp,outf,oar)
 
-c preparation of results page
-c
+! preparation of results page
+!
         write(7,3991) iy,mmdd,phour,timev(iut+1),
      &        coorv(jmag+1),xlat,xlon,hxx
         if(jf(1)) then
@@ -577,9 +577,9 @@ c
 214     format('Peak Heights/km:     hmF2=',F9.2,'   hmF1=',F9.2,
      &          '   hmE=',F9.2/)
 3314    format(A7,' is used for topside Ne profile')
-c
-c table head .......................................................
-c
+!
+! table head .......................................................
+!
 
         agnr=7          !output unit number
         xtex=imz(ivar)
@@ -616,13 +616,13 @@ c
      &  1X,'km',18X,'DRS-95: Stratos Warming/Winter Anomaly'/5X,
      &  'IRI-07',4x,'FIRI  SW/WA=0/0  0.5/0   1/0    0/0.5    0/1')
 
-c
-c output: D-region PIKTAB=4
-c
-c D-REGION ELECTRON DENSITY IN CM-3: 
-c    IRI-07    FIRI  Danilov:SW/WA=0/0  0.5/0   1/0    0/0.5    0/1 
-c                    DRS-95: Stratos Warming/Winter Anomaly
-c
+!
+! output: D-region PIKTAB=4
+!
+! D-REGION ELECTRON DENSITY IN CM-3: 
+!    IRI-07    FIRI  Danilov:SW/WA=0/0  0.5/0   1/0    0/0.5    0/1 
+!                    DRS-95: Stratos Warming/Winter Anomaly
+!
 
 		if(piktab.eq.4) then
             do 2591 lix=1,77 
@@ -643,9 +643,9 @@ c
 
         do 1234 li=1,numstp
 
-c
-c output: peak densities and altitudes PIKTAB=1
-c
+!
+! output: peak densities and altitudes PIKTAB=1
+!
 
       IF(PIKTAB.eq.1) THEN
         if(oar(3,li).lt.1.) oar(4,li)=0.
@@ -667,9 +667,9 @@ c
 3910    FORMAT(F7.1,2X,4F6.1,1X,I9,3I7,1X,F6.2,I4)
         GOTO 1234
       ENDIF
-c
-c output: plasma frequencies and profile parameters  PIKTAB=2
-c
+!
+! output: plasma frequencies and profile parameters  PIKTAB=2
+!
 
       IF(PIKTAB.eq.2) THEN
         if(oar(3,li).lt.1.) oar(4,li)=0.
@@ -694,58 +694,58 @@ c
 3950    FORMAT(F7.1,2X,F6.4,F6.1,F4.1,F6.1,F8.4,1X,4F7.3)
         GOTO 1234
       ENDIF
-c
-c output: 6 parameters of your choice    PIKTAB=3
-c
+!
+! output: 6 parameters of your choice    PIKTAB=3
+!
 
       IF(PIKTAB.eq.3) THEN
-c        if(pad1.eq.45.and.oar(pad1,li).le.0.0) oar(pad1,li)=-1.
-c        if(pad2.eq.45.and.oar(pad2,li).le.0.0) oar(pad2,li)=-1.
-c        if(pad3.eq.45.and.oar(pad3,li).le.0.0) oar(pad3,li)=-1.
+!        if(pad1.eq.45.and.oar(pad1,li).le.0.0) oar(pad1,li)=-1.
+!        if(pad2.eq.45.and.oar(pad2,li).le.0.0) oar(pad2,li)=-1.
+!        if(pad3.eq.45.and.oar(pad3,li).le.0.0) oar(pad3,li)=-1.
         WRITE(7,3919) XCOR,oar(pad1(1),li),oar(pad1(2),li),
      &        oar(pad1(3),li),oar(pad1(4),li),oar(pad1(5),li),
      &        oar(pad1(6),li)
 3919    FORMAT(F7.1,6(1X,1PE9.2))
         GOTO 1234
       ENDIF
-c
-c output: special for test purposes    PIKTAB=5
-c
+!
+! output: special for test purposes    PIKTAB=5
+!
 
       IF(PIKTAB.eq.5) THEN
-c ----------- B0, B1 ----------------
-c        WRITE(8,4919) XCOR,oar(10,li),oar(35,li)
-c4919    FORMAT(F7.1,2X,F6.2,2X,F5.3)
-c ----------- Te ----------------
+! ----------- B0, B1 ----------------
+!        WRITE(8,4919) XCOR,oar(10,li),oar(35,li)
+!4919    FORMAT(F7.1,2X,F6.2,2X,F5.3)
+! ----------- Te ----------------
         WRITE(8,4919) XCOR,outf(2,li),outf(3,li),outf(4,li)
 4919    FORMAT(F7.1,2X,F6.1,2X,F6.1,2X,F6.1)
-c ----------- Ne, TEC ----------------
-c        WRITE(8,4919) XCOR,outf(1,li),oar(37,li)
-c4919    FORMAT(F7.1,2X,E12.5,2X,E12.5)
-c ----------- Ni ----------------
-c        type*,XCOR,outf(1,li),outf(5,li),outf(6,li),
-c     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
-c        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
-c     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
-c4919    FORMAT(F7.1,2X,E12.5,7F10.4)
-c ----------- hmF2 ----------------
-c        type*,XCOR,oar(26,li),oar(2,li),oar(36,li),
-c     &   sqrt(oar(1,li)/oar(5,li)),oar(33,li),oar(39,li)
-c        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
-c     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
-c4919    FORMAT(F7.1,2X,E12.5,7F10.4)
-c ----------- auroral boundary ----------------
-c        print *,XCOR,oar(55,li),oar(56,li),oar(54,li),
-c     &     oar(57,li),oar(54,li)-oar(57,li),oar(58,li)
-cc        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
-cc     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
-cc4919    FORMAT(F7.1,2X,E12.5,7F10.4)
+! ----------- Ne, TEC ----------------
+!        WRITE(8,4919) XCOR,outf(1,li),oar(37,li)
+!4919    FORMAT(F7.1,2X,E12.5,2X,E12.5)
+! ----------- Ni ----------------
+!        type*,XCOR,outf(1,li),outf(5,li),outf(6,li),
+!     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
+!        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
+!     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
+!4919    FORMAT(F7.1,2X,E12.5,7F10.4)
+! ----------- hmF2 ----------------
+!        type*,XCOR,oar(26,li),oar(2,li),oar(36,li),
+!     &   sqrt(oar(1,li)/oar(5,li)),oar(33,li),oar(39,li)
+!        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
+!     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
+!4919    FORMAT(F7.1,2X,E12.5,7F10.4)
+! ----------- auroral boundary ----------------
+!        print *,XCOR,oar(55,li),oar(56,li),oar(54,li),
+!     &     oar(57,li),oar(54,li)-oar(57,li),oar(58,li)
+!c        WRITE(8,4919) XCOR,outf(1,li),outf(5,li),outf(6,li),
+!c     &   outf(7,li),outf(8,li),outf(9,li),outf(10,li),outf(11,li)
+!c4919    FORMAT(F7.1,2X,E12.5,7F10.4)
 
         GOTO 1234
       ENDIF
-c
-c output: standard
-c
+!
+! output: standard
+!
         if(ivar.eq.1) then
                 oar(1,li)=oar(1,1)
                 oar(37,li)=oar(37,1)
@@ -765,8 +765,8 @@ c
         jino=INT(OUTF(9,li)*scid+.5)
         jicl=INT(OUTF(10,li)*scid+.5)
         jin=INT(OUTF(11,li)*scid+.5)
-c        print *,'O+,N+,O2+,NO+=',outf(5,li),
-c     &    outf(11,li),outf(9,li),outf(8,li)
+!        print *,'O+,N+,O2+,NO+=',outf(5,li),
+!     &    outf(11,li),outf(9,li),outf(8,li)
         if(outf(1,li).lt.0) jne=-1
         if(outf(1,li).lt.0) xner=-1.
         if(outf(2,li).lt.0) jtn=-1
@@ -787,8 +787,8 @@ c     &    outf(11,li),outf(9,li),outf(8,li)
             tec=-1.0
             itopp=-1
         endif
-c        print *, XCOR,jne,xner,jtn,jti,jte,jio,jin,
-c     &        jih,jihe,jino,jio2,jicl,tec,itopp
+!        print *, XCOR,jne,xner,jtn,jti,jte,jio,jin,
+!     &        jih,jihe,jino,jio2,jicl,tec,itopp
         WRITE(7,7117) XCOR,jne,xner,jtn,jti,jte,jio,jin,
      &        jih,jihe,jio2,jino,jicl,tec,itopp
 7117    FORMAT(F6.1,I8,1x,F6.3,3I6,7I4,f6.1,i4)

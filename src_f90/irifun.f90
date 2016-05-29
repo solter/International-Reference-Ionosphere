@@ -1,190 +1,190 @@
-c irifun.for, version number can be found at the end of this comment.
-c-----------------------------------------------------------------------
-C Functions and subroutines for the International Reference Ionosphere 
-C (IRI) model. These functions and subroutines are called by the main
-C IRI subroutine IRI_SUB in IRISUB.FOR.
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c Required i/o units:  
-c  KONSOL= 6 Program messages (used when jf(12)=.true. -> konsol)
-c  KONSOL=11 Program messages (used when jf(12)=.false. -> MESSAGES.TXT)
-c
-c     COMMON/iounit/konsol,mess is used to pass the value of KONSOL from 
-c     IRISUB to IRIFUN and IGRF. If mess=false then messages are turned off.
-c     
-c  UNIT=12 TCON: Solar/ionospheric indices IG12, R12 (IG_RZ.DAT) 
-c  UNIT=13 APF,APFMSIS,APF_ONLY: Magnetic indices and F10.7 (APF107.DAT) 
-c
-c I/o Units used in other programs:
-c  IUCCIR=10 in IRISUB for CCIR and URSI coefficients (CCIR%%.ASC, %%=month+10)
-c  UNIT=14 in IGRF/GETSHC for IGRF coeff. (DGRF%%%%.DAT, %%%%=year)
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c changes from IRIFU9 to IRIF10:
-c       SOCO for solar zenith angle 
-c       ACOS and ASIN argument forced to be within -1 / +1
-c       EPSTEIN functions corrected for large arguments
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c changes from IRIF10 to IRIF11: 
-c       LAY subroutines introduced
-c       TEBA corrected for 1400 km
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c changes from IRIF11 to IRIF12:
-C       Neutral temperature subroutines now in CIRA86.FOR 
-C       TEDER changed
-C       All names with 6 or more characters replaced 
-C       10/29/91 XEN: 10^ in loop, instead of at the end
-C       1/21/93 B0_TAB instead of B0POL
-C       9/22/94 Alleviate underflow condition in IONCOM exp()
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c changes from IRIF12 to IRIF13:
-C        9/18/95 MODA: add leap year and number of days in month
-C        9/29/95 replace F2out with FOUT and XMOUT.
-C       10/ 5/95 add TN and DTNDH; earlier in CIRA86.FOR
-C       10/ 6/95 add TCON for reading indices
-C       10/20/95 MODA: IN=1 MONTH=IMO
-C       10/20/95 TCON: now includes RZ interpolation
-C       11/05/95 IONCOM->IONCO1, added IONCOM_new, IONCO2
-C       11/05/95 LSTID added for strom-time updating
-C       11/06/95 ROGUL: transition 20. instead of 15.
-C       12/01/95 add UT_LT for (date-)correct UT<->LT conversion
-C       01/16/96 TCON: add IMST to SAVE statement
-C       02/02/96 ROGUL: 15. reinstated
-C       02/07/96 UT_LT: ddd, dddend integer, no leap year 2000
-C       03/15/96 ZERO: finding delta for topside
-C       03/18/96 UT_LT: mode=1, change of year
-C       12/09/96 since 2000 is leap, delete y/100*100 condition
-C       04/25/97 XMDED: minimal value also daytime
-C       05/18/98 TCON: changes to IG_RZ (update date); -R = Cov
-C       05/19/98 Replaced IONCO2&APROK; HEI,XHI in IONCOM_NEW
-C       10/01/98 added INITIALIZE
-C       04/30/99 MODA: reset bb(2)=28
-C       11/08/99 avoid negative x value in function XE2. Set x=0.
-C       11/09/99 added COMMON/const1/humr,dumr also for CIRA86
-C       11/30/99 EXIT in APROK replaced with GOTO (N. Smirnova)
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c changes from IRIF13 to IRIFUN:
-C-Version-mm/dd/yy-description [person reporting correction]
-C 2000.01 05/09/00 Include B0_98 subroutine to replace B0_NEW and B0POL
-C 2000.02 05/18/00 Include Elteik and spharm_ik for Te
-C 2000.03 06/09/00 Include xe3_1, xe4_1, xe_1
-C 2000.04 06/11/00 Include f1_c1, f1_prob, modified fof1ed
-C 2000.05 10/30/00 Include vdrift
-C 2000.06 04/15/01 Include IGRF_SUB subroutine for IK Te model
-C 2000.07 05/07/01 Include storm subroutine STORM and Ap access s/w
-C 2000.08 09/07/01 APF: if(j1.eq.j2) -> if(IY.eq.j2) [P. Wilkinson]
-C 2000.09 09/07/01 CONVER: LO2 = MOD(LO1,20)+1 [P. Webb,D. Pesnell]
-C 2000.10 02/20/02 CONVER/DATA: 105.78 -> 015.78 [A. Shovkoplyas] 
-C 2000.11 10/28/02 replace TAB/6 blanks, enforce 72/line [D. Simpson]
-C 2000.12 11/08/02 removing unused variables (corr); apf0 removed
-C 2000.13 11/26/02 apf() using keyed access to ap.dat file; apf->apf1
-C 2000.14 11/27/02 changed F1_PROB; always 6 preceeding spaces 
-C 2005.01 03/09/05 CALION,INVDPC,CALNE for new Ne, Ni models
-C 2005.01 11/14/05 APF_ONLY for F107D;  
-C 2005.01 11/14/05 spreadf_brazil; added constraint 0<=P<=1 
-C 2005.02 05/11/06 NeQuick: XE1,TOPQ, M3000HM; stormvd,
-C 2005.02 03/27/07 STORM: hourly interpolation of Ap  [A. Oinats]
-C 2007.00 05/18/07 Release of IRI-2007
-C 2007.01 09/19/07 vdrift et al.: without *8 (no change in results)
-C 2007.04 02/07/09 IONLOW: N+ correction [V. Truhlik]
-C 2007.05 03/30/09 NMDED: avoid exp underflow [K. Choi] 
-C 2007.05 03/30/09 spreadf_brazil: bspl2f et al b(20->30) [Tab Ji]
-C 2007.05 03/30/09 APF_ONLY: Compute monthly F10.7
-C 2007.06 05/26/09 APF_ONLY: replace i with 1 and IMN with ID [R.Conde]
-C 2007.07 07/10/09 CONVER/DATA: 015.78 -> 005.78 [E. Araujo] 
-C 2007.08 07/23/09 STORM/CONVER: long. discont. [R. Conde, E. Araujo] 
-C 2007.08 07/23/09 APF,APF_ONLY: use YearBegin from ap.dat [R. Conde] 
-C 2007.10 02/03/10 APF: eof error message; clean-up APF and APF_only
-C 2007.11 04/19/10 ELTEIK:     IF (ALT .GE. 900) THEN      [A. Senior]
-C 2007.11 04/19/10 INILAY: HFFF,XFFF when NIGHT=F1REG=f    [A. Senior]
-C
-C 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
-C 2012.00 10/05/11   bottomside Ni model (iriflip.for), auroral foE
-C 2012.00 10/05/11   storm model (storme_ap), Te with PF10.7 (elteik),
-C 2012.00 10/05/11   oval kp model (auroral_boundary),IGRF-11(igrf.for), 
-C 2012.00 10/05/11   NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
-C 2012.00 10/05/11   81-day 365-day indices (apf107.dat), ap->kp (ckp),
-C 2012.00 10/05/11   array size change jf(50) outf(20,1000), oarr(100).
-C 2012.00 10/05/11   No longer needed: TEDER,DTNDH
-C 2012.01 11/08/11 SHAMDB0D+: Initialize COMMON variables outside DATA
-C 2012.01 11/08/11 SCHNEVPD,LEGFUN: COSD(x) -> COS(x*UMR)
-C 2012.01 11/08/11 auroral_boundary: i1.gt/ge.48
-C 2012.01 11/08/11 CALION: F107D upper/lower boundary 220/65
-C 2012.01 01/06/12 delete PAUSE statement in SPLINT
-C 2012.01 01/24/12 STORME_AP: change 365 to 366 leap year    [F. Simoes]
-C 2012.01 06/30/12 HMF2ED: hmF2 too low foF2/foE ge 1.7 [I.Zakharenkova]
-C 2012.01 09/14/12 SHAMDB0D,SHAB1D: initializing CONS2      [P. Coisson]
-C 2012.02 12/12/12 STORME_AP: add KONSOL and ERROR ouput STORME_AP=-5.
-C 2014.00 01/22/14 TPCORR: INVDIP --> INVDP                [J.K. Knight]
-C 2014.02 07/24/14 COMMON/iounit/ added 'mess'
-C 2014.03 08/25/14 ELTEIK,INVDPC,SOCO: ACOS: if(abs(x).gt.1) x=sign(1,x)
-C 2014.03 10/02/14 IONLOW,IONHIGH: C1(82) added for SPHARM_IK [J.C. Xue]
-C 2014.05 12/22/14 APFMSIS: changed text if out of range of APF107.DAT
-C 2015.01 04/27/15 TCON: ionoindx(806),indrz(806)
-C 2015.02 07/12/15 add read_ig_rz, readapf107 change TCON,APF* 
-C 2015.02 07/20/15 APFMSIS: remove duplicate iiap(8)         [E. Blanch]
-C 2015.03 08/13/15 DATA in subr: DATA values only used first CALL 
-C 2015.03 08/13/15 COMMON/CONST/UMR,PI 
-C 2015.03 09/30/15 hmF2 new: SHAMDHMF2, SDMF2 and associated subroutines 
-C 2015.03 09/30/15 ELTEIK,CALION,IONLOW,IONHIGH w/o invdip calc; INVDPC
-C 2015.03 10/12/15 READAPF107: F365 -> F107_365             [M. Hausman]
-C 2015.03 10/14/15 LEGFUN: replace print * with write(konsol,..)
-C 2015.03 10/14/15 SHAMDB0D,SHAB1D,SCHNEVPD: COMMON/ATB/
-C 2015.03 10/14/15 CLCMLT,DPMTRX --> IGRF.FOR
-C 2015.04 02/01/16 TAL: if(SHBR.le.0.0) -> RETURN
-C 2015.04 02/01/16 IONLOW,IONHIGH: ALT -> ALTI extrapolation [S.R. Zhang]
-C                  
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c IRI functions and subroutines:
-C Ne:       XE1,TOPQ,ZERO,DXE1N,XE2,XE3_1,XE4_1,XE5,XE6,XE_1
-C Te, Ti:   ELTEIK{INTERP,KODERR,KOEFD,KOF107,LOCATE,SPHARM_IK, 
-C		    SPLINE,SPLINT,SWAPEL,TEDIFI,TPCAS,TPCORR},TEBA,SPHARM,
-C           ELTE,TEDE,TI,TN
-C Ni:       RPID,RDHHE,RDNO,KOEFP1,KOEFP2,KOEFP3,SUFE,IONDANI,IONCO1, 
-C           IONCO2,APROK,CALION,IONLOW,IONHIGH,INVDPC
-C PEAKS:    FOUT,XMOUT,HMF2ED,XM3000HM,SHAMDHMF2,SCHNEVPDH,SDMF2,
-C     		hmF2_med_SD,read_data_SD,fun_hmF2_SD,fun_Gk,Legendre, 
-C     		fun_hmF2UT,Koeff_UT,fun_Akp_UT,fun_Fk_UT,fun_Gk_UT
-C     		FOF1ED,f1_c1,f1_prob,FOEEDI,XMDED,GAMMA1
-C PROFILE:  TOPH05,CHEBISH,SHAMDB0D,SHAB1D,SCHNEVPD,TBFIT,LEGFUN,  
-C           B0_98,TAL,VALGUL,DREGION
-C MAG. FIELD: FIELDG, CONVER(Geom. Corrected Latitude)
-C TIME:     SOCO,HPOL,MODA,UT_LT,SUN
-C EPSTEIN:  RLAY,D1LAY,D2LAY,EPTR,EPST,EPSTEP,EPLA
-C LAY:      XE2TO5,XEN,ROGUL,LNGLSN,LSKNM,INILAY
-C INDICES:  TCON,APF,APFMSIS,APF_ONLY
-C STORM:   	CONVER, STORM, STORME_AP
-C Vi:       vdrift,bspl4_time,bspl4_long,g,stormvd,bspl4_ptime
-C Spread-F:	spreadf_brazil,bspl2f,bspl2l,bspl2s,bspl4t
-C Auroral: 	auroral_boundary, ckp
-C Misc:     REGFA1
-c-----------------------------------------------------------------------
-C
-C        
-C*************************************************************   
-C*************** ELECTRON DENSITY ****************************   
-C*************************************************************   
-C
+! irifun.for, version number can be found at the end of this comment.
+!-----------------------------------------------------------------------
+! Functions and subroutines for the International Reference Ionosphere 
+! (IRI) model. These functions and subroutines are called by the main
+! IRI subroutine IRI_SUB in IRISUB.FOR.
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! Required i/o units:  
+!  KONSOL= 6 Program messages (used when jf(12)=.true. -> konsol)
+!  KONSOL=11 Program messages (used when jf(12)=.false. -> MESSAGES.TXT)
+!
+!     COMMON/iounit/konsol,mess is used to pass the value of KONSOL from 
+!     IRISUB to IRIFUN and IGRF. If mess=false then messages are turned off.
+!     
+!  UNIT=12 TCON: Solar/ionospheric indices IG12, R12 (IG_RZ.DAT) 
+!  UNIT=13 APF,APFMSIS,APF_ONLY: Magnetic indices and F10.7 (APF107.DAT) 
+!
+! I/o Units used in other programs:
+!  IUCCIR=10 in IRISUB for CCIR and URSI coefficients (CCIR%%.ASC, %%=month+10)
+!  UNIT=14 in IGRF/GETSHC for IGRF coeff. (DGRF%%%%.DAT, %%%%=year)
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! changes from IRIFU9 to IRIF10:
+!       SOCO for solar zenith angle 
+!       ACOS and ASIN argument forced to be within -1 / +1
+!       EPSTEIN functions corrected for large arguments
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! changes from IRIF10 to IRIF11: 
+!       LAY subroutines introduced
+!       TEBA corrected for 1400 km
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! changes from IRIF11 to IRIF12:
+!       Neutral temperature subroutines now in CIRA86.FOR 
+!       TEDER changed
+!       All names with 6 or more characters replaced 
+!       10/29/91 XEN: 10^ in loop, instead of at the end
+!       1/21/93 B0_TAB instead of B0POL
+!       9/22/94 Alleviate underflow condition in IONCOM exp()
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! changes from IRIF12 to IRIF13:
+!        9/18/95 MODA: add leap year and number of days in month
+!        9/29/95 replace F2out with FOUT and XMOUT.
+!       10/ 5/95 add TN and DTNDH; earlier in CIRA86.FOR
+!       10/ 6/95 add TCON for reading indices
+!       10/20/95 MODA: IN=1 MONTH=IMO
+!       10/20/95 TCON: now includes RZ interpolation
+!       11/05/95 IONCOM->IONCO1, added IONCOM_new, IONCO2
+!       11/05/95 LSTID added for strom-time updating
+!       11/06/95 ROGUL: transition 20. instead of 15.
+!       12/01/95 add UT_LT for (date-)correct UT<->LT conversion
+!       01/16/96 TCON: add IMST to SAVE statement
+!       02/02/96 ROGUL: 15. reinstated
+!       02/07/96 UT_LT: ddd, dddend integer, no leap year 2000
+!       03/15/96 ZERO: finding delta for topside
+!       03/18/96 UT_LT: mode=1, change of year
+!       12/09/96 since 2000 is leap, delete y/100*100 condition
+!       04/25/97 XMDED: minimal value also daytime
+!       05/18/98 TCON: changes to IG_RZ (update date); -R = Cov
+!       05/19/98 Replaced IONCO2&APROK; HEI,XHI in IONCOM_NEW
+!       10/01/98 added INITIALIZE
+!       04/30/99 MODA: reset bb(2)=28
+!       11/08/99 avoid negative x value in function XE2. Set x=0.
+!       11/09/99 added COMMON/const1/humr,dumr also for CIRA86
+!       11/30/99 EXIT in APROK replaced with GOTO (N. Smirnova)
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! changes from IRIF13 to IRIFUN:
+!-Version-mm/dd/yy-description [person reporting correction]
+! 2000.01 05/09/00 Include B0_98 subroutine to replace B0_NEW and B0POL
+! 2000.02 05/18/00 Include Elteik and spharm_ik for Te
+! 2000.03 06/09/00 Include xe3_1, xe4_1, xe_1
+! 2000.04 06/11/00 Include f1_c1, f1_prob, modified fof1ed
+! 2000.05 10/30/00 Include vdrift
+! 2000.06 04/15/01 Include IGRF_SUB subroutine for IK Te model
+! 2000.07 05/07/01 Include storm subroutine STORM and Ap access s/w
+! 2000.08 09/07/01 APF: if(j1.eq.j2) -> if(IY.eq.j2) [P. Wilkinson]
+! 2000.09 09/07/01 CONVER: LO2 = MOD(LO1,20)+1 [P. Webb,D. Pesnell]
+! 2000.10 02/20/02 CONVER/DATA: 105.78 -> 015.78 [A. Shovkoplyas] 
+! 2000.11 10/28/02 replace TAB/6 blanks, enforce 72/line [D. Simpson]
+! 2000.12 11/08/02 removing unused variables (corr); apf0 removed
+! 2000.13 11/26/02 apf() using keyed access to ap.dat file; apf->apf1
+! 2000.14 11/27/02 changed F1_PROB; always 6 preceeding spaces 
+! 2005.01 03/09/05 CALION,INVDPC,CALNE for new Ne, Ni models
+! 2005.01 11/14/05 APF_ONLY for F107D;  
+! 2005.01 11/14/05 spreadf_brazil; added constraint 0<=P<=1 
+! 2005.02 05/11/06 NeQuick: XE1,TOPQ, M3000HM; stormvd,
+! 2005.02 03/27/07 STORM: hourly interpolation of Ap  [A. Oinats]
+! 2007.00 05/18/07 Release of IRI-2007
+! 2007.01 09/19/07 vdrift et al.: without *8 (no change in results)
+! 2007.04 02/07/09 IONLOW: N+ correction [V. Truhlik]
+! 2007.05 03/30/09 NMDED: avoid exp underflow [K. Choi] 
+! 2007.05 03/30/09 spreadf_brazil: bspl2f et al b(20->30) [Tab Ji]
+! 2007.05 03/30/09 APF_ONLY: Compute monthly F10.7
+! 2007.06 05/26/09 APF_ONLY: replace i with 1 and IMN with ID [R.Conde]
+! 2007.07 07/10/09 CONVER/DATA: 015.78 -> 005.78 [E. Araujo] 
+! 2007.08 07/23/09 STORM/CONVER: long. discont. [R. Conde, E. Araujo] 
+! 2007.08 07/23/09 APF,APF_ONLY: use YearBegin from ap.dat [R. Conde] 
+! 2007.10 02/03/10 APF: eof error message; clean-up APF and APF_only
+! 2007.11 04/19/10 ELTEIK:     IF (ALT .GE. 900) THEN      [A. Senior]
+! 2007.11 04/19/10 INILAY: HFFF,XFFF when NIGHT=F1REG=f    [A. Senior]
+!
+! 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
+! 2012.00 10/05/11   bottomside Ni model (iriflip.for), auroral foE
+! 2012.00 10/05/11   storm model (storme_ap), Te with PF10.7 (elteik),
+! 2012.00 10/05/11   oval kp model (auroral_boundary),IGRF-11(igrf.for), 
+! 2012.00 10/05/11   NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
+! 2012.00 10/05/11   81-day 365-day indices (apf107.dat), ap->kp (ckp),
+! 2012.00 10/05/11   array size change jf(50) outf(20,1000), oarr(100).
+! 2012.00 10/05/11   No longer needed: TEDER,DTNDH
+! 2012.01 11/08/11 SHAMDB0D+: Initialize COMMON variables outside DATA
+! 2012.01 11/08/11 SCHNEVPD,LEGFUN: COSD(x) -> COS(x*UMR)
+! 2012.01 11/08/11 auroral_boundary: i1.gt/ge.48
+! 2012.01 11/08/11 CALION: F107D upper/lower boundary 220/65
+! 2012.01 01/06/12 delete PAUSE statement in SPLINT
+! 2012.01 01/24/12 STORME_AP: change 365 to 366 leap year    [F. Simoes]
+! 2012.01 06/30/12 HMF2ED: hmF2 too low foF2/foE ge 1.7 [I.Zakharenkova]
+! 2012.01 09/14/12 SHAMDB0D,SHAB1D: initializing CONS2      [P. Coisson]
+! 2012.02 12/12/12 STORME_AP: add KONSOL and ERROR ouput STORME_AP=-5.
+! 2014.00 01/22/14 TPCORR: INVDIP --> INVDP                [J.K. Knight]
+! 2014.02 07/24/14 COMMON/iounit/ added 'mess'
+! 2014.03 08/25/14 ELTEIK,INVDPC,SOCO: ACOS: if(abs(x).gt.1) x=sign(1,x)
+! 2014.03 10/02/14 IONLOW,IONHIGH: C1(82) added for SPHARM_IK [J.C. Xue]
+! 2014.05 12/22/14 APFMSIS: changed text if out of range of APF107.DAT
+! 2015.01 04/27/15 TCON: ionoindx(806),indrz(806)
+! 2015.02 07/12/15 add read_ig_rz, readapf107 change TCON,APF* 
+! 2015.02 07/20/15 APFMSIS: remove duplicate iiap(8)         [E. Blanch]
+! 2015.03 08/13/15 DATA in subr: DATA values only used first CALL 
+! 2015.03 08/13/15 COMMON/CONST/UMR,PI 
+! 2015.03 09/30/15 hmF2 new: SHAMDHMF2, SDMF2 and associated subroutines 
+! 2015.03 09/30/15 ELTEIK,CALION,IONLOW,IONHIGH w/o invdip calc; INVDPC
+! 2015.03 10/12/15 READAPF107: F365 -> F107_365             [M. Hausman]
+! 2015.03 10/14/15 LEGFUN: replace print * with write(konsol,..)
+! 2015.03 10/14/15 SHAMDB0D,SHAB1D,SCHNEVPD: COMMON/ATB/
+! 2015.03 10/14/15 CLCMLT,DPMTRX --> IGRF.FOR
+! 2015.04 02/01/16 TAL: if(SHBR.le.0.0) -> RETURN
+! 2015.04 02/01/16 IONLOW,IONHIGH: ALT -> ALTI extrapolation [S.R. Zhang]
+!                  
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! IRI functions and subroutines:
+! Ne:       XE1,TOPQ,ZERO,DXE1N,XE2,XE3_1,XE4_1,XE5,XE6,XE_1
+! Te, Ti:   ELTEIK{INTERP,KODERR,KOEFD,KOF107,LOCATE,SPHARM_IK, 
+!		    SPLINE,SPLINT,SWAPEL,TEDIFI,TPCAS,TPCORR},TEBA,SPHARM,
+!           ELTE,TEDE,TI,TN
+! Ni:       RPID,RDHHE,RDNO,KOEFP1,KOEFP2,KOEFP3,SUFE,IONDANI,IONCO1, 
+!           IONCO2,APROK,CALION,IONLOW,IONHIGH,INVDPC
+! PEAKS:    FOUT,XMOUT,HMF2ED,XM3000HM,SHAMDHMF2,SCHNEVPDH,SDMF2,
+!     		hmF2_med_SD,read_data_SD,fun_hmF2_SD,fun_Gk,Legendre, 
+!     		fun_hmF2UT,Koeff_UT,fun_Akp_UT,fun_Fk_UT,fun_Gk_UT
+!     		FOF1ED,f1_c1,f1_prob,FOEEDI,XMDED,GAMMA1
+! PROFILE:  TOPH05,CHEBISH,SHAMDB0D,SHAB1D,SCHNEVPD,TBFIT,LEGFUN,  
+!           B0_98,TAL,VALGUL,DREGION
+! MAG. FIELD: FIELDG, CONVER(Geom. Corrected Latitude)
+! TIME:     SOCO,HPOL,MODA,UT_LT,SUN
+! EPSTEIN:  RLAY,D1LAY,D2LAY,EPTR,EPST,EPSTEP,EPLA
+! LAY:      XE2TO5,XEN,ROGUL,LNGLSN,LSKNM,INILAY
+! INDICES:  TCON,APF,APFMSIS,APF_ONLY
+! STORM:   	CONVER, STORM, STORME_AP
+! Vi:       vdrift,bspl4_time,bspl4_long,g,stormvd,bspl4_ptime
+! Spread-F:	spreadf_brazil,bspl2f,bspl2l,bspl2s,bspl4t
+! Auroral: 	auroral_boundary, ckp
+! Misc:     REGFA1
+!-----------------------------------------------------------------------
+!
+!        
+!*************************************************************   
+!*************** ELECTRON DENSITY ****************************   
+!*************************************************************   
+!
 
         FUNCTION XE1(H)    
-c----------------------------------------------------------------
-C DETERMINING ELECTRON DENSITY(M-3) IN THE TOPSIDE IONOSPHERE   
-C (H=HMF2....2000 KM) BY HARMONIZED BENT-MODEL ADMITTING 
-C VARIABILITY OF THE GLOBAL PARAMETERS BETA,ETA,DELTA,ZETA WITH        
-C GEOM. LATITUDE, SMOOTHED SOLAR FLUX AND CRITICAL FREQUENCY.     
-C BETA,ETA,DELTA,ZETA are computed in IRISUB program and 
-C communicated via COMMON /BLO10. This is the IRI-2001 approach
-C [REF.:K.RAWER,S.RAMAKRISHNAN,1978] 
-C New options include:
-C (1) IRI-corrected: TC3,alg10,hcor1 in COMMON /BLO11. 
-C   TC3     correction term divided by (1500-(hcor1-hmF2))
-C   alg10   = alog(10.)
-C	hcor1	lower height boundary for correction
-C (2) NeQuick:  B2TOP  in COMMON /BLO11.
-C	B2TOP   is the topside scale height that depends on foF2 and 
-C           hmF2. 
-C Switch for choosing the desired option is itopn in COMMON /BLO11
-C   itopn   =0 IRI-2001, =1 IRI-2001-corrected, =2 NeQuick
-C           =3 Gulyaeva-0.5 is not yet implemented. 
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+! DETERMINING ELECTRON DENSITY(M-3) IN THE TOPSIDE IONOSPHERE   
+! (H=HMF2....2000 KM) BY HARMONIZED BENT-MODEL ADMITTING 
+! VARIABILITY OF THE GLOBAL PARAMETERS BETA,ETA,DELTA,ZETA WITH        
+! GEOM. LATITUDE, SMOOTHED SOLAR FLUX AND CRITICAL FREQUENCY.     
+! BETA,ETA,DELTA,ZETA are computed in IRISUB program and 
+! communicated via COMMON /BLO10. This is the IRI-2001 approach
+! [REF.:K.RAWER,S.RAMAKRISHNAN,1978] 
+! New options include:
+! (1) IRI-corrected: TC3,alg10,hcor1 in COMMON /BLO11. 
+!   TC3     correction term divided by (1500-(hcor1-hmF2))
+!   alg10   = alog(10.)
+!	hcor1	lower height boundary for correction
+! (2) NeQuick:  B2TOP  in COMMON /BLO11.
+!	B2TOP   is the topside scale height that depends on foF2 and 
+!           hmF2. 
+! Switch for choosing the desired option is itopn in COMMON /BLO11
+!   itopn   =0 IRI-2001, =1 IRI-2001-corrected, =2 NeQuick
+!           =3 Gulyaeva-0.5 is not yet implemented. 
+!----------------------------------------------------------------
         COMMON  /BLOCK1/HMF2,XNMF2,HMF1,F1REG
      &          /BLO10/BETA,ETA,DELTA,ZETA
      &          /BLO11/B2TOP,TC3,itopn,alg10,hcor1
@@ -222,13 +222,13 @@ c----------------------------------------------------------------
         XE1 = XNMF2 * EXP(-Y+TCOR)                             
         RETURN          
         END             
-C
-C
+!
+!
 
         REAL FUNCTION TOPQ(h,No,hmax,Ho)
-c----------------------------------------------------------------
-c  NeQuick formula
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+!  NeQuick formula
+!----------------------------------------------------------------
         REAL No
         PARAMETER (g=0.125,rfac=100.0)
           dh=h-hmax
@@ -248,10 +248,10 @@ c----------------------------------------------------------------
         RETURN
         END
 
-C 
-C
+! 
+!
         REAL FUNCTION ZERO(DELTA)
-C FOR A PEAK AT X0 THE FUNCTION ZERO HAS TO BE EQUAL TO 0.
+! FOR A PEAK AT X0 THE FUNCTION ZERO HAS TO BE EQUAL TO 0.
         COMMON  /BLO10/         BETA,ETA,DEL,ZETA
      &          /ARGEXP/        ARGMAX
 
@@ -274,10 +274,10 @@ C FOR A PEAK AT X0 THE FUNCTION ZERO HAS TO BE EQUAL TO 0.
         zero=zeta*(1.-z1) - eta*z2
         return
         end
-C
-C
+!
+!
         FUNCTION DXE1N(H)                            
-C LOGARITHMIC DERIVATIVE OF FUNCTION XE1 (KM-1).   
+! LOGARITHMIC DERIVATIVE OF FUNCTION XE1 (KM-1).   
         COMMON    /BLOCK1/HMF2,XNMF2,HMF1,F1REG
      &            /BLO10/BETA,ETA,DELTA,ZETA                    
 	    logical f1reg
@@ -289,10 +289,10 @@ C LOGARITHMIC DERIVATIVE OF FUNCTION XE1 (KM-1).
         DXE1N = - ETA * epst1 + ZETA * (1. - epst2)             
         RETURN          
         END             
-C
-C
+!
+!
         REAL FUNCTION XE2(H)                         
-C ELECTRON DENSITY FOR THE BOTTOMSIDE F-REGION (HMF1...HMF2).                   
+! ELECTRON DENSITY FOR THE BOTTOMSIDE F-REGION (HMF1...HMF2).                   
         COMMON    /BLOCK1/HMF2,XNMF2,HMF1,F1REG
      &          /BLOCK2/B0,B1,C1        /ARGEXP/ARGMAX
 	    logical	f1reg
@@ -304,29 +304,29 @@ C ELECTRON DENSITY FOR THE BOTTOMSIDE F-REGION (HMF1...HMF2).
         XE2=XNMF2*EXP(-z)/COSH(X)                 
         RETURN          
         END             
-C
-C
+!
+!
         REAL FUNCTION XE3_1(H)
-C ELECTRON DENSITY FOR THE F1-LAYER (HZ.....HMF1)
-C USING THE NEW DEFINED F1-LAYER FUNCTION (Reinisch and Huang, Advances 
-C in Space Research, Volume 25, Number 1, 81-88, 2000)
+! ELECTRON DENSITY FOR THE F1-LAYER (HZ.....HMF1)
+! USING THE NEW DEFINED F1-LAYER FUNCTION (Reinisch and Huang, Advances 
+! in Space Research, Volume 25, Number 1, 81-88, 2000)
         COMMON	/BLOCK1/	HMF2,XNMF2,HMF1,F1REG
      &		/BLOCK2/	B0,B1,D1F1
 	    logical	f1reg
-C
+!
 	    h1bar=h
         if (f1reg) H1BAR=HMF1*(1.0-((HMF1-H)/HMF1)**(1.0+D1F1))
         XE3_1=XE2(H1BAR)
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION XE4_1(H)
-C ELECTRON DENSITY FOR THE INTERMEDIATE REGION (HEF...HZ)
-C USING THE NEW DEFINED FUNCTION
+! ELECTRON DENSITY FOR THE INTERMEDIATE REGION (HEF...HZ)
+! USING THE NEW DEFINED FUNCTION
         COMMON	/BLOCK3/	HZ,T,HST
      &		/BLOCK4/	HME,XNME,HEF
-C
+!
 	    if(hst.lt.0.0) then
 		xe4_1=xnme+t*(h-hef)
 		return
@@ -339,10 +339,10 @@ C
         XE4_1=XE3_1(H1BAR)
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION XE5(H)                         
-C ELECTRON DENSITY FOR THE E AND VALLEY REGION (HME..HEF).   
+! ELECTRON DENSITY FOR THE E AND VALLEY REGION (HME..HEF).   
         LOGICAL NIGHT   
         COMMON    /BLOCK4/        HME,XNME,HEF
      &          /BLOCK5/        NIGHT,E(4)                    
@@ -354,10 +354,10 @@ C ELECTRON DENSITY FOR THE E AND VALLEY REGION (HME..HEF).
 100     XE5=XNME*EXP(T1)                              
         RETURN          
         END             
-C
-C
+!
+!
         REAL FUNCTION XE6(H)                         
-C ELECTRON DENSITY FOR THE D REGION (HA...HME).    
+! ELECTRON DENSITY FOR THE D REGION (HA...HME).    
         COMMON    /BLOCK4/        HME,XNME,HEF
      &          /BLOCK6/        HMD,XNMD,HDX
      &        /BLOCK7/        D1,XKK,FP30,FP3U,FP1,FP2    
@@ -371,11 +371,11 @@ C ELECTRON DENSITY FOR THE D REGION (HA...HME).
         XE6=XNME*EXP(-D1*Z**XKK)
         RETURN          
         END             
-C
-C
+!
+!
         REAL FUNCTION XE_1(H)                          
-C ELECTRON DENSITY BEETWEEN HA(KM) AND 1000 KM     
-C SUMMARIZING PROCEDURES  NE1....6;                
+! ELECTRON DENSITY BEETWEEN HA(KM) AND 1000 KM     
+! SUMMARIZING PROCEDURES  NE1....6;                
         COMMON    /BLOCK1/HMF2,XNMF2,XHMF1,F1REG         
      &          /BLOCK3/HZ,T,HST
      &        /BLOCK4/HME,XNME,HEF
@@ -408,66 +408,66 @@ C SUMMARIZING PROCEDURES  NE1....6;
 600     XE_1=XE6(H)       
         RETURN          
         END             
-C
-C                     
-C**********************************************************                     
-C***************** ELECTRON TEMPERATURE ********************                    
-C**********************************************************                     
-C
+!
+!                     
+!**********************************************************                     
+!***************** ELECTRON TEMPERATURE ********************                    
+!**********************************************************                     
+!
       SUBROUTINE ELTEIK(PF107Y,INVDIP,MLT,ALT,DDD,PF107,TE,SIGTE)
-c      SUBROUTINE ELTEIK(CRD,PF107Y,INVDIP,FL,DIMO,B0,
-c     &                   DIPL,MLT,ALT,DDD,PF107,TE,SIGTE)
-C----------------------------------------------------------------------
-C Empirical model of electron temperature (Te) in the outer ionosphere
-C with inclusion of solar activity.
-C Based on spherical harmonics approximation of measured
-C Te (all available satellites) at altitudes centred on 350km, 550km,
-C 850km, 1400km, and 2000km. For intermediate altitudes a linear
-C interpolation is used. Recommended altitude range: 300-2500 km!!!
-C Linear extrapolation is used for altitude ranges <300;350)km
-C and (2000;2500> km. For days between seasons centred at
-C (21.3. = 79; 21.6. = 171; 23.9. 265; 21.12. = 354) Te is
-C interpolated by a harmonic function.
-Cc Inputs: CRD - 0 .. INVDIP
-Cc               1 .. FL, DIMO, B0, DIPL (used for calc. INVDIP inside)
-C         PF107Y - 0 .. PF107 correction NOT included
-C                  1 .. PF107 correction included
-C         INVDIP - "mix" coordinate of the dip latitude and of
-C                the invariant latitude (can be computed with INVDPC)
-C                positive northward, in deg, range <-90.0;90.0>
-Cc         FL, DIMO, BO - McIlwain L parameter, dipole moment in
-Cc                        Gauss, magnetic field strength in Gauss -
-Cc                        parameters needed for invariant latitude
-Cc                        calculation
-Cc         DIPL - dip latitude
-Cc                positive northward, in deg, range <-90.0;90.0>
-C         MLT - magnetic local time (central dipole)
-C               in hours, range <0;24)
-C         ALT - altitude above the Earth's surface;
-C               in km, range <500;3000>
-C         DDD - day of year; range <0;365>
-C         PF107 - Phil Richard's solar radio flux;
-C Output: TE - electron temperature in K
-C         SIGTE - standard deviation (or model error) of TE in K
-C Versions: 1.00 (IDL) the first version Te=Te(invl,mlt,alt,season)
-C           1.50 (IDL) corrected IK19 Te at 900km for possible Ne>2E11 m-3
-C           2.00 (IDL) F107 included as a linear perturbation on global Te pattern
-C                      Te=Te(invlat,mlt,alt,season,F107)
-C           3.00 (IDL) invdipl introduced
-C           2000 (IDL,FORTRAN) correction for seasons included
-C           2010 (IDL,FORTRAN) completely new version 
-C Authors of the model (v 2011)
-C                V. Truhlik, D. Bilitza, and L. Triskova
-C Author of the code:
-C         Vladimir Truhlik
-C         Institute of Atm. Phys.
-C         Bocni II.
-C         141 31 Praha 4, Sporilov
-C         Czech Republic
-C         e-mail: vtr@ufa.cas.cz
-C----------------------------------------------------------------------
-c      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,PF107,TE,SIGTE
-c      INTEGER CRD,PF107Y,DDD,SEZDAY,XDAY
+!      SUBROUTINE ELTEIK(CRD,PF107Y,INVDIP,FL,DIMO,B0,
+!     &                   DIPL,MLT,ALT,DDD,PF107,TE,SIGTE)
+!----------------------------------------------------------------------
+! Empirical model of electron temperature (Te) in the outer ionosphere
+! with inclusion of solar activity.
+! Based on spherical harmonics approximation of measured
+! Te (all available satellites) at altitudes centred on 350km, 550km,
+! 850km, 1400km, and 2000km. For intermediate altitudes a linear
+! interpolation is used. Recommended altitude range: 300-2500 km!!!
+! Linear extrapolation is used for altitude ranges <300;350)km
+! and (2000;2500> km. For days between seasons centred at
+! (21.3. = 79; 21.6. = 171; 23.9. 265; 21.12. = 354) Te is
+! interpolated by a harmonic function.
+!c Inputs: CRD - 0 .. INVDIP
+!c               1 .. FL, DIMO, B0, DIPL (used for calc. INVDIP inside)
+!         PF107Y - 0 .. PF107 correction NOT included
+!                  1 .. PF107 correction included
+!         INVDIP - "mix" coordinate of the dip latitude and of
+!                the invariant latitude (can be computed with INVDPC)
+!                positive northward, in deg, range <-90.0;90.0>
+!c         FL, DIMO, BO - McIlwain L parameter, dipole moment in
+!c                        Gauss, magnetic field strength in Gauss -
+!c                        parameters needed for invariant latitude
+!c                        calculation
+!c         DIPL - dip latitude
+!c                positive northward, in deg, range <-90.0;90.0>
+!         MLT - magnetic local time (central dipole)
+!               in hours, range <0;24)
+!         ALT - altitude above the Earth's surface;
+!               in km, range <500;3000>
+!         DDD - day of year; range <0;365>
+!         PF107 - Phil Richard's solar radio flux;
+! Output: TE - electron temperature in K
+!         SIGTE - standard deviation (or model error) of TE in K
+! Versions: 1.00 (IDL) the first version Te=Te(invl,mlt,alt,season)
+!           1.50 (IDL) corrected IK19 Te at 900km for possible Ne>2E11 m-3
+!           2.00 (IDL) F107 included as a linear perturbation on global Te pattern
+!                      Te=Te(invlat,mlt,alt,season,F107)
+!           3.00 (IDL) invdipl introduced
+!           2000 (IDL,FORTRAN) correction for seasons included
+!           2010 (IDL,FORTRAN) completely new version 
+! Authors of the model (v 2011)
+!                V. Truhlik, D. Bilitza, and L. Triskova
+! Author of the code:
+!         Vladimir Truhlik
+!         Institute of Atm. Phys.
+!         Bocni II.
+!         141 31 Praha 4, Sporilov
+!         Czech Republic
+!         e-mail: vtr@ufa.cas.cz
+!----------------------------------------------------------------------
+!      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,PF107,TE,SIGTE
+!      INTEGER CRD,PF107Y,DDD,SEZDAY,XDAY
       REAL INVDIP,MLT,ALT,PF107,TE,SIGTE
       INTEGER PF107Y,DDD,SEZDAY,XDAY
       INTEGER MIRREQ(81)
@@ -489,7 +489,7 @@ c      INTEGER CRD,PF107Y,DDD,SEZDAY,XDAY
       INTEGER I
       DATA B/1.259921D0  ,-0.1984259D0 ,-0.04686632D0,-0.01314096D0,
      &      -0.00308824D0, 0.00082777D0,-0.00105877D0, 0.00183142D0/
-C////////////////////////////////coefficients - main model part//////////////////////
+!////////////////////////////////coefficients - main model part//////////////////////
       DATA (MIRREQ(J),J=1,81)/
      &  1,-1, 1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1,
      &  1,-1, 1,-1, 1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,-1, 1, 1,-1, 1,
@@ -498,39 +498,39 @@ C////////////////////////////////coefficients - main model part/////////////////
       CALL KOEFD(MIRREQ,D)
       CALL KODERR(MIRREQ,DERRTE)
       CALL KOF107(MIRREQ,DPF107)
-C//////////////////////thresholds of solar activity/////////////////////////////////////
+!//////////////////////thresholds of solar activity/////////////////////////////////////
       IF (PF107 .GT. 250) PF107=250
       IF (PF107 .LT. 80) PF107=80
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       DPI=3.1415926535897
       DTOR=DPI/180.0
-c      IF (CRD .EQ. 1) THEN
-C      calculation of INVDIP from FL, DIMO, BO, and DIPL
-C      invariant latitude calculated by highly
-C      accurate polynomial expansion
-c       A=(DIMO/B0)**(1.0D0/3.0D0)/FL
-c       ASA=A*(B(1)+B(2)*A+B(3)*A**2+B(4)*A**3+B(5)*A**4+
-c     &        B(6)*A**5+B(7)*A**6+B(8)*A**7)
-c       IF (ASA .GT. 1.0) ASA=1.0
-c       IF (ASA .LT. 0.0) ASA=0.0
-C      invariant latitude (absolute value)
-c       RINVL=ACOS(SQRT(ASA))
-c       INVL=RINVL/DTOR
-c       RDIPL=DIPL*DTOR
-c       ALFA=SIN(ABS(RDIPL))**3
-c       BETA=COS(RINVL)**3
-c       INVDP=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
-c      ELSE IF	(CRD .EQ. 0) THEN
-c       INVDP=INVDIP
-c      ELSE
-c       RETURN
-c      END IF
+!      IF (CRD .EQ. 1) THEN
+!      calculation of INVDIP from FL, DIMO, BO, and DIPL
+!      invariant latitude calculated by highly
+!      accurate polynomial expansion
+!       A=(DIMO/B0)**(1.0D0/3.0D0)/FL
+!       ASA=A*(B(1)+B(2)*A+B(3)*A**2+B(4)*A**3+B(5)*A**4+
+!     &        B(6)*A**5+B(7)*A**6+B(8)*A**7)
+!       IF (ASA .GT. 1.0) ASA=1.0
+!       IF (ASA .LT. 0.0) ASA=0.0
+!      invariant latitude (absolute value)
+!       RINVL=ACOS(SQRT(ASA))
+!       INVL=RINVL/DTOR
+!       RDIPL=DIPL*DTOR
+!       ALFA=SIN(ABS(RDIPL))**3
+!       BETA=COS(RINVL)**3
+!       INVDP=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
+!      ELSE IF	(CRD .EQ. 0) THEN
+!       INVDP=INVDIP
+!      ELSE
+!       RETURN
+!      END IF
 
       INVDP=INVDIP
       RMLT=MLT*DTOR*15.0
       RCOLAT=(90.0-INVDP)*DTOR
       CALL SPHARM_IK(C,8,8,RCOLAT,RMLT)
-C     21.3. - 20.6.
+!     21.3. - 20.6.
       IF ((DDD .GE. 79) .AND. (DDD .LT. 171)) THEN
        SEZA=1
        SEZB=2
@@ -539,7 +539,7 @@ C     21.3. - 20.6.
        DDDD=DDD
        FUN=0
       END IF
-C     21.6. - 22.9.
+!     21.6. - 22.9.
       IF ((DDD .GE. 171) .AND. (DDD .LT. 265)) THEN
        SEZA=2
        SEZB=1
@@ -548,7 +548,7 @@ C     21.6. - 22.9.
        DDDD=DDD
        FUN=1
       END IF
-C     23.9. - 20.12.
+!     23.9. - 20.12.
       IF ((DDD .GE. 265) .AND. (DDD .LT. 354)) THEN
        SEZA=1
        SEZB=3
@@ -557,7 +557,7 @@ C     23.9. - 20.12.
        DDDD=DDD
        FUN=0
       END IF
-C     21.12. - 20.3.
+!     21.12. - 20.3.
       IF ((DDD .GE. 354) .OR. (DDD .LT. 79)) THEN
        SEZA=3
        SEZB=1
@@ -571,7 +571,7 @@ C     21.12. - 20.3.
         END IF
        FUN=1 
       END IF
-C     model Te
+!     model Te
       T350A=0.0
       T350B=0.0
       T550A=0.0
@@ -603,7 +603,7 @@ C     model Te
       T1400B=10**T1400B
       T2000A=10**T2000A
       T2000B=10**T2000B
-C     model PF107
+!     model PF107
       P350A=0.0
       P350B=0.0
       P550A=0.0
@@ -635,7 +635,7 @@ C     model PF107
       P1400B=10**P1400B
       P2000A=10**P2000A
       P2000B=10**P2000B
-C     model errTe
+!     model errTe
       E350A=0.0
       E350B=0.0
       E550A=0.0
@@ -667,7 +667,7 @@ C     model errTe
       E1400B=10**E1400B
       E2000A=10**E2000A
       E2000B=10**E2000B 
-C
+!
       IF (PF107Y .EQ. 1) THEN
        CALL TPCORR(INVDP,MLT,DDD,PF107,
      &             P350A,P350B,P550A,P550B,P850A,P850B,
@@ -685,7 +685,7 @@ C
        T2000A=T2000A+TP200A
        T2000B=T2000B+TP200B
       END IF 
-C     Te
+!     Te
       IF (FUN .EQ. 0) THEN
        SEZDAY=(DDDB-DDDA)
        XDAY=DDDD-DDDA
@@ -703,7 +703,7 @@ C     Te
        T1400=(T1400A-T1400B)*COS(DPI/2.0*XDAY/SEZDAY)+T1400B
        T2000=(T2000A-T2000B)*COS(DPI/2.0*XDAY/SEZDAY)+T2000B
       END IF
-C     error Te
+!     error Te
       IF (FUN .EQ. 0) THEN
        SEZDAY=(DDDB-DDDA)
        XDAY=DDDD-DDDA
@@ -721,8 +721,8 @@ C     error Te
        E1400=(E1400A-E1400B)*COS(DPI/2.0*XDAY/SEZDAY)+E1400B
        E2000=(E2000A-E2000B)*COS(DPI/2.0*XDAY/SEZDAY)+E2000B
       END IF      
-C ////////////////////////////////////////////////////////
-C     Te linear interpolation for altitude
+! ////////////////////////////////////////////////////////
+!     Te linear interpolation for altitude
       IF (ALT .LT. 550) THEN
        TE=(T550-T350)/200.0*(ALT-350)+T350
        SIGTE=(E550-E350)/200.0*(ALT-350)+E350    
@@ -744,16 +744,16 @@ C     Te linear interpolation for altitude
            
       RETURN
       END
-C
-C
+!
+!
        REAL FUNCTION INTERP(N,L,V,X,XOUT)
-C---------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------
         INTEGER N,L,S,S0,I
         REAL V(N),X(N),XOUT,Y2(N),YOUT,X0(4),V0(4)
         REAL XA,XB,XC,VA,VB,VC
         CALL locate(X,N,XOUT,S)
         IF (L .EQ. 0) THEN   
-C       Spline interpolation (L=0)       
+!       Spline interpolation (L=0)       
          IF (S .LT. 2) S=2
          IF (S .GT. (N-2)) S=N-2    
          S0=S-1 
@@ -764,7 +764,7 @@ C       Spline interpolation (L=0)
          CALL SPLINT(X0,V0,Y2,4,XOUT,YOUT)
         END IF 
         IF (L .EQ. 1) THEN
-C       Linear interpolation (L=1)       
+!       Linear interpolation (L=1)       
          IF ((S .GE.1) .AND. (S .LT. N)) THEN
           YOUT=(V(S+1)-V(S))/(X(S+1)-X(S))*(XOUT-X(S))+V(S)
          END IF
@@ -776,7 +776,7 @@ C       Linear interpolation (L=1)
          END IF  
         END IF        
          IF (L .EQ. 2) THEN
-C       Quadratic interpolation (L=2)    
+!       Quadratic interpolation (L=2)    
          IF (S .LT. 2) S=2
          IF (S .GT. (N-1)) S=N-1    
           XA=X(S-1)
@@ -792,16 +792,16 @@ C       Quadratic interpolation (L=2)
         INTERP=YOUT
         RETURN
        END
-C
-C
+!
+!
       SUBROUTINE KODERR(MIRREQ,DOUT)
-C------------------------------------------------------------------------------------
-C coefficients - error model part
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+! coefficients - error model part
+!------------------------------------------------------------------------------------
       REAL DOUT(5,3,81)
       INTEGER MIRREQ(81),I,J,K
       REAL DERRTE(5,3,81)
-C     350km equinox
+!     350km equinox
       DATA (DERRTE(1,1,J),J=1,81)/ 2.1178E+00, 1.3114E-07, 2.6148E-01,
      &                            -2.8483E-07,-8.3770E-02,-2.3135E-08,
      &                             5.7835E-02,-9.9532E-08,-2.0735E-02,
@@ -829,7 +829,7 @@ C     350km equinox
      &                             6.8581E-02, 5.7838E-09, 6.9529E-03,
      &                             1.5896E-02,-5.0075E-09, 2.8420E-02,
      &                            -4.8417E-09, 2.9191E-02, 4.8866E-02/
-C     350km June solstice
+!     350km June solstice
       DATA (DERRTE(1,2,J),J=1,81)/ 2.1020E+00, 6.4074E-02, 8.8979E-02,
      &                            -1.6295E-01,-6.8680E-02,-4.9903E-02,
      &                             2.7634E-02, 5.3483E-02,-3.6534E-02,
@@ -857,7 +857,7 @@ C     350km June solstice
      &                             3.0577E-02, 6.6725E-03, 9.0547E-03,
      &                            -1.5337E-02,-4.3676E-03,-6.5343E-02,
      &                             1.1111E-02, 2.3191E-03,-3.1603E-02/
-C     550km equinox
+!     550km equinox
       DATA (DERRTE(2,1,J),J=1,81)/ 2.0812E+00, 2.4308E-07, 5.6584E-01,
      &                             1.9086E-08,-7.6095E-02,-5.1032E-07,
      &                            -1.7049E-01,-1.0472E-08, 6.7164E-02,
@@ -885,7 +885,7 @@ C     550km equinox
      &                             3.0434E-02,-5.3588E-10, 1.7285E-03,
      &                            -4.6172E-02, 1.0424E-09,-3.3645E-02,
      &                             4.5595E-10,-1.0524E-02,-6.6919E-02/
-C     550km June solstice
+!     550km June solstice
       DATA (DERRTE(2,2,J),J=1,81)/ 2.0903E+00, 4.9465E-02, 4.1834E-01,
      &                            -3.0721E-02,-1.0157E-01,-1.5666E-01,
      &                            -7.6741E-02, 1.2230E-01, 3.1210E-02,
@@ -913,7 +913,7 @@ C     550km June solstice
      &                             4.0519E-02,-8.4599E-03, 1.1588E-03,
      &                            -3.3485E-02, 5.8463E-03,-2.8652E-03,
      &                             8.8555E-03,-2.6834E-02,-5.0552E-02/
-C     850km equinox
+!     850km equinox
       DATA (DERRTE(3,1,J),J=1,81)/ 2.1741E+00,-3.0713E-07, 7.0198E-02,
      &                             4.9868E-07,-1.4427E-01, 2.8235E-08,
      &                             2.9561E-02,-8.1150E-07, 1.8500E-03,
@@ -941,7 +941,7 @@ C     850km equinox
      &                            -1.6994E-02, 4.5616E-09, 1.3458E-03,
      &                             2.5439E-02,-5.2198E-09, 3.0276E-02,
      &                            -3.3313E-09,-5.7659E-02, 2.8990E-02/
-C     850km June solstice
+!     850km June solstice
       DATA (DERRTE(3,2,J),J=1,81)/ 2.1685E+00,-9.1071E-02,-1.2046E-01,
      &                            -2.0084E-01,-7.3145E-02,-1.2735E-01,
      &                            -5.5899E-02, 5.2264E-02, 2.3232E-02,
@@ -969,7 +969,7 @@ C     850km June solstice
      &                            -5.0934E-02,-4.4936E-03, 1.3723E-03,
      &                            -8.1570E-03, 1.3748E-02, 7.0236E-03,
      &                             7.9914E-04,-4.6833E-02,-1.6385E-02/
-C     1400km equinox
+!     1400km equinox
       DATA (DERRTE(4,1,J),J=1,81)/ 2.1822E+00, 3.3549E-08, 1.2164E-01,
      &                             2.4764E-07,-8.7502E-02,-4.0691E-07,
      &                             2.3355E-03,-2.8158E-07,-1.3242E-03,
@@ -997,7 +997,7 @@ C     1400km equinox
      &                            -2.4122E-02, 6.0810E-10, 5.8355E-03,
      &                            -5.1302E-02,-7.9405E-09,-7.6189E-02,
      &                            -6.7824E-10,-3.1716E-02,-4.1055E-02/
-C     1400km June solstice
+!     1400km June solstice
       DATA (DERRTE(4,2,J),J=1,81)/ 2.1442E+00,-1.3864E-01, 1.7112E-01,
      &                            -2.1389E-01,-1.8186E-02,-1.0237E-01,
      &                             5.9302E-02, 6.0929E-02, 2.4732E-02,
@@ -1025,7 +1025,7 @@ C     1400km June solstice
      &                             7.7473E-02,-6.8423E-03,-1.5793E-03,
      &                            -2.6085E-02, 8.8083E-03, 4.2452E-02,
      &                             8.2699E-04, 2.1088E-02, 1.7894E-02/
-C     2000km equinox
+!     2000km equinox
       DATA (DERRTE(5,1,J),J=1,81)/ 2.4436E+00,-4.3843E-07, 1.5425E-01,
      &                            -5.5662E-08, 4.0385E-03, 8.1161E-07,
      &                             5.3553E-02,-6.9405E-07,-1.8544E-02,
@@ -1053,7 +1053,7 @@ C     2000km equinox
      &                             6.3435E-02,-2.5381E-09,-2.2050E-03,
      &                            -6.6893E-02, 1.6210E-09, 4.0881E-02,
      &                            -5.1892E-09, 9.0158E-03, 2.3495E-02/
-C     2000km June solstice
+!     2000km June solstice
       DATA (DERRTE(5,2,J),J=1,81)/ 2.4223E+00,-1.6581E-01, 2.0883E-01,
      &                            -8.0645E-02,-3.9722E-02, 1.5954E-02,
      &                             3.0088E-02,-9.6053E-03, 7.4229E-03,
@@ -1094,19 +1094,19 @@ C     2000km June solstice
 20      CONTINUE
 30     CONTINUE
 40    CONTINUE
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE KOEFD(MIRREQ,DOUT)
-C------------------------------------------------------------------------------------
-C    coefficients - main model part
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+!    coefficients - main model part
+!------------------------------------------------------------------------------------
       REAL DOUT(5,3,81)
       INTEGER MIRREQ(81),I,J,K
       REAL D(5,3,81)
-C     350km equinox
+!     350km equinox
       DATA (D(1,1,J),J=1,81)/ 3.1753E+00, 5.7689E-07, 1.9586E-01,
      &                       -6.8275E-07, 1.8921E-02, 3.6213E-07,
      &                       -1.8628E-02, 5.0105E-08,-8.5600E-03,
@@ -1134,7 +1134,7 @@ C     350km equinox
      &                       -2.7676E-02,-1.3017E-08, 5.8774E-04,
      &                        1.6090E-02, 4.6780E-08,-2.0595E-02,
      &                        2.5706E-08, 1.2541E-02, 1.7794E-02/
-C     350km June solstice
+!     350km June solstice
       DATA (D(1,2,J),J=1,81)/ 3.1629E+00, 6.1302E-02, 2.0063E-01,
      &                        4.5285E-02,-4.1826E-02, 1.9260E-03,
      &                        2.4969E-03, 8.2077E-03,-2.8539E-02,
@@ -1162,7 +1162,7 @@ C     350km June solstice
      &                       -1.7878E-02, 5.3427E-03, 1.7965E-05,
      &                        3.5806E-03, 6.6563E-04,-1.2012E-02,
      &                       -5.7183E-03, 2.4944E-03, 4.3333E-03/
-C     550km equinox
+!     550km equinox
       DATA (D(2,1,J),J=1,81)/ 3.2751E+00, 1.3545E-06, 1.7150E-01,
      &                       -7.6203E-07, 4.0429E-02, 5.0117E-07,
      &                       -2.2589E-02, 3.0332E-08,-2.0861E-02,
@@ -1190,7 +1190,7 @@ C     550km equinox
      &                       -1.8001E-02, 1.3656E-07, 4.1525E-04,
      &                        7.9458E-03,-1.0954E-07,-1.2869E-02,
      &                       -6.1937E-08, 9.2866E-03, 5.3834E-03/
-C     550km June solstice
+!     550km June solstice
       DATA (D(2,2,J),J=1,81)/ 3.2706E+00, 3.5202E-02, 1.6153E-01,
      &                        7.5517E-02,-1.2975E-02,-1.0202E-02,
      &                       -1.4402E-02, 8.0992E-03,-2.4350E-02,
@@ -1218,7 +1218,7 @@ C     550km June solstice
      &                        9.1260E-04, 5.9450E-04, 3.9428E-04,
      &                        1.7175E-03,-7.0834E-04,-7.3342E-03,
      &                        9.3208E-04, 8.0461E-03, 1.7211E-03/
-C     850km equinox
+!     850km equinox
       DATA (D(3,1,J),J=1,81)/ 3.4090E+00,-8.7890E-07, 1.4192E-01,
      &                        2.2022E-06,-2.3026E-02, 2.8080E-07,
      &                       -2.0490E-02,-2.4588E-06, 8.0287E-03,
@@ -1246,7 +1246,7 @@ C     850km equinox
      &                       -1.1323E-02,-1.0595E-07, 2.4607E-06,
      &                       -1.1919E-02,-1.2954E-07,-1.5160E-02,
      &                       -9.8974E-08, 9.1103E-03,-9.8102E-04/
-C     850km June solstice
+!     850km June solstice
       DATA (D(3,2,J),J=1,81)/ 3.4298E+00, 2.6491E-02, 1.3842E-01,
      &                        4.0680E-02,-5.6606E-02,-5.7153E-03,
      &                       -1.4690E-02, 7.5677E-03, 3.2216E-04,
@@ -1274,7 +1274,7 @@ C     850km June solstice
      &                        3.5803E-03,-6.7022E-05,-9.2460E-04,
      &                       -5.0650E-03, 2.3747E-03,-1.1690E-02,
      &                        2.7210E-04,-1.2308E-02,-2.4554E-03/
-C     1400km equinox
+!     1400km equinox
       DATA (D(4,1,J),J=1,81)/ 3.4323E+00, 5.9891E-08, 1.4440E-01,
      &                       -2.5296E-06,-3.0483E-02, 8.7633E-07,
      &                       -2.0333E-02, 1.4639E-06, 8.3905E-03,
@@ -1302,7 +1302,7 @@ C     1400km equinox
      &                        3.2506E-03, 9.8322E-07, 2.4373E-04,
      &                        1.0563E-02,-4.2559E-08,-1.4966E-02,
      &                        6.3242E-07, 3.0936E-02, 5.0785E-04/
-C     1400km June solstice
+!     1400km June solstice
       DATA (D(4,2,J),J=1,81)/ 3.4432E+00, 1.4031E-02, 1.3160E-01,
      &                        2.5090E-02,-4.2982E-02,-4.1350E-03,
      &                       -2.3576E-02, 4.5813E-04, 9.9480E-03,
@@ -1330,7 +1330,7 @@ C     1400km June solstice
      &                        6.8566E-03,-1.3812E-03, 3.7630E-04,
      &                       -4.2406E-04,-4.0773E-05,-7.0264E-03,
      &                       -4.8997E-04, 3.2745E-03,-4.3985E-03/
-C     2000km equinox
+!     2000km equinox
       DATA (D(5,1,J),J=1,81)/ 3.5267E+00, 3.1496E-06, 1.0072E-01,
      &                       -4.0719E-06,-2.9570E-02, 3.1967E-06,
      &                       -1.6759E-02,-2.2291E-06, 1.4529E-02,
@@ -1358,7 +1358,7 @@ C     2000km equinox
      &                        1.7064E-02, 2.6949E-07, 3.5386E-05,
      &                        1.3508E-03,-9.3600E-08, 2.2163E-03,
      &                        1.8302E-07, 1.4533E-02, 6.8208E-03/
-C     2000km June solstice
+!     2000km June solstice
       DATA (D(5,2,J),J=1,81)/ 3.5455E+00, 2.3030E-02, 9.1028E-02,
      &                        5.6686E-03,-4.3555E-02, 7.5223E-03,
      &                       -5.3314E-03,-2.3664E-03, 9.2735E-03,
@@ -1399,19 +1399,19 @@ C     2000km June solstice
 20      CONTINUE
 30     CONTINUE
 40    CONTINUE
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE KOF107(MIRREQ,DOUT)
-C------------------------------------------------------------------------------------
-C   coefficients - F107 model part
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+!   coefficients - F107 model part
+!------------------------------------------------------------------------------------
       REAL DOUT(5,3,81)
       INTEGER MIRREQ(81),I,J,K
       REAL DPF107(5,3,81)
-C     350km equinox
+!     350km equinox
       DATA (DPF107(1,1,J),J=1,81)/ 2.1179E+00, 2.6093E-07, 4.4282E-02,
      &                            -1.3876E-06, 2.7803E-02, 1.3986E-06,
      &                             2.9846E-02, 5.5440E-07, 1.3094E-02,
@@ -1439,7 +1439,7 @@ C     350km equinox
      &                             2.0173E-02, 1.1973E-07, 5.7493E-06,
      &                             9.8510E-04,-5.6858E-08,-6.9055E-03,
      &                             8.8015E-08,-5.2797E-03, 4.9785E-02/
-C     350km June solstice
+!     350km June solstice
       DATA (DPF107(1,2,J),J=1,81)/ 2.1118E+00, 1.2667E-02, 7.8532E-02,
      &                             2.8013E-03, 4.6247E-03,-1.8002E-02,
      &                             1.7402E-02, 2.1645E-02, 9.7880E-04,
@@ -1467,7 +1467,7 @@ C     350km June solstice
      &                            -3.2205E-02, 2.4068E-04, 1.5491E-03,
      &                            -1.3486E-03, 1.5805E-03, 1.2679E-02,
      &                             1.5963E-03,-9.2296E-03, 3.3470E-02/
-C     550km equinox
+!     550km equinox
       DATA (DPF107(2,1,J),J=1,81)/ 2.2596E+00,-1.0250E-06,-6.0469E-02,
      &                            -5.1717E-08, 2.4081E-02, 1.3561E-06,
      &                             2.2501E-02, 1.8975E-07,-1.9328E-03,
@@ -1495,7 +1495,7 @@ C     550km equinox
      &                            -3.6805E-03,-4.2162E-11, 5.9164E-04,
      &                            -1.1688E-03,-6.3884E-09,-3.4464E-03,
      &                            -2.9236E-08,-3.2531E-03, 7.3254E-04/
-C     550km June solstice
+!     550km June solstice
       DATA (DPF107(2,2,J),J=1,81)/ 2.2443E+00,-7.5467E-03, 4.6154E-03,
      &                            -3.2706E-02,-9.4369E-03,-2.9842E-03,
      &                             9.5202E-03, 2.6462E-02, 8.1390E-03,
@@ -1523,7 +1523,7 @@ C     550km June solstice
      &                             7.8526E-03, 2.1084E-04,-6.8010E-06,
      &                            -1.2768E-04, 9.3358E-05, 5.0014E-03,
      &                             5.5091E-04, 6.4201E-04, 2.6821E-03/
-C     850km equinox
+!     850km equinox
       DATA (DPF107(3,1,J),J=1,81)/ 2.2430E+00, 6.3529E-07,-2.1093E-02,
      &                             2.3192E-06, 3.9848E-03,-4.0399E-06,
      &                            -2.0864E-03, 1.4147E-06,-2.7632E-03,
@@ -1551,7 +1551,7 @@ C     850km equinox
      &                            -1.6288E-02,-2.8123E-08,-6.2559E-04,
      &                             1.6419E-04,-8.6871E-08,-3.8220E-03,
      &                            -3.4288E-08,-1.6062E-02,-2.3689E-03/
-C     850km June solstice
+!     850km June solstice
       DATA (DPF107(3,2,J),J=1,81)/ 2.2234E+00, 8.7471E-03,-3.6271E-02,
      &                            -1.8205E-02, 1.4310E-02, 1.4137E-02,
      &                             1.1152E-03,-5.6408E-03,-2.3086E-04,
@@ -1579,7 +1579,7 @@ C     850km June solstice
      &                            -2.1501E-02,-2.0520E-03, 3.9847E-04,
      &                            -9.8123E-04, 3.0419E-03, 6.5642E-03,
      &                            -1.3463E-03,-4.1453E-03,-3.4043E-03/
-C     1400km equinox
+!     1400km equinox
       DATA (DPF107(4,1,J),J=1,81)/ 2.0721E+00,-1.2810E-06,-2.2446E-02,
      &                             4.0113E-06, 1.5405E-02,-4.0985E-06,
      &                            -4.4873E-03, 1.6972E-06, 1.0420E-03,
@@ -1607,7 +1607,7 @@ C     1400km equinox
      &                            -1.0013E-02, 4.5334E-07, 4.6489E-04,
      &                            -1.7219E-05, 2.8226E-08, 1.2155E-03,
      &                            -5.5547E-08,-2.5776E-02, 3.7582E-02/
-C     1400km June solstice
+!     1400km June solstice
       DATA (DPF107(4,2,J),J=1,81)/ 2.0715E+00, 1.1060E-02,-7.2558E-03,
      &                             1.6759E-02, 4.4526E-03,-3.1949E-03,
      &                            -1.1849E-03, 1.9253E-03, 1.6289E-03,
@@ -1635,7 +1635,7 @@ C     1400km June solstice
      &                            -2.2815E-03, 3.8619E-04,-8.9996E-05,
      &                            -2.2212E-05, 2.8260E-04, 3.3863E-03,
      &                            -6.4781E-04, 1.0682E-02,-5.7521E-03/
-C     2000km equinox
+!     2000km equinox
       DATA (DPF107(5,1,J),J=1,81)/ 2.2225E+00,-1.8465E-07, 3.9702E-02,
      &                             7.4498E-08, 6.7294E-03,-1.5623E-07,
      &                             8.6264E-04, 4.9782E-07,-1.0457E-02,
@@ -1663,7 +1663,7 @@ C     2000km equinox
      &                             1.1895E-02, 4.6967E-07, 4.3363E-04,
      &                            -5.3628E-03, 4.2370E-07, 1.2707E-03,
      &                             1.0193E-07, 1.2395E-02, 1.0030E-02/
-C     2000km June solstice
+!     2000km June solstice
       DATA (DPF107(5,2,J),J=1,81)/ 2.2631E+00, 2.1866E-02, 4.6921E-03,
      &                            -3.3329E-02, 1.0108E-02,-1.2195E-02,
      &                             4.8366E-03, 2.1350E-02,-8.6916E-03,
@@ -1704,13 +1704,13 @@ C     2000km June solstice
 20      CONTINUE
 30     CONTINUE
 40    CONTINUE
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       RETURN
       END
-C     
-C
+!     
+!
       SUBROUTINE locate(xx,n,x,j)
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
       INTEGER j,n
       REAL x,xx(n)
       INTEGER jl,jm,ju
@@ -1728,14 +1728,14 @@ C-------------------------------------------------------------------------------
       j=jl
       return
       END
-C
-C
+!
+!
         SUBROUTINE SPHARM_IK(C,L,M,COLAT,AZ)
-C------------------------------------------------------------------------------------
-C CALCULATES THE COEFFICIENTS OF THE SPHERICAL HARMONIC
-C FROM IRI 95 MODEL
-C NOTE: COEFFICIENTS CORRESPONDING TO COS, SIN SWAPPED!!!
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+! CALCULATES THE COEFFICIENTS OF THE SPHERICAL HARMONIC
+! FROM IRI 95 MODEL
+! NOTE: COEFFICIENTS CORRESPONDING TO COS, SIN SWAPPED!!!
+!------------------------------------------------------------------------------------
       DIMENSION C(82)
       C(1)=1.
       K=2
@@ -1766,10 +1766,10 @@ C-------------------------------------------------------------------------------
 20    CONTINUE
       RETURN
       END
-C     
-C
+!     
+!
       SUBROUTINE spline(x,y,n,yp1,ypn,y2)
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
       INTEGER n,NMAX
       REAL yp1,ypn,x(n),y(n),y2(n)
       PARAMETER (NMAX=500)
@@ -1803,10 +1803,10 @@ C-------------------------------------------------------------------------------
 12    continue
       return
       END
-C
-C
+!
+!
       SUBROUTINE splint(xa,ya,y2a,n,x,y)
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
       INTEGER n
       REAL x,y,xa(n),y2a(n),ya(n)
       INTEGER k,khi,klo
@@ -1829,12 +1829,12 @@ C-------------------------------------------------------------------------------
      *2)/6.
       return
       END
-C
-C
+!
+!
        SUBROUTINE SWAPEL(N,A)
-C------------------------------------------------------------------------------------
-C      swaps elements of array
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+!      swaps elements of array
+!------------------------------------------------------------------------------------
        INTEGER N,I  
        REAL A(N),AT(N)
        DO 10 I=1,N
@@ -1843,12 +1843,12 @@ C-------------------------------------------------------------------------------
 20      A(I+1)=AT(N-I)                   
        RETURN
        END
-C
-C
+!
+!
        SUBROUTINE TEDIFI(F107IN,TEXN,TEDN,F107DF,TEDIF)
-C------------------------------------------------------------------------------------
-C      interpolation for solar activity        
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+!      interpolation for solar activity        
+!------------------------------------------------------------------------------------
        REAL F107IN,TEXN,TEDN,F107DF(3),TEDIF
        REAL T0DNXN(3),T0DN(2),TDNXN(2)
        REAL INTERP
@@ -1870,13 +1870,13 @@ C-------------------------------------------------------------------------------
        END IF        
        RETURN
        END
-C
-C
+!
+!
        SUBROUTINE TPCAS(MLTRAD,PF107,PF107M,
      &                  XNDI,DNDI,PD,XNNI,DNNI,PN,TPASEA)
-C------------------------------------------------------------------------------------
-C      correction for season at fixed altitude
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
+!      correction for season at fixed altitude
+!------------------------------------------------------------------------------------
        REAL MLTRAD,PF107,PF107M,XNDI,DNDI,PD(3),XNNI,DNNI,PN(3),TPASEA
        REAL TA,TM,TDC,TNC
        CALL TEDIFI(PF107,XNDI,DNDI,PD,TA)
@@ -1889,19 +1889,19 @@ C-------------------------------------------------------------------------------
        TNC=TA-TM
         TNC=AMAX1(TNC,-1250.)
         TNC=AMIN1(TNC,1250.)       
-C      harmonic interpolation for local time       
+!      harmonic interpolation for local time       
        TPASEA=(1.-COS(MLTRAD))/2.*(TDC-TNC)+TNC
        RETURN
        END
 
-C
-C
+!
+!
       SUBROUTINE   TPCORR(INVDIP,MLT,DDD,PF107,
      &             P350A,P350B,P550A,P550B,P850A,P850B,
      &             P1400A,P1400B,P2000A,P2000B, 
      &             TP350A,TP350B,TP550A,TP550B,TP850A,TP850B,
      &             TP140A,TP140B,TP200A,TP200B)
-C------------------------------------------------------------------------------------
+!------------------------------------------------------------------------------------
        REAL INVDIP,MLT,PF107
        INTEGER DDD
        REAL        P350A,P350B,P550A,P550B,P850A,P850B,
@@ -1910,37 +1910,37 @@ C-------------------------------------------------------------------------------
      &             TP140A,TP140B,TP200A,TP200B
        REAL INTERP
        REAL MLTRAD
-C      Constants    
+!      Constants    
        REAL INVDPQ(13)
-C      PF107 Day Equinox       
+!      PF107 Day Equinox       
        REAL P2DE(13,3),P1DE(13,3),P8DE(13,3),P5DE(13,3),P3DE(13,3)
-C      Te max-min dif Day Equinox       
+!      Te max-min dif Day Equinox       
        REAL CXN2DE(13),CXN1DE(13),CXN8DE(13),CXN5DE(13),CXN3DE(13)
-C      Te med-min dif Day Equinox       
+!      Te med-min dif Day Equinox       
        REAL CDN2DE(13),CDN1DE(13),CDN8DE(13),CDN5DE(13),CDN3DE(13)
-C
-C      PF107 Night Equinox       
+!
+!      PF107 Night Equinox       
        REAL P2NE(13,3),P1NE(13,3),P8NE(13,3),P5NE(13,3),P3NE(13,3)
-C      Te max-min dif Night Equinox       
+!      Te max-min dif Night Equinox       
        REAL CXN2NE(13),CXN1NE(13),CXN8NE(13),CXN5NE(13),CXN3NE(13)
-C      Te med-min dif Night Equinox       
+!      Te med-min dif Night Equinox       
        REAL CDN2NE(13),CDN1NE(13),CDN8NE(13),CDN5NE(13),CDN3NE(13)
-C       
-C
-C      PF107 Day Solstice       
+!       
+!
+!      PF107 Day Solstice       
        REAL P2DS(13,3),P1DS(13,3),P8DS(13,3),P5DS(13,3),P3DS(13,3)
-C      Te max-min dif Day Solstice       
+!      Te max-min dif Day Solstice       
        REAL CXN2DS(13),CXN1DS(13),CXN8DS(13),CXN5DS(13),CXN3DS(13)
-C      Te med-min dif Day Solstice       
+!      Te med-min dif Day Solstice       
        REAL CDN2DS(13),CDN1DS(13),CDN8DS(13),CDN5DS(13),CDN3DS(13)
-C
-C      PF107 Night Solstice       
+!
+!      PF107 Night Solstice       
        REAL P2NS(13,3),P1NS(13,3),P8NS(13,3),P5NS(13,3),P3NS(13,3)
-C      Te max-min dif Night Solstice       
+!      Te max-min dif Night Solstice       
        REAL CXN2NS(13),CXN1NS(13),CXN8NS(13),CXN5NS(13),CXN3NS(13)
-C      Te med-min dif Night Solstice       
+!      Te med-min dif Night Solstice       
        REAL CDN2NS(13),CDN1NS(13),CDN8NS(13),CDN5NS(13),CDN3NS(13)
-C      working variables
+!      working variables
        REAL TXN2DE(13),TXN1DE(13),TXN8DE(13),TXN5DE(13),TXN3DE(13)
        REAL TDN2DE(13),TDN1DE(13),TDN8DE(13),TDN5DE(13),TDN3DE(13)
        REAL TXN2NE(13),TXN1NE(13),TXN8NE(13),TXN5NE(13),TXN3NE(13)
@@ -1949,13 +1949,13 @@ C      working variables
        REAL TDN2DS(13),TDN1DS(13),TDN8DS(13),TDN5DS(13),TDN3DS(13)
        REAL TXN2NS(13),TXN1NS(13),TXN8NS(13),TXN5NS(13),TXN3NS(13)
        REAL TDN2NS(13),TDN1NS(13),TDN8NS(13),TDN5NS(13),TDN3NS(13)      
-C
-C      Interpolated PF107
+!
+!      Interpolated PF107
        REAL P2DEI(3),P1DEI(3),P8DEI(3),P5DEI(3),P3DEI(3)
        REAL P2NEI(3),P1NEI(3),P8NEI(3),P5NEI(3),P3NEI(3)
        REAL P2DSI(3),P1DSI(3),P8DSI(3),P5DSI(3),P3DSI(3)
        REAL P2NSI(3),P1NSI(3),P8NSI(3),P5NSI(3),P3NSI(3) 
-C      Additional local and temporary variables
+!      Additional local and temporary variables
        REAL XN2DEI,XN1DEI,XN8DEI,XN5DEI,XN3DEI
        REAL XN2NEI,XN1NEI,XN8NEI,XN5NEI,XN3NEI
        REAL DN2DEI,DN1DEI,DN8DEI,DN5DEI,DN3DEI
@@ -1966,10 +1966,10 @@ C      Additional local and temporary variables
        REAL DN2NSI,DN1NSI,DN8NSI,DN5NSI,DN3NSI
        REAL MLTTMP
        INTEGER I      
-C
+!
        DATA (INVDPQ(I),I=1,13) /-90.0,-75.0,-60.0,-45.0,-30.0,-15.0,
      &                      0.0, 15.0, 30.0, 45.0, 60.0, 75.0,90.0/
-C      Equinox
+!      Equinox
        DATA ((P2DE(I,J),I=1,13),J=1,3) /
      &  125., 120., 115., 113., 118., 119., 118., 119., 118., 113.,
      &  115., 120., 125.,
@@ -2034,9 +2034,9 @@ C      Equinox
      &  202., 195., 188./
        DATA (CXN2NE(I),I=1,13) /   76.,  134.,  192.,  821.,  801.,
      &   583.,  551.,  583.,  801.,  821.,  192.,  134.,   76./
-C       DATA (CDN2NE(I),I=1,13) /  -19.,  -83., -148.,  399.,  289.,
-C     &   340.,  542.,  340.,  289.,  399., -148.,  -83.,  -19./  
-C        equator corrected  
+!       DATA (CDN2NE(I),I=1,13) /  -19.,  -83., -148.,  399.,  289.,
+!     &   340.,  542.,  340.,  289.,  399., -148.,  -83.,  -19./  
+!        equator corrected  
         DATA (CDN2NE(I),I=1,13) /  -19.,  -83., -148.,  399.,  289.,
      &   340.,  340.,  340.,  289.,  399., -148.,  -83.,  -19./
        DATA ((P1NE(I,J),I=1,13),J=1,3) /
@@ -2083,7 +2083,7 @@ C        equator corrected
      &   390.,  364.,  390.,  187.,  153.,   68.,  763., 1457./
        DATA (CDN3NE(I),I=1,13) /  722.,  329.,  -63.,   40.,   31.,
      &   102.,  111.,  102.,   31.,   40.,  -63.,  329.,  722./
-C      Solstice
+!      Solstice
        DATA ((P2DS(I,J),I=1,13),J=1,3) /
      &   90.,  90.,  91.,  91.,  98., 105., 112., 119., 125., 124.,
      &  120., 126., 131.,
@@ -2194,7 +2194,7 @@ C      Solstice
      &   178.,  224.,  198.,  220.,  380.,  559.,  228., -104./
        DATA (CDN3NS(I),I=1,13) /   97.,    1.,  -95.,   47.,   37.,
      &   112.,   96.,  106.,  129.,  252.,  470.,  220.,  -30./
-C
+!
        DO 5 I=1,13
         TXN2DE(I)=CXN2DE(I)
         TDN2DE(I)=CDN2DE(I)
@@ -2236,7 +2236,7 @@ C
         TDN5NS(I)=CDN5NS(I)
         TXN3NS(I)=CXN3NS(I)
 5       TDN3NS(I)=CDN3NS(I)       
-C
+!
        IF (((DDD .GE. 265) .AND. (DDD .LT. 354)) .OR. 
      &    ((DDD .GE. 354) .OR. (DDD .LT. 79))) THEN
          CALL SWAPEL(13,TXN2DS)
@@ -2261,51 +2261,51 @@ C
          CALL SWAPEL(13,TDN3NS)
        END IF
        
-C      interpolated Te values for invdip
-C      Te max-min day equinox
+!      interpolated Te values for invdip
+!      Te max-min day equinox
        XN2DEI=INTERP(13,0,TXN2DE,INVDPQ,INVDIP)
        XN1DEI=INTERP(13,0,TXN1DE,INVDPQ,INVDIP)
        XN8DEI=INTERP(13,0,TXN8DE,INVDPQ,INVDIP)
        XN5DEI=INTERP(13,0,TXN5DE,INVDPQ,INVDIP)
        XN3DEI=INTERP(13,0,TXN3DE,INVDPQ,INVDIP)
-C      Te max-min night equinox       
+!      Te max-min night equinox       
        XN2NEI=INTERP(13,0,TXN2NE,INVDPQ,INVDIP)
        XN1NEI=INTERP(13,0,TXN1NE,INVDPQ,INVDIP)
        XN8NEI=INTERP(13,0,TXN8NE,INVDPQ,INVDIP)
        XN5NEI=INTERP(13,0,TXN5NE,INVDPQ,INVDIP)
        XN3NEI=INTERP(13,0,TXN3NE,INVDPQ,INVDIP)
-C      Te med-min day equinox       
+!      Te med-min day equinox       
        DN2DEI=INTERP(13,0,TDN2DE,INVDPQ,INVDIP)
        DN1DEI=INTERP(13,0,TDN1DE,INVDPQ,INVDIP)
        DN8DEI=INTERP(13,0,TDN8DE,INVDPQ,INVDIP)
        DN5DEI=INTERP(13,0,TDN5DE,INVDPQ,INVDIP)
        DN3DEI=INTERP(13,0,TDN3DE,INVDPQ,INVDIP)
-C      Te med-min night equinox       
+!      Te med-min night equinox       
        DN2NEI=INTERP(13,0,TDN2NE,INVDPQ,INVDIP)
        DN1NEI=INTERP(13,0,TDN1NE,INVDPQ,INVDIP)
        DN8NEI=INTERP(13,0,TDN8NE,INVDPQ,INVDIP)
        DN5NEI=INTERP(13,0,TDN5NE,INVDPQ,INVDIP)
        DN3NEI=INTERP(13,0,TDN3NE,INVDPQ,INVDIP)
-C       
-C      Te max-min day solstice       
+!       
+!      Te max-min day solstice       
        XN2DSI=INTERP(13,0,TXN2DS,INVDPQ,INVDIP)
        XN1DSI=INTERP(13,0,TXN1DS,INVDPQ,INVDIP)
        XN8DSI=INTERP(13,0,TXN8DS,INVDPQ,INVDIP)
        XN5DSI=INTERP(13,0,TXN5DS,INVDPQ,INVDIP)
        XN3DSI=INTERP(13,0,TXN3DS,INVDPQ,INVDIP)
-C      Te max-min night solstice            
+!      Te max-min night solstice            
        XN2NSI=INTERP(13,0,TXN2NS,INVDPQ,INVDIP)
        XN1NSI=INTERP(13,0,TXN1NS,INVDPQ,INVDIP)
        XN8NSI=INTERP(13,0,TXN8NS,INVDPQ,INVDIP)
        XN5NSI=INTERP(13,0,TXN5NS,INVDPQ,INVDIP)
        XN3NSI=INTERP(13,0,TXN3NS,INVDPQ,INVDIP)
-C      Te med-min day solstice      
+!      Te med-min day solstice      
        DN2DSI=INTERP(13,0,TDN2DS,INVDPQ,INVDIP)
        DN1DSI=INTERP(13,0,TDN1DS,INVDPQ,INVDIP)
        DN8DSI=INTERP(13,0,TDN8DS,INVDPQ,INVDIP)
        DN5DSI=INTERP(13,0,TDN5DS,INVDPQ,INVDIP)
        DN3DSI=INTERP(13,0,TDN3DS,INVDPQ,INVDIP)
-C      Te med-min night solstice           
+!      Te med-min night solstice           
        DN2NSI=INTERP(13,0,TDN2NS,INVDPQ,INVDIP)
        DN1NSI=INTERP(13,0,TDN1NS,INVDPQ,INVDIP)
        DN8NSI=INTERP(13,0,TDN8NS,INVDPQ,INVDIP)
@@ -2338,7 +2338,7 @@ C      Te med-min night solstice
        MLTRAD=MLTTMP/24.0*2*3.1415927
       IF (((DDD .GE. 79) .AND. (DDD .LT. 171)) .OR. 
      &    ((DDD .GE. 265) .AND. (DDD .LT. 354))) THEN
-C      Equinox     
+!      Equinox     
        CALL TPCAS(MLTRAD,PF107,P2000A,
      &             XN2DEI,DN2DEI,P2DEI,XN2NEI,DN2NEI,P2NEI,TP200A)
        CALL TPCAS(MLTRAD,PF107,P1400A,
@@ -2349,7 +2349,7 @@ C      Equinox
      &             XN5DEI,DN5DEI,P5DEI,XN5NEI,DN5NEI,P5NEI,TP550A)
        CALL TPCAS(MLTRAD,PF107,P350A,
      &             XN3DEI,DN3DEI,P3DEI,XN3NEI,DN3NEI,P3NEI,TP350A)
-C       Solstice     
+!       Solstice     
        CALL TPCAS(MLTRAD,PF107,P2000B,
      &             XN2DSI,DN2DSI,P2DSI,XN2NSI,DN2NSI,P2NSI,TP200B)
        CALL TPCAS(MLTRAD,PF107,P1400B,
@@ -2363,7 +2363,7 @@ C       Solstice
       END IF
       IF (((DDD .GE. 171) .AND. (DDD .LT. 265)) .OR. 
      &    ((DDD .GE. 354) .OR. (DDD .LT. 79)))  THEN
-C       Solstice     
+!       Solstice     
        CALL TPCAS(MLTRAD,PF107,P2000A,
      &             XN2DSI,DN2DSI,P2DSI,XN2NSI,DN2NSI,P2NSI,TP200A)
        CALL TPCAS(MLTRAD,PF107,P1400A,
@@ -2374,7 +2374,7 @@ C       Solstice
      &             XN5DSI,DN5DSI,P5DSI,XN5NSI,DN5NSI,P5NSI,TP550A)
        CALL TPCAS(MLTRAD,PF107,P350A,
      &             XN3DSI,DN3DSI,P3DSI,XN3NSI,DN3NSI,P3NSI,TP350A)  
-C      Equinox     
+!      Equinox     
        CALL TPCAS(MLTRAD,PF107,P2000B,
      &             XN2DEI,DN2DEI,P2DEI,XN2NEI,DN2NEI,P2NEI,TP200B)
        CALL TPCAS(MLTRAD,PF107,P1400B,
@@ -2388,16 +2388,16 @@ C      Equinox
       END IF 
       RETURN
       END
-c
-c
+!
+!
       SUBROUTINE TEBA(DIPL,SLT,NS,TE) 
-C CALCULATES ELECTRON TEMPERATURES TE(1) TO TE(4) AT ALTITUDES
-C 300, 400, 1400 AND 3000 KM FOR DIP-LATITUDE DIPL/DEG AND 
-C LOCAL SOLAR TIME SLT/H USING THE BRACE-THEIS-MODELS (J. ATMOS.
-C TERR. PHYS. 43, 1317, 1981); NS IS SEASON IN NORTHERN
-C HEMISOHERE: IS=1 SPRING, IS=2 SUMMER ....
-C ALSO CALCULATED ARE THE TEMPERATURES AT 400 KM ALTITUDE FOR
-C MIDNIGHT (TE(5)) AND NOON (TE(6)).   
+! CALCULATES ELECTRON TEMPERATURES TE(1) TO TE(4) AT ALTITUDES
+! 300, 400, 1400 AND 3000 KM FOR DIP-LATITUDE DIPL/DEG AND 
+! LOCAL SOLAR TIME SLT/H USING THE BRACE-THEIS-MODELS (J. ATMOS.
+! TERR. PHYS. 43, 1317, 1981); NS IS SEASON IN NORTHERN
+! HEMISOHERE: IS=1 SPRING, IS=2 SUMMER ....
+! ALSO CALCULATED ARE THE TEMPERATURES AT 400 KM ALTITUDE FOR
+! MIDNIGHT (TE(5)) AND NOON (TE(6)).   
       DIMENSION C(4,2,81),A(82),TE(6)
       COMMON    /CONST/UMR,PI      /const1/humr,dumr
       DATA (C(1,1,J),J=1,81)/                      
@@ -2538,7 +2538,7 @@ C MIDNIGHT (TE(5)) AND NOON (TE(6)).
            TE(4)=10.**STE
         ENDIF
 
-C---------- TEMPERATURE AT 400KM AT MIDNIGHT AND NOON
+!---------- TEMPERATURE AT 400KM AT MIDNIGHT AND NOON
       DO 4 J=1,2      
         STE=0.          
         AZ=humr*(J-1)*12.                           
@@ -2548,11 +2548,11 @@ C---------- TEMPERATURE AT 400KM AT MIDNIGHT AND NOON
 4       TE(J+4)=10.**STE                             
       RETURN          
       END             
-C
-C
+!
+!
       SUBROUTINE SPHARM(C,L,M,COLAT,AZ)            
-C CALCULATES THE COEFFICIENTS OF THE SPHERICAL HARMONIC                         
-C EXPANSION THAT WAS USED FOR THE BRACE-THEIS-MODELS.                           
+! CALCULATES THE COEFFICIENTS OF THE SPHERICAL HARMONIC                         
+! EXPANSION THAT WAS USED FOR THE BRACE-THEIS-MODELS.                           
       DIMENSION C(82)                              
       C(1)=1.         
       K=2             
@@ -2583,18 +2583,18 @@ C EXPANSION THAT WAS USED FOR THE BRACE-THEIS-MODELS.
 20    CONTINUE        
       RETURN          
       END             
-C
-C
+!
+!
       REAL FUNCTION ELTE(H)
-c----------------------------------------------------------------
-C ELECTRON TEMPERATURE PROFILE BASED ON THE TEMPERATURES AT 7 FIXED
-C HEIGHTS (AH(7)) AND THE TEMPERATURE GRADIENTS BETWEEN THESE THESE 
-C HEIGHTS (ST(6)) GIVEN IN THE COMMON BLOCK. ATE1 IS THE TEMPERATURE
-C AT THE STARTING HEIGHT 120 KM. D(5) DEFINE THE TRANSITION SPAN FROM
-C ONE CONSTANT GRADIENT REGION TO THE NEXT.
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+! ELECTRON TEMPERATURE PROFILE BASED ON THE TEMPERATURES AT 7 FIXED
+! HEIGHTS (AH(7)) AND THE TEMPERATURE GRADIENTS BETWEEN THESE THESE 
+! HEIGHTS (ST(6)) GIVEN IN THE COMMON BLOCK. ATE1 IS THE TEMPERATURE
+! AT THE STARTING HEIGHT 120 KM. D(5) DEFINE THE TRANSITION SPAN FROM
+! ONE CONSTANT GRADIENT REGION TO THE NEXT.
+!----------------------------------------------------------------
       COMMON /BLOTE/AH(7),ATE1,ST(6),D(5)
-C
+!
       SUM=ATE1+ST(1)*(H-AH(1))                     
       DO 1 I=1,5
         aa = eptr(h    ,d(i),ah(i+1))
@@ -2603,12 +2603,12 @@ C
       ELTE=SUM        
       RETURN          
       END             
-C
-C
+!
+!
       FUNCTION TEDE(H,DEN,COV)                     
-C ELECTRON TEMEPERATURE MODEL AFTER BRACE,THEIS .  
-C FOR NEG. COV THE MEAN COV-INDEX (3 SOLAR ROT.) IS EXPECTED.                   
-C DEN IS THE ELECTRON DENSITY IN M-3.              
+! ELECTRON TEMEPERATURE MODEL AFTER BRACE,THEIS .  
+! FOR NEG. COV THE MEAN COV-INDEX (3 SOLAR ROT.) IS EXPECTED.                   
+! DEN IS THE ELECTRON DENSITY IN M-3.              
       Y=1051.+(17.01*H-2746.)*                     
      &EXP(-5.122E-4*H+(6.094E-12-3.353E-14*H)*DEN) 
       ACOV=ABS(COV)   
@@ -2618,18 +2618,18 @@ C DEN IS THE ELECTRON DENSITY IN M-3.
       TEDE=Y*YC       
       RETURN          
       END             
-C
-C                     
-C*************************************************************                  
-C**************** ION TEMPERATURE ****************************
-C*************************************************************                  
-C
-C
+!
+!                     
+!*************************************************************                  
+!**************** ION TEMPERATURE ****************************
+!*************************************************************                  
+!
+!
       REAL FUNCTION TI(H)
-c----------------------------------------------------------------
-C ION TEMPERATURE FOR HEIGHTS NOT GREATER 1000 KM AND NOT LESS HS               
-C EXPLANATION SEE FUNCTION RPID.                   
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+! ION TEMPERATURE FOR HEIGHTS NOT GREATER 1000 KM AND NOT LESS HS               
+! EXPLANATION SEE FUNCTION RPID.                   
+!----------------------------------------------------------------
       REAL              MM
       COMMON  /BLOCK8/  HS,TNHS,XSM(4),MM(5),G(4),M
 
@@ -2641,22 +2641,22 @@ c----------------------------------------------------------------
       TI=SUM          
       RETURN          
       END             
-C
-C                     
-C*************************************************************                  
-C************* ION RELATIVE PRECENTAGE DENSITY *****************                
-C*************************************************************                  
-C
-C
+!
+!                     
+!*************************************************************                  
+!************* ION RELATIVE PRECENTAGE DENSITY *****************                
+!*************************************************************                  
+!
+!
       REAL FUNCTION RPID (H, H0, N0, M, ST, ID, XS)
-c------------------------------------------------------------------
-C D.BILITZA,1977,THIS ANALYTIC FUNCTION IS USED TO REPRESENT THE                
-C RELATIVE PRECENTAGE DENSITY OF ATOMAR AND MOLECULAR OXYGEN IONS.              
-C THE M+1 HEIGHT GRADIENTS ST(M+1) ARE CONNECTED WITH EPSTEIN-                  
-C STEP-FUNCTIONS AT THE STEP HEIGHTS XS(M) WITH TRANSITION                      
-C THICKNESSES ID(M). RPID(H0,H0,N0,....)=N0.       
-C ARGMAX is the highest allowed argument for EXP in your system.
-c------------------------------------------------------------------
+!------------------------------------------------------------------
+! D.BILITZA,1977,THIS ANALYTIC FUNCTION IS USED TO REPRESENT THE                
+! RELATIVE PRECENTAGE DENSITY OF ATOMAR AND MOLECULAR OXYGEN IONS.              
+! THE M+1 HEIGHT GRADIENTS ST(M+1) ARE CONNECTED WITH EPSTEIN-                  
+! STEP-FUNCTIONS AT THE STEP HEIGHTS XS(M) WITH TRANSITION                      
+! THICKNESSES ID(M). RPID(H0,H0,N0,....)=N0.       
+! ARGMAX is the highest allowed argument for EXP in your system.
+!------------------------------------------------------------------
       REAL              N0         
       DIMENSION         ID(4), ST(5), XS(4)                
       COMMON  /ARGEXP/  ARGMAX
@@ -2677,14 +2677,14 @@ c------------------------------------------------------------------
       RPID= n0 * SM        
       RETURN          
       END             
-C
-c
+!
+!
       SUBROUTINE RDHHE (H,HB,RDOH,RDO2H,RNO,PEHE,RDH,RDHE)                      
-C BILITZA,FEB.82,H+ AND HE+ RELATIVE PERECENTAGE DENSITY BELOW                  
-C 1000 KM. THE O+ AND O2+ REL. PER. DENSITIES SHOULD BE GIVEN                   
-C (RDOH,RDO2H). HB IS THE ALTITUDE OF MAXIMAL O+ DENSITY. PEHE                  
-C IS THE PRECENTAGE OF HE+ IONS COMPARED TO ALL LIGHT IONS.                     
-C RNO IS THE RATIO OF NO+ TO O2+DENSITY AT H=HB.   
+! BILITZA,FEB.82,H+ AND HE+ RELATIVE PERECENTAGE DENSITY BELOW                  
+! 1000 KM. THE O+ AND O2+ REL. PER. DENSITIES SHOULD BE GIVEN                   
+! (RDOH,RDO2H). HB IS THE ALTITUDE OF MAXIMAL O+ DENSITY. PEHE                  
+! IS THE PRECENTAGE OF HE+ IONS COMPARED TO ALL LIGHT IONS.                     
+! RNO IS THE RATIO OF NO+ TO O2+DENSITY AT H=HB.   
       RDHE=0.0        
       RDH=0.0         
       IF(H.LE.HB) GOTO 100                         
@@ -2693,23 +2693,23 @@ C RNO IS THE RATIO OF NO+ TO O2+DENSITY AT H=HB.
       RDHE=REST*PEHE/100.                          
 100   RETURN          
       END             
-C
-C
+!
+!
       REAL FUNCTION RDNO(H,HB,RDO2H,RDOH,RNO)      
-C D.BILITZA, 1978. NO+ RELATIVE PERCENTAGE DENSITY ABOVE 100KM.                 
-C FOR MORE INFORMATION SEE SUBROUTINE RDHHE.       
+! D.BILITZA, 1978. NO+ RELATIVE PERCENTAGE DENSITY ABOVE 100KM.                 
+! FOR MORE INFORMATION SEE SUBROUTINE RDHHE.       
       IF (H.GT.HB) GOTO 200                        
       RDNO=100.0-RDO2H-RDOH                        
       RETURN          
 200   RDNO=RNO*RDO2H  
       RETURN          
       END
-C
-C
+!
+!
       SUBROUTINE  KOEFP1(PG1O)                     
-C THIEMANN,1979,COEFFICIENTS PG1O FOR CALCULATING  O+ PROFILES                  
-C BELOW THE F2-MAXIMUM. CHOSEN TO APPROACH DANILOV-                             
-C SEMENOV'S COMPILATION.                           
+! THIEMANN,1979,COEFFICIENTS PG1O FOR CALCULATING  O+ PROFILES                  
+! BELOW THE F2-MAXIMUM. CHOSEN TO APPROACH DANILOV-                             
+! SEMENOV'S COMPILATION.                           
       DIMENSION PG1O(80), FELD (80)  
       DATA FELD/-11.0,-11.0,4.0,-11.0,0.08018,0.13027,0.04216,     
      &0.25,-0.00686,0.00999,5.113,0.1 ,170.0,180.0,0.1175,0.15,    
@@ -2724,11 +2724,11 @@ C SEMENOV'S COMPILATION.
 10    	PG1O(I)=FELD(I)                              
       RETURN          
       END             
-C
-C
+!
+!
       SUBROUTINE KOEFP2(PG2O)                      
-C THIEMANN,1979,COEFFICIENTS FOR CALCULATION OF O+ PROFILES                     
-C ABOVE THE F2-MAXIMUM (DUMBS,SPENNER:AEROS-COMPILATION)                        
+! THIEMANN,1979,COEFFICIENTS FOR CALCULATION OF O+ PROFILES                     
+! ABOVE THE F2-MAXIMUM (DUMBS,SPENNER:AEROS-COMPILATION)                        
       DIMENSION PG2O(32), FELD(32)   
       DATA FELD/1.0,-11.0,-11.0,1.0,695.0,-.000781,-.00264,                             
      &2177.0,1.0,-11.0,-11.0,2.0,570.0,-.002,-.0052,1040.0,    
@@ -2738,11 +2738,11 @@ C ABOVE THE F2-MAXIMUM (DUMBS,SPENNER:AEROS-COMPILATION)
 10    	PG2O(I)=FELD(I)                              
       RETURN          
       END             
-C
-C
+!
+!
       SUBROUTINE  KOEFP3(PG3O)                     
-C THIEMANN,1979,COEFFICIENTS FOR CALCULATING O2+ PROFILES.                      
-C CHOSEN AS TO APPROACH DANILOV-SEMENOV'S COMPILATION.                          
+! THIEMANN,1979,COEFFICIENTS FOR CALCULATING O2+ PROFILES.                      
+! CHOSEN AS TO APPROACH DANILOV-SEMENOV'S COMPILATION.                          
       DIMENSION PG3O(80), FELD(80)   
       DATA FELD/-11.0,1.0,2.0,-11.0,160.0,31.0,130.0,-10.0,                           
      &198.0,0.0,0.05922,-0.07983,-0.00397,0.00085,-0.00313,            
@@ -2758,13 +2758,13 @@ C CHOSEN AS TO APPROACH DANILOV-SEMENOV'S COMPILATION.
 10    	PG3O(I)=FELD(I)                              
       RETURN          
       END             
-C
-C
+!
+!
       SUBROUTINE SUFE (FIELD,RFE,M,FE)             
-C SELECTS THE REQUIRED ION DENSITY PARAMETER SET.
-C THE INPUT FIELD INCLUDES DIFFERENT SETS OF DIMENSION M EACH                
-C CARACTERISED BY 4 HEADER NUMBERS. RFE(4) SHOULD CONTAIN THE                   
-C CHOSEN HEADER NUMBERS.FE(M) IS THE CORRESPONDING SET.                         
+! SELECTS THE REQUIRED ION DENSITY PARAMETER SET.
+! THE INPUT FIELD INCLUDES DIFFERENT SETS OF DIMENSION M EACH                
+! CARACTERISED BY 4 HEADER NUMBERS. RFE(4) SHOULD CONTAIN THE                   
+! CHOSEN HEADER NUMBERS.FE(M) IS THE CORRESPONDING SET.                         
       DIMENSION RFE(4),FE(12),FIELD(80),EFE(4)     
       K=0             
 100   DO 101 I=1,4    
@@ -2778,28 +2778,28 @@ C CHOSEN HEADER NUMBERS.FE(M) IS THE CORRESPONDING SET.
 120   CONTINUE        
       RETURN          
       END             
-C
-C
+!
+!
         subroutine iondani(id,ismo,hx,zd,fd,fs,dion)
-c-------------------------------------------------------
-c       id      day of month
-c       ismo    seasonal month (Northern Hemisphere January 
-c                   is ismo=1 and so is Southern H. July)
-c       hx      altitude in km
-c       zd      solar zenith angle in degrees
-c       fd      latitude in degrees
-c       fs      10.7cm solar radio flux (12-month running mean)
-c       dion(1)   O+  relative density in percent
-c       dion(2)   H+  relative density in percent
-c       dion(3)   N+  relative density in percent
-c       dion(4)   He+ relative density in percent
-c       dion(5)   NO+ relative density in percent
-c       dion(6)   O2+ relative density in percent
-c       dion(7)   Cluster+ relative density in percent
-c
-c Uses ionco2 (DS-95) for the molecular ions and ionco1 (DY-85)
-c for the atomic ions.
-c-------------------------------------------------------
+!-------------------------------------------------------
+!       id      day of month
+!       ismo    seasonal month (Northern Hemisphere January 
+!                   is ismo=1 and so is Southern H. July)
+!       hx      altitude in km
+!       zd      solar zenith angle in degrees
+!       fd      latitude in degrees
+!       fs      10.7cm solar radio flux (12-month running mean)
+!       dion(1)   O+  relative density in percent
+!       dion(2)   H+  relative density in percent
+!       dion(3)   N+  relative density in percent
+!       dion(4)   He+ relative density in percent
+!       dion(5)   NO+ relative density in percent
+!       dion(6)   O2+ relative density in percent
+!       dion(7)   Cluster+ relative density in percent
+!
+! Uses ionco2 (DS-95) for the molecular ions and ionco1 (DY-85)
+! for the atomic ions.
+!-------------------------------------------------------
         dimension       dion(7)
         common  /const/umr,pi
 
@@ -2826,34 +2826,34 @@ c-------------------------------------------------------
 
         return
         end
-c
-c
+!
+!
         subroutine ionco1(h,zd,fd,fs,t,cn)
-c---------------------------------------------------------------
-c ion composition model
-c   A.D. Danilov and A.P. Yaichnikov, A New Model of the Ion
-c   Composition at 75 to 1000 km for IRI, Adv. Space Res. 5, #7,
-c   75-79, 107-108, 1985
-c
-c       h       altitude in km
-c       zd      solar zenith angle in degrees
-c       fd      latitude in degrees (same result for fd and -fd)
-c       fs      10.7cm solar radio flux
-c       t       seasonal decimal month (Northern Hemisphere January 
-c                   15 is t=1.5 and so is Southern Hemisphere July 15)
-c       cn(1)   O+  relative density in percent
-c       cn(2)   H+  relative density in percent
-c       cn(3)   N+  relative density in percent
-c       cn(4)   He+ relative density in percent
-c Please note: molecular ions are now computed in IONCO2
-c       [cn(5)   NO+ relative density in percent
-c       [cn(6)   O2+ relative density in percent
-c       [cn(7)   cluster ions  relative density in percent
-c---------------------------------------------------------------
-c
-c        dimension       cn(7),cm(7),hm(7),alh(7),all(7),beth(7),
-c     &                  betl(7),p(5,6,7),var(6),po(5,6),ph(5,6),
-c     &                  pn(5,6),phe(5,6),pno(5,6),po2(5,6),pcl(5,6)
+!---------------------------------------------------------------
+! ion composition model
+!   A.D. Danilov and A.P. Yaichnikov, A New Model of the Ion
+!   Composition at 75 to 1000 km for IRI, Adv. Space Res. 5, #7,
+!   75-79, 107-108, 1985
+!
+!       h       altitude in km
+!       zd      solar zenith angle in degrees
+!       fd      latitude in degrees (same result for fd and -fd)
+!       fs      10.7cm solar radio flux
+!       t       seasonal decimal month (Northern Hemisphere January 
+!                   15 is t=1.5 and so is Southern Hemisphere July 15)
+!       cn(1)   O+  relative density in percent
+!       cn(2)   H+  relative density in percent
+!       cn(3)   N+  relative density in percent
+!       cn(4)   He+ relative density in percent
+! Please note: molecular ions are now computed in IONCO2
+!       [cn(5)   NO+ relative density in percent
+!       [cn(6)   O2+ relative density in percent
+!       [cn(7)   cluster ions  relative density in percent
+!---------------------------------------------------------------
+!
+!        dimension       cn(7),cm(7),hm(7),alh(7),all(7),beth(7),
+!     &                  betl(7),p(5,6,7),var(6),po(5,6),ph(5,6),
+!     &                  pn(5,6),phe(5,6),pno(5,6),po2(5,6),pcl(5,6)
         dimension       cn(4),cm(4),hm(4),alh(4),all(4),beth(4),
      &                  betl(4),p(5,6,4),var(6),po(5,6),ph(5,6),
      &                  pn(5,6),phe(5,6)
@@ -2871,14 +2871,14 @@ c     &                  pn(5,6),phe(5,6),pno(5,6),po2(5,6),pcl(5,6)
      &          4*0.,-1.17E-5,4.88E-3,-1.31E-3,-7.03E-4,0.,-2.38E-3/
         data phe/-8.95E-1,6.1,5.39,0.,8.01,4*0.,1200.,4*0.,-1.04E-5,
      &          1.9E-3,9.53E-4,1.06E-3,0.,-3.44E-3,10*0./ 
-c       data pno/-22.4,17.7,-13.4,-4.88,62.3,32.7,0.,19.8,2.07,115.,
-c    &          5*0.,3.94E-3,0.,2.48E-3,2.15E-4,6.67E-3,5*0.,
-c    &          -8.4E-3,0.,-3.64E-3,2.E-3,-2.59E-2/
-c       data po2/8.,-12.2,9.9,5.8,53.4,-25.2,0.,-28.5,-6.72,120.,
-c    &          5*0.,-1.4E-2,0.,-9.3E-3,3.3E-3,2.8E-2,5*0.,4.25E-3,
-c    &          0.,-6.04E-3,3.85E-3,-3.64E-2/
-c       data pcl/4*0.,100.,4*0.,75.,10*0.,4*0.,-9.04E-3,-7.28E-3,
-c    &          2*0.,3.46E-3,-2.11E-2/
+!       data pno/-22.4,17.7,-13.4,-4.88,62.3,32.7,0.,19.8,2.07,115.,
+!    &          5*0.,3.94E-3,0.,2.48E-3,2.15E-4,6.67E-3,5*0.,
+!    &          -8.4E-3,0.,-3.64E-3,2.E-3,-2.59E-2/
+!       data po2/8.,-12.2,9.9,5.8,53.4,-25.2,0.,-28.5,-6.72,120.,
+!    &          5*0.,-1.4E-2,0.,-9.3E-3,3.3E-3,2.8E-2,5*0.,4.25E-3,
+!    &          0.,-6.04E-3,3.85E-3,-3.64E-2/
+!       data pcl/4*0.,100.,4*0.,75.,10*0.,4*0.,-9.04E-3,-7.28E-3,
+!    &          2*0.,3.46E-3,-2.11E-2/
 
         z=zd*umr
         f=fd*umr
@@ -2889,13 +2889,13 @@ c    &          2*0.,3.46E-3,-2.11E-2/
                 p(i,j,2)=ph(i,j)
                 p(i,j,3)=pn(i,j)
                 p(i,j,4)=phe(i,j)
-c               p(i,j,5)=pno(i,j)
-c               p(i,j,6)=po2(i,j)
-c               p(i,j,7)=pcl(i,j)
+!               p(i,j,5)=pno(i,j)
+!               p(i,j,6)=po2(i,j)
+!               p(i,j,7)=pcl(i,j)
 8       continue
 
         s=0.
-c       do 5 i=1,7
+!       do 5 i=1,7
         do 5 i=1,4
           do 7 j=1,6
                 var(j) = p(1,j,i)*cos(z) + p(2,j,i)*cos(f) +
@@ -2924,13 +2924,13 @@ c       do 5 i=1,7
           if(cn(i).GT.cm(i)) cn(i)=cm(i)
           s=s+cn(i)
 5       continue
-c       do 6 i=1,7
+!       do 6 i=1,7
         do 6 i=1,4
 6               cn(i)=cn(i)/s*100.
         return
         end
-C
-C
+!
+!
       Subroutine ionco2(hei,xhi,it,F,R1,R2,R3,R4)
 *----------------------------------------------------------------
 *     INPUT:
@@ -3299,10 +3299,10 @@ C
         R4=ANINT(R4)
  300   continue
         end
-c
-c
+!
+!
       Subroutine aprok(j1m,j2m,h1,h2,R1m,R2m,rk1m,rk2m,hei,xhi,R1,R2)
-c----------------------------------------------------------------- 
+!----------------------------------------------------------------- 
       dimension   zm(7),j1m(7),j2m(7),h1(13,7),h2(13,7),R1m(13,7),
      *            R2m(13,7),rk1m(13,7),rk2m(13,7)
       data        zm/20,40,60,70,80,85,90/
@@ -3355,64 +3355,64 @@ c-----------------------------------------------------------------
           R2=R2+(R12-R2)*rk
         endif
        end
-c
-c
+!
+!
 	SUBROUTINE CALION(INVDIP,MLT,ALT,DDD,F107,NO,NH,NHE,NN)
-c	SUBROUTINE CALION(CRD,INVDIP,FL,DIMO,B0,
-c     &                    DIPL,MLT,ALT,DDD,F107,NO,NH,NHE,NN)
-C----------------------------------------------------------------------
-C Version 1.0 (released 20.12.2002)
-C CALION calculates relative density of O+, H+, He+ and N+  in the outer
-C ionosphere with regard to solar activity (F107 index).
-C CALION uses subroutines IONLOW and IONHIGH.
-C Linearly interpolates for solar activity.
-Cc Inputs: CRD - 0 .. INVDIP
-Cc               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
-C         INVDIP - "mix" coordinate of the dip latitude and of
-C                    the invariant latitude (can be computed with INVDPC)
-C                    positive northward, in deg, range <-90.0;90.0>
-Cc         FL, DIMO, B0 - McIlwain L parameter, dipole moment in
-Cc                        Gauss, magnetic field strength in Gauss -
-Cc                        parameters needed for invariant latitude
-Cc                        calculation
-Cc         DIPL - dip latitude
-Cc                positive northward, in deg, range <-90.0;90.0>
-C         MLT - magnetic local time (central dipole)
-C               in hours, range <0;24)
-C         ALT - altitude above the Earth's surface;
-C               in km, range <350;2000>
-C         DDD - day of year; range <0;365>
-C         F107 - F107 index
-C Output: NO,NH,NHE,NN - relative density of O+, H+, He+, and N+
-C Versions:  1.0 FORTRAN
-C
-C REFERENCES:
-C   Triskova, L., Truhlik, V., Smilauer, J. An empirical model of ion
-C      composition in the outer ionosphere. Adv. Space Res. 31 (3), 
-C      653–663, 2003.
-C   Truhlik, V., Triskova, L., Smilauer, J. New advances in empirical
-C      modeling of ion composition in the outer ionosphere. Adv. Space
-C      Res. 33, 844–849, 2004.
-C
-C Author of the code:
-C         Vladimir Truhlik
-C         Institute of Atm. Phys.
-C         Bocni II.
-C         141 31 Praha 4, Sporilov
-C         Czech Republic
-C         e-mail: vtr@ufa.cas.cz
-C         tel/fax: +420 267103058, +420 728073539 / +420 272 762528
-C----------------------------------------------------------------------
-c      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,F107
-c	  INTEGER CRD,DDD,ION
+!	SUBROUTINE CALION(CRD,INVDIP,FL,DIMO,B0,
+!     &                    DIPL,MLT,ALT,DDD,F107,NO,NH,NHE,NN)
+!----------------------------------------------------------------------
+! Version 1.0 (released 20.12.2002)
+! CALION calculates relative density of O+, H+, He+ and N+  in the outer
+! ionosphere with regard to solar activity (F107 index).
+! CALION uses subroutines IONLOW and IONHIGH.
+! Linearly interpolates for solar activity.
+!c Inputs: CRD - 0 .. INVDIP
+!c               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
+!         INVDIP - "mix" coordinate of the dip latitude and of
+!                    the invariant latitude (can be computed with INVDPC)
+!                    positive northward, in deg, range <-90.0;90.0>
+!c         FL, DIMO, B0 - McIlwain L parameter, dipole moment in
+!c                        Gauss, magnetic field strength in Gauss -
+!c                        parameters needed for invariant latitude
+!c                        calculation
+!c         DIPL - dip latitude
+!c                positive northward, in deg, range <-90.0;90.0>
+!         MLT - magnetic local time (central dipole)
+!               in hours, range <0;24)
+!         ALT - altitude above the Earth's surface;
+!               in km, range <350;2000>
+!         DDD - day of year; range <0;365>
+!         F107 - F107 index
+! Output: NO,NH,NHE,NN - relative density of O+, H+, He+, and N+
+! Versions:  1.0 FORTRAN
+!
+! REFERENCES:
+!   Triskova, L., Truhlik, V., Smilauer, J. An empirical model of ion
+!      composition in the outer ionosphere. Adv. Space Res. 31 (3), 
+!      653–663, 2003.
+!   Truhlik, V., Triskova, L., Smilauer, J. New advances in empirical
+!      modeling of ion composition in the outer ionosphere. Adv. Space
+!      Res. 33, 844–849, 2004.
+!
+! Author of the code:
+!         Vladimir Truhlik
+!         Institute of Atm. Phys.
+!         Bocni II.
+!         141 31 Praha 4, Sporilov
+!         Czech Republic
+!         e-mail: vtr@ufa.cas.cz
+!         tel/fax: +420 267103058, +420 728073539 / +420 272 762528
+!----------------------------------------------------------------------
+!      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,F107
+!	  INTEGER CRD,DDD,ION
       REAL INVDIP,MLT,ALT,F107
 	  INTEGER DDD,ION
       REAL NO,NH,NHE,NN,NOH,NHH,NHEH,NNH,NOL,NHL,NHEL,NNL,NTOT
       DIMENSION  DOL(3,3,49),DHL(3,3,49),DHEL(3,3,49),DNL(3,3,49)
       DIMENSION  DOH(4,3,49),DHH(4,3,49),DHEH(4,3,49),DNH(4,3,49)
-C/////////////////////coefficients high solar activity////////////////////////
-C//////////////////////////////////O+/////////////////////////////////////////
-C     550km equinox
+!/////////////////////coefficients high solar activity////////////////////////
+!//////////////////////////////////O+/////////////////////////////////////////
+!     550km equinox
       DATA (DOH(1,1,J),J=1,49)/-1.2838E-002, 3.3892E-009,-4.9527E-003,
      &                        9.6584E-009,-2.8249E-004, 9.2209E-009,
      &                       -1.5708E-003,-1.5997E-003,-1.7077E-010,
@@ -3430,7 +3430,7 @@ C     550km equinox
      &                       -1.4022E-005,-1.1307E-004, 1.6024E-010,
      &                        2.7979E-004, 6.1773E-011,-2.7536E-005,
      &                        3.7412E-005/
-C     550km June solstice
+!     550km June solstice
       DATA (DOH(1,2,J),J=1,49)/-1.3612E-002,-5.5550E-003,-8.8001E-003,
      &                       -6.7878E-003,-2.5424E-003,-6.6143E-004,
      &                       -3.0189E-003,-5.1701E-004,-3.4954E-004,
@@ -3448,7 +3448,7 @@ C     550km June solstice
      &                        8.9837E-007, 2.0305E-005, 1.3643E-005,
      &                        1.1488E-004, 4.8798E-005,-1.7122E-006,
      &                        1.3591E-004/
-C     900km equinox
+!     900km equinox
       DATA (DOH(2,1,J),J=1,49)/-1.1873E-001,-7.9543E-008, 8.8754E-002,
      &                        1.2749E-007, 3.7834E-002,-3.7071E-008,
      &                       -3.3659E-002,-1.3753E-001,-6.7705E-008,
@@ -3466,7 +3466,7 @@ C     900km equinox
      &                       -2.1361E-003,-1.7300E-003,-6.3066E-012,
      &                       -1.8190E-003,-1.1929E-009,-2.4384E-003,
      &                        4.5096E-003/
-C     900km June solstice
+!     900km June solstice
       DATA (DOH(2,2,J),J=1,49)/-1.1400E-001, 7.2284E-002, 5.9514E-002,
      &                       -9.2827E-002, 2.4670E-002, 1.8185E-002,
      &                       -5.3528E-003,-1.0798E-001, 4.9821E-002,
@@ -3484,7 +3484,7 @@ C     900km June solstice
      &                        6.4259E-004,-6.4764E-003,-1.6915E-004,
      &                       -7.3788E-003, 3.5767E-004,-3.8287E-003,
      &                       -3.2403E-003/
-C     1500km equinox
+!     1500km equinox
       DATA (DOH(3,1,J),J=1,49)/-5.0096E-001, 3.9699E-007, 5.4222E-001,
      &                       -4.2933E-007, 4.2261E-002,-1.2006E-007,
      &                       -1.3304E-001,-5.7614E-001, 1.9950E-007,
@@ -3502,7 +3502,7 @@ C     1500km equinox
      &                        1.1241E-003, 3.0503E-003, 7.4212E-010,
      &                       -9.1099E-003,-6.3420E-009,-2.4364E-003,
      &                        7.8412E-003/
-C     1500km June solstice
+!     1500km June solstice
       DATA (DOH(3,2,J),J=1,49)/-3.8369E-001, 2.8162E-001, 3.3410E-001,
      &                       -4.4591E-001, 1.2217E-001, 1.4901E-001,
      &                       -1.2365E-001,-3.3668E-001, 1.4641E-001,
@@ -3520,7 +3520,7 @@ C     1500km June solstice
      &                       -6.8627E-004,-1.6996E-002, 1.9841E-003,
      &                       -1.0077E-002,-4.0022E-004,-3.5827E-003,
      &                        1.0792E-003/
-C     2250km equinox
+!     2250km equinox
       DATA (DOH(4,1,J),J=1,49)/-7.5121E-001, 4.7106E-006, 9.8731E-001,
      &                       -1.1517E-005,-2.1953E-001, 7.7259E-006,
      &                       -7.3014E-002,-3.4116E-001,-1.3414E-006,
@@ -3538,7 +3538,7 @@ C     2250km equinox
      &                       -1.2046E-003,-1.0719E-004, 1.8530E-007,
      &                        8.5126E-003, 4.9934E-008, 7.7988E-003,
      &                        1.4431E-003/
-C     2250km June solstice
+!     2250km June solstice
       DATA (DOH(4,2,J),J=1,49)/-8.2190E-001, 3.6727E-001, 8.6943E-001,
      &                       -5.1681E-001, 4.3418E-002, 1.4628E-001,
      &                       -1.6190E-001,-4.8689E-001, 7.9939E-002,
@@ -3556,9 +3556,9 @@ C     2250km June solstice
      &                       -1.8408E-003,-1.1994E-002,-4.7379E-003,
      &                       -2.0841E-002,-2.9637E-003,-4.9867E-003,
      &                       -1.4069E-002/
-C//////////////////////////////////////////////////////////////////////
-C//////////////////////////////////H+//////////////////////////////////
-C     550km equinox
+!//////////////////////////////////////////////////////////////////////
+!//////////////////////////////////H+//////////////////////////////////
+!     550km equinox
       DATA (DHH(1,1,J),J=1,49)/-3.1678E+000, 3.6289E-007,-5.5819E-002,
      &                       -1.0303E-006,-1.1119E-001,-1.7286E-007,
      &                        2.9466E-002, 6.9927E-001,-1.0867E-007,
@@ -3576,7 +3576,7 @@ C     550km equinox
      &                        1.5597E-003,-3.7610E-003,-2.4712E-008,
      &                        4.0460E-003, 7.7021E-009,-1.4101E-003,
      &                        1.6789E-002/
-C     550km June solstice
+!     550km June solstice
       DATA (DHH(1,2,J),J=1,49)/-2.8141E+000,-4.4836E-001, 8.2760E-003,
      &                        1.9407E-001, 2.8119E-002,-2.6308E-002,
      &                       -1.5432E-002, 4.8983E-001, 8.6385E-002,
@@ -3594,7 +3594,7 @@ C     550km June solstice
      &                        1.3247E-003, 5.7483E-003, 4.0066E-003,
      &                        1.3048E-002, 1.6612E-004, 6.5345E-003,
      &                        6.1813E-003/
-C     900km equinox
+!     900km equinox
       DATA (DHH(2,1,J),J=1,49)/-1.5293E+000, 1.9563E-007,-7.1593E-001,
      &                        5.0551E-008,-1.0967E-001, 1.4302E-007,
      &                        2.3166E-001, 7.0241E-001, 6.7276E-008,
@@ -3612,7 +3612,7 @@ C     900km equinox
      &                        7.9079E-003,-7.9338E-003, 3.6623E-008,
      &                        8.5068E-004, 1.7537E-009, 2.3308E-002,
      &                       -2.1869E-002/
-C     900km June solstice
+!     900km June solstice
       DATA (DHH(2,2,J),J=1,49)/-1.3652E+000,-3.7141E-001,-6.9554E-001,
      &                        2.1456E-001, 9.1424E-002, 4.0012E-002,
      &                        9.3601E-002, 4.8116E-001, 3.2264E-002,
@@ -3630,7 +3630,7 @@ C     900km June solstice
      &                       -1.8874E-003, 1.7634E-002, 9.8946E-003,
      &                        1.8101E-002, 5.3287E-003, 3.0321E-002,
      &                        6.8488E-003/
-C     1500km equinox
+!     1500km equinox
       DATA (DHH(3,1,J),J=1,49)/-8.1841E-001, 1.3246E-007,-9.9407E-001,
      &                       -3.5826E-007,-1.1572E-001,-3.8968E-007,
      &                        1.8954E-001, 2.6643E-001,-1.2399E-008,
@@ -3648,7 +3648,7 @@ C     1500km equinox
      &                        3.8995E-003, 7.2715E-003,-2.0243E-008,
      &                        4.1793E-003,-3.2785E-009, 1.3978E-002,
      &                       -6.1225E-003/
-C     1500km June solstice
+!     1500km June solstice
       DATA (DHH(3,2,J),J=1,49)/-8.1500E-001,-3.1034E-001,-1.0382E+000,
      &                        2.2304E-001,-1.3799E-001, 6.2362E-002,
      &                        2.6902E-001, 2.6612E-001,-4.7466E-002,
@@ -3666,7 +3666,7 @@ C     1500km June solstice
      &                        1.9642E-003, 8.8836E-003, 4.2172E-003,
      &                       -1.8502E-004, 2.3092E-003, 1.8370E-003,
      &                       -3.7978E-004/
-C     2250km equinox
+!     2250km equinox
       DATA (DHH(4,1,J),J=1,49)/-6.6978E-001, 4.5698E-007,-1.2361E+000,
      &                       -1.5676E-007,-1.2804E-001,-6.0241E-007,
      &                        2.7591E-001, 4.0136E-002,-1.1570E-007,
@@ -3684,7 +3684,7 @@ C     2250km equinox
      &                        9.5343E-004,-2.2094E-003, 2.7066E-009,
      &                       -2.4215E-003,-3.1546E-009,-1.0581E-003,
      &                       -1.0098E-003/
-C     2250km June solstice
+!     2250km June solstice
       DATA (DHH(4,2,J),J=1,49)/-5.6899E-001,-2.5609E-001,-1.0606E+000,
      &                       -1.6164E-002,-1.9427E-001, 1.0428E-001,
      &                        1.9448E-001, 1.1527E-001, 1.6518E-002,
@@ -3702,9 +3702,9 @@ C     2250km June solstice
      &                       -5.3892E-004, 8.5280E-004, 1.4028E-003,
      &                        3.5032E-003,-3.7237E-004,-2.5767E-005,
      &                       -8.0710E-004/
-C//////////////////////////////////////////////////////////////////////
-C//////////////////////////////////He+/////////////////////////////////
-C     550km equinox
+!//////////////////////////////////////////////////////////////////////
+!//////////////////////////////////He+/////////////////////////////////
+!     550km equinox
       DATA (DHEH(1,1,J),J=1,49)/-3.0827E+000, 4.4643E-007,-3.4361E-001,
      &                       -4.7996E-007,-2.9473E-001, 1.5576E-007,
      &                        2.0815E-001, 4.0991E-001,-2.9466E-008,
@@ -3722,7 +3722,7 @@ C     550km equinox
      &                       -1.1729E-003,-2.9558E-003, 1.6849E-008,
      &                        1.2213E-003,-8.7021E-009,-1.4505E-002,
      &                       -5.6113E-004/
-C     550km June solstice
+!     550km June solstice
       DATA (DHEH(1,2,J),J=1,49)/-2.9760E+000,-8.6799E-001, 4.8259E-002,
      &                        4.8124E-001,-9.2323E-003,-1.7802E-001,
      &                        1.2279E-001, 1.6776E-001, 2.1054E-001,
@@ -3740,7 +3740,7 @@ C     550km June solstice
      &                        2.7256E-003, 8.6778E-003,-8.9810E-004,
      &                        1.0350E-002,-3.1749E-003, 1.6338E-002,
      &                       -2.1051E-003/
-C     900km equinox
+!     900km equinox
       DATA (DHEH(2,1,J),J=1,49)/-1.7100E+000, 5.2540E-007,-8.2280E-001,
      &                       -8.2344E-007,-4.0545E-001,-5.5031E-007,
      &                        3.3911E-001, 2.5554E-001, 8.4842E-008,
@@ -3758,7 +3758,7 @@ C     900km equinox
      &                        3.0308E-003,-8.5876E-003, 2.5667E-009,
      &                        6.5844E-003,-1.7771E-008,-6.1409E-003,
      &                       -1.0949E-002/
-C     900km June solstice
+!     900km June solstice
       DATA (DHEH(2,2,J),J=1,49)/-2.0393E+000,-8.1007E-001,-4.3286E-001,
      &                        3.0351E-001,-1.7024E-001, 4.6307E-002,
      &                       -2.4220E-003,-6.3442E-002,-1.6370E-003,
@@ -3776,7 +3776,7 @@ C     900km June solstice
      &                        2.3044E-003, 2.9926E-002, 2.6085E-003,
      &                        2.5759E-002, 3.9804E-004, 3.1126E-002,
      &                        1.0860E-002/
-C     1500km equinox
+!     1500km equinox
       DATA (DHEH(3,1,J),J=1,49)/-1.2078E+000,-8.3889E-008,-8.6323E-001,
      &                       -1.5199E-007,-4.4768E-001, 2.5090E-007,
      &                        3.5311E-001, 1.3210E-001,-4.2130E-009,
@@ -3794,7 +3794,7 @@ C     1500km equinox
      &                        6.6776E-003,-4.7692E-003, 1.1823E-008,
      &                       -8.8228E-003,-2.5359E-009,-1.1986E-002,
      &                       -5.1509E-003/
-C     1500km June solstice
+!     1500km June solstice
       DATA (DHEH(3,2,J),J=1,49)/-1.5728E+000,-6.8726E-001,-4.6811E-001,
      &                        2.4677E-002,-4.5196E-001, 1.5523E-001,
      &                        3.0631E-001, 1.4197E-001,-7.8123E-002,
@@ -3812,7 +3812,7 @@ C     1500km June solstice
      &                        1.1060E-003, 1.1001E-002, 1.2477E-003,
      &                        9.0196E-003,-5.8886E-004, 9.7300E-003,
      &                        4.9376E-003/
-C     2250km equinox
+!     2250km equinox
       DATA (DHEH(4,1,J),J=1,49)/-1.1230E+000,-2.9419E-007,-9.5822E-001,
      &                       -3.4817E-007,-3.5165E-001, 2.2927E-007,
      &                        3.3646E-001, 8.9248E-002,-1.1195E-007,
@@ -3830,7 +3830,7 @@ C     2250km equinox
      &                       -2.3766E-003, 7.2023E-004, 9.0865E-010,
      &                        3.0388E-003,-2.6828E-009, 4.6501E-004,
      &                       -7.7390E-004/
-C     2250km June solstice
+!     2250km June solstice
       DATA (DHEH(4,2,J),J=1,49)/-1.3029E+000,-4.3965E-001,-4.3540E-001,
      &                       -1.2774E-001,-5.4683E-001, 8.9815E-002,
      &                        2.4691E-001, 1.5207E-001, 4.5816E-002,
@@ -3848,9 +3848,9 @@ C     2250km June solstice
      &                       -1.1457E-003, 2.2648E-003,-8.7925E-004,
      &                        4.1493E-003,-2.3712E-004, 7.9344E-004,
      &                        1.8450E-003/
-C//////////////////////////////////////////////////////////////////////
-C///////////////////////////////////N+/////////////////////////////////
-C     550km equinox
+!//////////////////////////////////////////////////////////////////////
+!///////////////////////////////////N+/////////////////////////////////
+!     550km equinox
       DATA (DNH(1,1,J),J=1,49)/-1.6313E+000, 3.3826E-009, 2.3816E-001,
      &                        2.8373E-007,-2.0961E-002,-5.3533E-007,
      &                        8.7160E-002, 9.8248E-002, 4.4888E-008,
@@ -3868,7 +3868,7 @@ C     550km equinox
      &                        8.3802E-004, 1.2105E-003,-1.0517E-008,
      &                       -8.5131E-003, 4.5467E-009,-2.2753E-003,
      &                       -3.3013E-003/
-C     550km June solstice
+!     550km June solstice
       DATA (DNH(1,2,J),J=1,49)/-1.5950E+000, 1.2602E-001, 2.4136E-001,
      &                        1.6546E-001, 1.7991E-002,-1.3398E-002,
      &                        9.3804E-002,-7.7106E-003, 1.4206E-002,
@@ -3886,7 +3886,7 @@ C     550km June solstice
      &                       -3.0407E-005,-3.0275E-003,-1.4841E-003,
      &                       -6.7625E-003,-2.2857E-003,-1.9180E-003,
      &                       -5.1806E-003/
-C     900km equinox
+!     900km equinox
       DATA (DNH(2,1,J),J=1,49)/-1.4724E+000, 6.2234E-007, 1.9984E-001,
      &                       -6.2436E-007,-5.9609E-002, 5.3063E-008,
      &                        4.0544E-002,-2.9918E-002, 4.1071E-007,
@@ -3904,7 +3904,7 @@ C     900km equinox
      &                       -1.6795E-003,-4.7359E-004,-1.4109E-008,
      &                        1.4272E-004, 2.0978E-008,-2.9585E-003,
      &                        1.0551E-002/
-C     900km June solstice
+!     900km June solstice
       DATA (DNH(2,2,J),J=1,49)/-1.4816E+000, 2.5836E-001, 2.5713E-001,
      &                       -1.1671E-002,-1.1685E-001,-8.0473E-002,
      &                       -2.5842E-002, 1.7538E-002, 3.1480E-002,
@@ -3922,7 +3922,7 @@ C     900km June solstice
      &                        6.3735E-004,-1.2284E-002,-3.8308E-003,
      &                       -1.0159E-002,-1.7879E-003,-1.2510E-002,
      &                       -1.0009E-002/
-C     1500km equinox
+!     1500km equinox
       DATA (DNH(3,1,J),J=1,49)/-1.6315E+000, 1.1175E-007, 4.7753E-001,
      &                       -1.0014E-007,-1.0097E-001,-1.0216E-007,
      &                       -5.3935E-002,-3.3570E-001, 2.0709E-007,
@@ -3940,7 +3940,7 @@ C     1500km equinox
      &                        2.2301E-003,-2.7938E-004,-2.2648E-008,
      &                       -1.5969E-002,-6.5911E-009, 3.6104E-003,
      &                        2.9534E-003/
-C     1500km June solstice
+!     1500km June solstice
       DATA (DNH(3,2,J),J=1,49)/-1.5647E+000, 4.2744E-001, 4.7853E-001,
      &                       -2.7160E-001,-3.7019E-002, 2.1446E-002,
      &                       -1.3457E-001,-1.1104E-001, 8.7769E-002,
@@ -3958,7 +3958,7 @@ C     1500km June solstice
      &                       -1.4730E-003,-1.0845E-002,-2.5005E-003,
      &                       -8.2969E-003,-1.9660E-003,-6.3399E-003,
      &                       -5.8925E-003/
-C     2250km equinox
+!     2250km equinox
       DATA (DNH(4,1,J),J=1,49)/-1.7525E+000,-1.0714E-006, 8.6183E-001,
      &                        1.1184E-006,-2.7829E-001, 2.7162E-007,
      &                       -1.0538E-001,-1.3943E-001,-1.1095E-007,
@@ -3976,7 +3976,7 @@ C     2250km equinox
      &                       -9.0528E-004, 6.7390E-003, 1.1191E-009,
      &                        5.7927E-003, 2.2189E-009, 8.9446E-003,
      &                       -6.3752E-004/
-C     2250km June solstice
+!     2250km June solstice
       DATA (DNH(4,2,J),J=1,49)/-1.7520E+000, 3.8232E-001, 8.1527E-001,
      &                       -2.8870E-001,-1.0730E-001, 7.0220E-002,
      &                       -1.6764E-001,-2.1758E-001,-2.0171E-002,
@@ -3994,10 +3994,10 @@ C     2250km June solstice
      &                       -1.5325E-003,-4.6303E-003,-3.9437E-003,
      &                       -1.7196E-002,-2.0703E-003,-3.6631E-004,
      &                       -1.6702E-002/
-C//////////////////////////////////////////////////////////////////////
-C/////////////////coefficients low solar activity///////////////////// 
-C//////////////////////////////////O+//////////////////////////////////
-C     400km equinox
+!//////////////////////////////////////////////////////////////////////
+!/////////////////coefficients low solar activity///////////////////// 
+!//////////////////////////////////O+//////////////////////////////////
+!     400km equinox
       DATA (DOL(1,1,J),J=1,49)/-3.4295E-003, 4.8322E-010, 7.9335E-004,
      &                        1.8237E-009, 1.0320E-003,-7.3733E-010,
      &                       -5.8045E-004,-2.1541E-003,-6.5013E-010,
@@ -4015,7 +4015,7 @@ C     400km equinox
      &                        2.5195E-005,-2.7325E-005,-2.3875E-011,
      &                       -3.1418E-006, 4.6152E-011,-2.9151E-005,
      &                        3.7913E-005/
-C     400km June solstice
+!     400km June solstice
       DATA (DOL(1,2,J),J=1,49)/-7.5061E-003, 4.2214E-003, 3.2811E-003,
      &                       -4.3773E-003, 4.1127E-005, 2.7276E-003,
      &                       -4.5069E-004,-6.9573E-003, 3.2289E-003,
@@ -4033,7 +4033,7 @@ C     400km June solstice
      &                       -3.4186E-005,-3.5859E-004,-6.1472E-005,
      &                       -4.7218E-004, 7.6277E-006, 1.4752E-004,
      &                       -4.5090E-004/
-C     650km equinox
+!     650km equinox
       DATA (DOL(2,1,J),J=1,49)/-2.6245E-001, 8.4041E-007, 2.2991E-001,
      &                       -2.1060E-006,-5.9700E-002, 5.5301E-006,
      &                        2.6165E-002,-3.4817E-001, 2.5875E-007,
@@ -4051,7 +4051,7 @@ C     650km equinox
      &                       -4.9135E-004,-1.5282E-003, 5.4962E-008,
      &                       -2.0812E-003, 3.7817E-008,-4.2919E-004,
      &                        1.7766E-004/
-C     650km June solstice
+!     650km June solstice
       DATA (DOL(2,2,J),J=1,49)/-3.1262E-001, 2.1640E-001, 2.9808E-001,
      &                       -2.9615E-001, 6.4926E-002, 3.8438E-003,
      &                       -9.0777E-002,-3.8422E-001, 1.3193E-001,
@@ -4069,7 +4069,7 @@ C     650km June solstice
      &                        1.9333E-003,-1.1646E-002,-1.6945E-003,
      &                       -2.7066E-002, 1.3570E-004,-8.5273E-003,
      &                       -1.5711E-002/
-C     1000km equinox
+!     1000km equinox
       DATA (DOL(3,1,J),J=1,49)/-8.9352E-001, 2.4097E-005, 3.7286E-001,
      &                       -1.0359E-005, 1.0068E-002,-1.7035E-005,
      &                       -2.0139E-002,-1.0039E+000, 8.8331E-006,
@@ -4087,7 +4087,7 @@ C     1000km equinox
      &                        5.0974E-003,-5.1648E-004,-2.9444E-008,
      &                       -1.0738E-003,-2.7121E-007, 3.4379E-003,
      &                       -2.1828E-003/
-C     1000km June solstice
+!     1000km June solstice
       DATA (DOL(3,2,J),J=1,49)/-6.9317E-001, 3.3146E-001, 5.9247E-001,
      &                       -3.8841E-001, 1.5031E-001, 3.4648E-002,
      &                       -2.0436E-001,-7.6788E-001, 1.1303E-001,
@@ -4105,9 +4105,9 @@ C     1000km June solstice
      &                       -1.7239E-003, 1.9465E-002,-5.4019E-003,
      &                        4.8407E-002,-4.4151E-003,-1.9067E-002,
      &                        1.5001E-002/
-C//////////////////////////////////////////////////////////////////////
-C//////////////////////////////////H+//////////////////////////////////
-C     400km equinox
+!//////////////////////////////////////////////////////////////////////
+!//////////////////////////////////H+//////////////////////////////////
+!     400km equinox
       DATA (DHL(1,1,J),J=1,49)/-2.3735E+000,-4.1106E-007,-1.5043E-001,
      &                        7.1050E-008,-4.4023E-002, 5.1900E-008,
      &                        7.5167E-002, 2.6079E-001,-5.4677E-008,
@@ -4125,7 +4125,7 @@ C     400km equinox
      &                       -1.9697E-003, 4.2966E-004, 5.9770E-009,
      &                        3.7248E-003, 6.9259E-009, 3.0955E-003,
      &                        2.7742E-003/
-C     400km June solstice
+!     400km June solstice
       DATA (DHL(1,2,J),J=1,49)/-2.2303E+000,-2.7930E-001,-1.6289E-001,
      &                        8.4439E-002, 4.3059E-002,-1.0900E-002,
      &                        5.9060E-003, 3.8539E-001,-9.7745E-002,
@@ -4143,7 +4143,7 @@ C     400km June solstice
      &                        8.0312E-004, 1.3604E-002, 3.2853E-003,
      &                        8.1745E-003, 1.9033E-003, 1.6966E-002,
      &                        1.2348E-002/
-C     650km equinox
+!     650km equinox
       DATA (DHL(2,1,J),J=1,49)/-7.5599E-001,-2.3535E-007,-4.1761E-001,
      &                       -2.8901E-008, 4.8799E-002,-1.4005E-007,
      &                       -7.5257E-002, 5.0850E-001,-5.5769E-008,
@@ -4161,7 +4161,7 @@ C     650km equinox
      &                       -2.2185E-003, 2.9117E-005,-4.8547E-009,
      &                        4.4236E-003,-2.8102E-009, 9.3261E-004,
      &                        1.9538E-003/
-C     650km June solstice
+!     650km June solstice
       DATA (DHL(2,2,J),J=1,49)/-7.6906E-001,-4.2549E-001,-6.2598E-001,
      &                        2.2279E-001, 1.4493E-001, 1.0653E-001,
      &                        2.7012E-001, 3.8710E-001,-6.1640E-002,
@@ -4179,7 +4179,7 @@ C     650km June solstice
      &                        9.5170E-004, 1.7845E-002, 6.1338E-003,
      &                        1.2967E-002, 2.3311E-003, 2.9597E-002,
      &                       -2.2654E-003/
-C     1000km equinox
+!     1000km equinox
       DATA (DHL(3,1,J),J=1,49)/-3.1869E-001, 1.5090E-007,-4.0560E-001,
      &                        2.8552E-007,-4.2289E-003, 3.6878E-008,
      &                        1.9957E-001, 2.7526E-001, 4.0798E-007,
@@ -4197,7 +4197,7 @@ C     1000km equinox
      &                        3.3880E-004, 4.5247E-004, 1.0538E-007,
      &                        3.7229E-003,-8.6806E-008,-5.2132E-004,
      &                       -5.7966E-004/
-C     1000km June solstice
+!     1000km June solstice
       DATA (DHL(3,2,J),J=1,49)/-4.6737E-001,-1.2403E-001,-6.4613E-001,
      &                        1.8831E-001, 1.2419E-001,-5.9911E-002,
      &                        1.9218E-001, 2.9484E-001, 4.0311E-002,
@@ -4215,9 +4215,9 @@ C     1000km June solstice
      &                        1.9430E-003, 1.8990E-003, 6.7012E-004,
      &                       -2.2565E-003,-4.5399E-004,-1.7694E-003,
      &                       -6.3397E-004/
-C//////////////////////////////////////////////////////////////////////
-C//////////////////////////////////He+/////////////////////////////////
-C     400km equinox
+!//////////////////////////////////////////////////////////////////////
+!//////////////////////////////////He+/////////////////////////////////
+!     400km equinox
       DATA (DHEL(1,1,J),J=1,49)/-2.8533E+000,-2.1986E-007, 7.2644E-002,
      &                        2.2489E-007,-1.8677E-001,-3.9095E-007,
      &                        1.0850E-002, 2.2428E-001,-1.5216E-008,
@@ -4235,7 +4235,7 @@ C     400km equinox
      &                       -1.9158E-003, 6.3675E-003,-8.1957E-009,
      &                        7.4360E-003,-7.6241E-009, 6.5228E-003,
      &                        3.2586E-003/
-C     400km June solstice
+!     400km June solstice
       DATA (DHEL(1,2,J),J=1,49)/-3.0612E+000,-1.0562E+000, 8.8532E-002,
      &                        8.5373E-002, 8.1474E-002, 2.8747E-002,
      &                        1.3534E-001, 4.3580E-001, 4.4317E-002,
@@ -4253,7 +4253,7 @@ C     400km June solstice
      &                       -6.0267E-004, 2.5325E-002, 1.1937E-003,
      &                        2.1619E-002,-1.3459E-003, 3.7915E-002,
      &                        1.7314E-002/
-C     650km equinox
+!     650km equinox
       DATA (DHEL(2,1,J),J=1,49)/-1.6103E+000,-1.3811E-007, 1.1838E-001,
      &                        2.4209E-007,-1.2965E-001,-6.5882E-008,
      &                        1.3191E-001, 4.6161E-001,-2.5600E-007,
@@ -4271,7 +4271,7 @@ C     650km equinox
      &                        3.1289E-003, 9.4760E-003,-8.4313E-009,
      &                       -2.1643E-003,-8.3007E-009, 2.3316E-003,
      &                       -8.8253E-003/
-C     650km June solstice
+!     650km June solstice
       DATA (DHEL(2,2,J),J=1,49)/-2.2374E+000,-7.4507E-001,-1.4689E-001,
      &                       -2.5946E-002, 4.7283E-002, 1.4143E-001,
      &                        3.2299E-001, 1.9366E-001, 8.7688E-002,
@@ -4289,7 +4289,7 @@ C     650km June solstice
      &                        2.4747E-003, 1.1677E-002,-4.2526E-003,
      &                        1.4606E-002, 2.2638E-003, 2.1285E-002,
      &                        1.3963E-002/
-C     1000km equinox
+!     1000km equinox
       DATA (DHEL(3,1,J),J=1,49)/-1.3192E+000, 1.8143E-006,-2.1284E-002,
      &                       -5.7860E-006,-1.3203E-001, 1.0367E-006,
      &                        8.7882E-002, 2.5246E-001, 3.0540E-007,
@@ -4307,7 +4307,7 @@ C     1000km equinox
      &                        2.8454E-003, 1.9020E-002,-5.1153E-008,
      &                        4.4576E-003,-2.0117E-008, 8.6293E-003,
      &                       -5.5447E-003/
-C     1000km June solstice
+!     1000km June solstice
       DATA (DHEL(3,2,J),J=1,49)/-1.9424E+000,-5.8403E-001, 3.4084E-001,
      &                       -1.9084E-001,-5.4692E-002, 2.0943E-001,
      &                        6.7653E-003, 1.7048E-001, 1.9560E-001,
@@ -4325,9 +4325,9 @@ C     1000km June solstice
      &                       -3.8353E-003, 1.9446E-003,-7.4106E-003,
      &                       -3.9309E-003,-1.3632E-003,-4.7108E-003,
      &                        7.2728E-003/
-C/////////////////////////////////////////////////////////////////////
-C//////////////////////////////////N+/////////////////////////////////
-C     400km equinox
+!/////////////////////////////////////////////////////////////////////
+!//////////////////////////////////N+/////////////////////////////////
+!     400km equinox
       DATA (DNL(1,1,J),J=1,49)/-1.7368E+000,-3.0027E-008, 2.2184E-001,
      &                       -6.7089E-007,-1.0635E-001, 6.8139E-007,
      &                        5.8091E-002,-6.2121E-002, 3.1864E-007,
@@ -4345,7 +4345,7 @@ C     400km equinox
      &                        1.8677E-004, 3.9142E-003,-4.8721E-009,
      &                       -4.1931E-003, 7.9621E-009, 1.9265E-004,
      &                       -1.3332E-003/
-C     400km June solstice
+!     400km June solstice
       DATA (DNL(1,2,J),J=1,49)/-1.7418E+000, 7.0525E-002, 2.9785E-001,
      &                        1.1675E-002,-9.2159E-002,-1.2950E-001,
      &                       -5.8461E-002,-1.3966E-001, 1.5042E-002,
@@ -4363,7 +4363,7 @@ C     400km June solstice
      &                        9.3966E-004,-5.1651E-004,-3.0807E-003,
      &                       -4.4359E-003,-2.0503E-003, 8.0675E-004,
      &                        1.1912E-004/
-C     650km equinox
+!     650km equinox
       DATA (DNL(2,1,J),J=1,49)/-1.5547E+000, 6.7091E-007, 4.0622E-001,
      &                       -5.5830E-008,-1.3901E-001,-6.7244E-007,
      &                        1.4880E-001,-8.2658E-002, 2.6659E-007,
@@ -4381,7 +4381,7 @@ C     650km equinox
      &                        1.5417E-003, 3.1698E-003, 1.8012E-008,
      &                       -3.1057E-003, 1.5340E-008, 3.0302E-003,
      &                       -2.9436E-003/
-C     650km June solstice
+!     650km June solstice
       DATA (DNL(2,2,J),J=1,49)/-1.5723E+000, 4.0251E-001, 4.0235E-001,
      &                       -1.6855E-001,-1.4445E-001,-2.9990E-002,
      &                       -2.0387E-001,-1.7979E-001, 1.9726E-001,
@@ -4399,7 +4399,7 @@ C     650km June solstice
      &                        3.7033E-003,-3.0094E-002,-2.2242E-004,
      &                       -2.8816E-002,-4.4691E-003,-2.2928E-002,
      &                       -1.6669E-002/
-C     1000km equinox
+!     1000km equinox
       DATA (DNL(3,1,J),J=1,49)/-1.7382E+000,-6.0635E-007, 4.4740E-001,
      &                        4.7518E-007, 9.1015E-002, 8.6631E-007,
      &                       -4.1582E-003,-3.1542E-001,-8.6896E-007,
@@ -4417,7 +4417,7 @@ C     1000km equinox
      &                        8.6786E-003, 4.9010E-003, 3.2400E-008,
      &                       -3.8863E-003,-2.5953E-008,-2.3986E-003,
      &                       -6.9512E-003/
-C     1000km June solstice
+!     1000km June solstice
       DATA (DNL(3,2,J),J=1,49)/-1.4667E+000, 1.6300E-001, 6.4765E-001,
      &                       -1.6832E-001,-1.9603E-001, 1.3735E-001,
      &                       -2.8157E-001,-9.1417E-002,-2.4826E-002,
@@ -4435,38 +4435,38 @@ C     1000km June solstice
      &                       -1.0346E-003,-4.2392E-003,-7.3591E-003,
      &                        1.0610E-002,-5.8767E-003, 2.4544E-004,
      &                        6.0162E-003/
-C//////////////////////////////////////////////////////////////////////
-C/////////////////////////solar minimum////////////////////////////////
-c      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DOL,0,NOL)
-c      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHL,1,NHL)
-c      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHEL,2,NHEL)
-c      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DNL,3,NNL)
+!//////////////////////////////////////////////////////////////////////
+!/////////////////////////solar minimum////////////////////////////////
+!      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DOL,0,NOL)
+!      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHL,1,NHL)
+!      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHEL,2,NHEL)
+!      CALL IONLOW(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DNL,3,NNL)
       CALL IONLOW(INVDIP,MLT,ALT,DDD,DOL,0,NOL)
       CALL IONLOW(INVDIP,MLT,ALT,DDD,DHL,1,NHL)
       CALL IONLOW(INVDIP,MLT,ALT,DDD,DHEL,2,NHEL)
       CALL IONLOW(INVDIP,MLT,ALT,DDD,DNL,3,NNL)
-C     normalization
+!     normalization
       NTOT=NOL+NHL+NHEL+NNL
       NOL=NOL/NTOT
       NHL=NHL/NTOT
       NHEL=NHEL/NTOT
       NNL=NNL/NTOT
-C///////////////////////////solar maximum//////////////////////////////
-c      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DOH,0,NOH)
-c      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHH,1,NHH)
-c      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHEH,2,NHEH)
-c      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DNH,3,NNH)
+!///////////////////////////solar maximum//////////////////////////////
+!      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DOH,0,NOH)
+!      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHH,1,NHH)
+!      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DHEH,2,NHEH)
+!      CALL IONHIGH(CRD,INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,DDD,DNH,3,NNH)
       CALL IONHIGH(INVDIP,MLT,ALT,DDD,DOH,0,NOH)
       CALL IONHIGH(INVDIP,MLT,ALT,DDD,DHH,1,NHH)
       CALL IONHIGH(INVDIP,MLT,ALT,DDD,DHEH,2,NHEH)
       CALL IONHIGH(INVDIP,MLT,ALT,DDD,DNH,3,NNH)
-C     normalization
+!     normalization
       NTOT=NOH+NHH+NHEH+NNH
       NOH=NOH/NTOT
       NHH=NHH/NTOT
       NHEH=NHEH/NTOT
       NNH=NNH/NTOT
-C     interpolation (in logarithm)
+!     interpolation (in logarithm)
       IF (F107 .GT. 220) F107=220
 	IF (F107 .LT. 65) F107=65
       NO=(ALOG10(NOH)-ALOG10(NOL))/(200.0-85.0)*(F107-85.0)+ALOG10(NOL)
@@ -4474,12 +4474,12 @@ C     interpolation (in logarithm)
       NHE=(ALOG10(NHEH)-ALOG10(NHEL))/(200.0-85.0)*(F107-85.0)+
      &     ALOG10(NHEL)
       NN=(ALOG10(NNH)-ALOG10(NNL))/(200.0-85.0)*(F107-85.0)+ALOG10(NNL)
-C     percentages
+!     percentages
       NO=10**NO
       NH=10**NH
       NHE=10**NHE
       NN=10**NN
-C     last normalization
+!     last normalization
       NTOT=NO+NH+NHE+NN
       NO=NO/NTOT
       NH=NH/NTOT
@@ -4487,42 +4487,42 @@ C     last normalization
       NN=NN/NTOT
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE IONLOW(INVDIP,MLT,ALTI,DDD,D,ION,NION)
-c      SUBROUTINE IONLOW(CRD,INVDIP,FL,DIMO,B0,
-c     &                   DIPL,MLT,ALTI,DDD,D,ION,NION)
-C---------------------------------------------------------------------------
-C IONLOW calculates relative density of O+, H+, He+ or N+  in the outer
-C ionosphere for a low solar activity (F107 < 100).
-C Based on spherical harmonics approximation of relative ion density
-C (by AE-C, and AE-E) at altitudes centred on 400km, 650km, and 1000km.
-C For intermediate altitudes an interpolation is used. 
-C Recommended altitude range: 350-2000 km!!!
-C For days between seasons centred at (21.3. = 79; 21.6. = 171;
-C 23.9. 265; 21.12. = 354) relative ion density is linearly interpolated.
-Cc Inputs: CRD - 0 .. INVDIP
-Cc               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
-C         INVDIP - "mix" coordinate of the dip latitude and of
-C                    the invariant latitude; can be computed with INVDPC;
-C                    positive northward, in deg, range <-90.0;90.0>
-Cc         FL, DIMO, BO - McIlwain L parameter, dipole moment in
-Cc                        Gauss, magnetic field strength in Gauss -
-Cc                        parameters needed for invariant latitude
-Cc                        calculation
-Cc         DIPL - dip latitude
-Cc                positive northward, in deg, range <-90.0;90.0>
-C         MLT - magnetic local time (central dipole)
-C               in hours, range <0;24)
-C         ALTI - altitude above the Earth's surface;
-C               in km, range <350;2000>
-C         DDD - day of year; range <0;365>
-C         D - coefficints of spherical harmonics for a given ion
-C         ION - ion species (0...O+, 1...H+, 2...He+, 3...N+)
-C Output: NION - relative density for a given ion 
-C---------------------------------------------------------------------------
-c      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,NION
-c      INTEGER CRD,DDD,ION
+!      SUBROUTINE IONLOW(CRD,INVDIP,FL,DIMO,B0,
+!     &                   DIPL,MLT,ALTI,DDD,D,ION,NION)
+!---------------------------------------------------------------------------
+! IONLOW calculates relative density of O+, H+, He+ or N+  in the outer
+! ionosphere for a low solar activity (F107 < 100).
+! Based on spherical harmonics approximation of relative ion density
+! (by AE-C, and AE-E) at altitudes centred on 400km, 650km, and 1000km.
+! For intermediate altitudes an interpolation is used. 
+! Recommended altitude range: 350-2000 km!!!
+! For days between seasons centred at (21.3. = 79; 21.6. = 171;
+! 23.9. 265; 21.12. = 354) relative ion density is linearly interpolated.
+!c Inputs: CRD - 0 .. INVDIP
+!c               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
+!         INVDIP - "mix" coordinate of the dip latitude and of
+!                    the invariant latitude; can be computed with INVDPC;
+!                    positive northward, in deg, range <-90.0;90.0>
+!c         FL, DIMO, BO - McIlwain L parameter, dipole moment in
+!c                        Gauss, magnetic field strength in Gauss -
+!c                        parameters needed for invariant latitude
+!c                        calculation
+!c         DIPL - dip latitude
+!c                positive northward, in deg, range <-90.0;90.0>
+!         MLT - magnetic local time (central dipole)
+!               in hours, range <0;24)
+!         ALTI - altitude above the Earth's surface;
+!               in km, range <350;2000>
+!         DDD - day of year; range <0;365>
+!         D - coefficints of spherical harmonics for a given ion
+!         ION - ion species (0...O+, 1...H+, 2...He+, 3...N+)
+! Output: NION - relative density for a given ion 
+!---------------------------------------------------------------------------
+!      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,NION
+!      INTEGER CRD,DDD,ION
       REAL INVDIP,MLT,ALT,ALTI,NION
       INTEGER DDD,ION
       DIMENSION  D(3,3,49),MIRREQ(49)
@@ -4539,21 +4539,21 @@ c      INTEGER CRD,DDD,ION
      &            1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1,
      &            1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,
      &           -1, 1,-1, 1,-1, 1, 1,-1, 1, 1,-1, 1,-1, 1, 1/
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       ALT=ALTI
       IF (ALT .GT. 1000) ALT=1000.0      
-C     coefficients for mirroring
+!     coefficients for mirroring
       DO 10 I=1,49
        D(1,3,I)=D(1,2,I)*MIRREQ(I)
        D(2,3,I)=D(2,2,I)*MIRREQ(I)
 10     D(3,3,I)=D(3,2,I)*MIRREQ(I)
-c      IF (CRD .EQ. 1) THEN
-c       INVDP=INVDPC(FL,DIMO,B0,DIPL)
-c      ELSE IF	(CRD .EQ. 0) THEN
-c       INVDP=INVDIP
-c      ELSE
-c       RETURN
-c      END IF
+!      IF (CRD .EQ. 1) THEN
+!       INVDP=INVDPC(FL,DIMO,B0,DIPL)
+!      ELSE IF	(CRD .EQ. 0) THEN
+!       INVDP=INVDIP
+!      ELSE
+!       RETURN
+!      END IF
 
       INVDP=INVDIP
       RMLT=MLT*DTOR*15.0
@@ -4562,7 +4562,7 @@ c      END IF
       do i=1,49
       	c(i)=c1(i)
       	enddo
-C     21.3. - 20.6.
+!     21.3. - 20.6.
       IF ((DDD .GE. 79) .AND. (DDD .LT. 171)) THEN
        SEZA=1
        SEZB=2
@@ -4570,7 +4570,7 @@ C     21.3. - 20.6.
        DDDB=171
        DDDD=DDD
       END IF
-C     21.6. - 22.9.
+!     21.6. - 22.9.
       IF ((DDD .GE. 171) .AND. (DDD .LT. 265)) THEN
        SEZA=2
        SEZB=4
@@ -4578,7 +4578,7 @@ C     21.6. - 22.9.
        DDDB=265
        DDDD=DDD
       END IF
-C     23.9. - 20.12.
+!     23.9. - 20.12.
       IF ((DDD .GE. 265) .AND. (DDD .LT. 354)) THEN
        SEZA=4
        SEZB=3
@@ -4586,7 +4586,7 @@ C     23.9. - 20.12.
        DDDB=354
        DDDD=DDD
       END IF
-C     21.12. - 20.3.
+!     21.12. - 20.3.
       IF ((DDD .GE. 354) .OR. (DDD .LT. 79)) THEN
        SEZA=3
        SEZB=1
@@ -4601,7 +4601,7 @@ C     21.12. - 20.3.
       END IF
        SEZAI=MOD(SEZA-1,3)+1
        SEZBI=MOD(SEZB-1,3)+1
-C     400km level
+!     400km level
         N0A400=0.0
         N0B400=0.0
         DO 30 I=1,49
@@ -4610,7 +4610,7 @@ C     400km level
         N400A=N0A400
         N400B=N0B400
         N400=(N400B-N400A)/(DDDB-DDDA)*(DDDD-DDDA)+N400A
-C     650km level
+!     650km level
       N0A650=0.0
 	N0B650=0.0
 	DO 70 I=1,49
@@ -4619,7 +4619,7 @@ C     650km level
 	N650A=N0A650
 	N650B=N0B650
 	N650=(N650B-N650A)/(DDDB-DDDA)*(DDDD-DDDA)+N650A
-C     1000km level
+!     1000km level
       N0A100=0.0
       N0B100=0.0
 	DO 110 I=1,49
@@ -4629,15 +4629,15 @@ C     1000km level
 	N100B=N0B100
 	N1000=(N100B-N100A)/(DDDB-DDDA)*(DDDD-DDDA)+N100A
           
-C      IF (ALT .LT. 650) NO=(N650-N400)/250.0*(ALT-400)+N400
-C      IF (ALT .GE. 650) NO=(N1000-N650)/350.0*(ALT-650)+N650
+!      IF (ALT .LT. 650) NO=(N650-N400)/250.0*(ALT-400)+N400
+!      IF (ALT .GE. 650) NO=(N1000-N650)/350.0*(ALT-650)+N650
 
-C      NION=10**NO
+!      NION=10**NO
 
-C-02/07/09- n(O+) AND n(N+) must not increase above 650km
+!-02/07/09- n(O+) AND n(N+) must not increase above 650km
       IF (((ION .EQ. 0) .OR. (ION .EQ. 3)) .AND. (N1000 .GT. N650))
      &      N1000=N650
-C-02/07/09- n(H+) must not decrease above 650km
+!-02/07/09- n(H+) must not decrease above 650km
       IF ((ION .EQ. 1) .AND. (N1000 .LT. N650)) N1000=N650
 
       ANO(1)=N400
@@ -4669,42 +4669,42 @@ C-02/07/09- n(H+) must not decrease above 650km
       NION=10**SUM       
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE IONHIGH(INVDIP,MLT,ALTI,DDD,D,ION,NION)
-c      SUBROUTINE IONHIGH(CRD,INVDIP,FL,DIMO,B0,
-c     &                   DIPL,MLT,ALTI,DDD,D,ION,NION)
-C---------------------------------------------------------------------------
-C IONHIGH calculates relative density of O+, H+, He+ or N+  in the outer
-C ionosphere for high solar activity conditions (F107 >= 100).
-C Based on spherical harmonics approximation of relative ion density
-C (by IK24) at altitudes centred on 550km, 900km, 1500km, and 2250km.
-C For intermediate altitudes a interpolation is used. 
-C Recommended altitude range: 500-3000 km!!!
-C For days between seasons centred at (21.3. = 79; 21.6. = 171;
-C 23.9. 265; 21.12. = 354) relative ion density is linearly interpolated.
-Cc Inputs: CRD - 0 .. INVDIP
-Cc               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
-C         INVDIP - "mix" coordinate of the dip latitude and of
-C                    the invariant latitude; can be computed with INVDPC;
-C                    positive northward, in deg, range <-90.0;90.0>
-Cc         FL, DIMO, BO - McIlwain L parameter, dipole moment in
-Cc                        Gauss, magnetic field strength in Gauss -
-Cc                        parameters needed for invariant latitude
-Cc                        calculation
-Cc         DIPL - dip latitude
-Cc                positive northward, in deg, range <-90.0;90.0>
-C         MLT - magnetic local time (central dipole)
-C               in hours, range <0;24)
-C         ALTI - altitude above the Earth's surface;
-C               in km, range <500;3000>
-C         DDD - day of year; range <0;365>
-C         D - coefficints of spherical harmonics for a given ion
-C         ION - ion species (0...O+, 1...H+, 2...He+, 3...N+)
-C Output: NION - relative density for a given ion 
-C---------------------------------------------------------------------------
-c      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,NION
-c	INTEGER CRD,DDD,ION
+!      SUBROUTINE IONHIGH(CRD,INVDIP,FL,DIMO,B0,
+!     &                   DIPL,MLT,ALTI,DDD,D,ION,NION)
+!---------------------------------------------------------------------------
+! IONHIGH calculates relative density of O+, H+, He+ or N+  in the outer
+! ionosphere for high solar activity conditions (F107 >= 100).
+! Based on spherical harmonics approximation of relative ion density
+! (by IK24) at altitudes centred on 550km, 900km, 1500km, and 2250km.
+! For intermediate altitudes a interpolation is used. 
+! Recommended altitude range: 500-3000 km!!!
+! For days between seasons centred at (21.3. = 79; 21.6. = 171;
+! 23.9. 265; 21.12. = 354) relative ion density is linearly interpolated.
+!c Inputs: CRD - 0 .. INVDIP
+!c               1 .. FL, DIMO, B0, DIPL (used for calculation INVDIP inside)
+!         INVDIP - "mix" coordinate of the dip latitude and of
+!                    the invariant latitude; can be computed with INVDPC;
+!                    positive northward, in deg, range <-90.0;90.0>
+!c         FL, DIMO, BO - McIlwain L parameter, dipole moment in
+!c                        Gauss, magnetic field strength in Gauss -
+!c                        parameters needed for invariant latitude
+!c                        calculation
+!c         DIPL - dip latitude
+!c                positive northward, in deg, range <-90.0;90.0>
+!         MLT - magnetic local time (central dipole)
+!               in hours, range <0;24)
+!         ALTI - altitude above the Earth's surface;
+!               in km, range <500;3000>
+!         DDD - day of year; range <0;365>
+!         D - coefficints of spherical harmonics for a given ion
+!         ION - ion species (0...O+, 1...H+, 2...He+, 3...N+)
+! Output: NION - relative density for a given ion 
+!---------------------------------------------------------------------------
+!      REAL INVDIP,FL,DIMO,B0,DIPL,MLT,ALT,NION
+!	INTEGER CRD,DDD,ION
       REAL INVDIP,MLT,ALT,ALTI,NION
 	  INTEGER DDD,ION
       DIMENSION  D(4,3,49),MIRREQ(49)
@@ -4722,22 +4722,22 @@ c	INTEGER CRD,DDD,ION
      &            1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,-1, 1,-1, 1,-1,
      &            1,-1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1, 1,-1, 1,-1, 1,
      &           -1, 1,-1, 1,-1, 1, 1,-1, 1, 1,-1, 1,-1, 1, 1/
-C////////////////////////////////////////////////////////////////////////////////////
+!////////////////////////////////////////////////////////////////////////////////////
       ALT=ALTI
       IF (ALT .GT. 2250.0) ALT=2250.0      
-C     coefficients for mirroring
+!     coefficients for mirroring
       DO 10 I=1,49
        D(1,3,I)=D(1,2,I)*MIRREQ(I)
        D(2,3,I)=D(2,2,I)*MIRREQ(I)
        D(3,3,I)=D(3,2,I)*MIRREQ(I)
 10     D(4,3,I)=D(4,2,I)*MIRREQ(I)
-c      IF (CRD .EQ. 1) THEN
-c       INVDP=INVDPC(FL,DIMO,B0,DIPL)
-c      ELSE IF	(CRD .EQ. 0) THEN
-c       INVDP=INVDIP
-c      ELSE
-c       RETURN
-c      END IF
+!      IF (CRD .EQ. 1) THEN
+!       INVDP=INVDPC(FL,DIMO,B0,DIPL)
+!      ELSE IF	(CRD .EQ. 0) THEN
+!       INVDP=INVDIP
+!      ELSE
+!       RETURN
+!      END IF
 
       INVDP=INVDIP
       RMLT=MLT*DTOR*15.0
@@ -4746,7 +4746,7 @@ c      END IF
       do i=1,49
       	c(i)=c1(i)
       	enddo
-C     21.3. - 20.6.
+!     21.3. - 20.6.
       IF ((DDD .GE. 79) .AND. (DDD .LT. 171)) THEN
        SEZA=1
        SEZB=2
@@ -4754,7 +4754,7 @@ C     21.3. - 20.6.
        DDDB=171
        DDDD=DDD
       END IF
-C     21.6. - 22.9.
+!     21.6. - 22.9.
       IF ((DDD .GE. 171) .AND. (DDD .LT. 265)) THEN
        SEZA=2
        SEZB=4
@@ -4762,7 +4762,7 @@ C     21.6. - 22.9.
        DDDB=265
        DDDD=DDD
       END IF
-C     23.9. - 20.12.
+!     23.9. - 20.12.
       IF ((DDD .GE. 265) .AND. (DDD .LT. 354)) THEN
        SEZA=4
        SEZB=3
@@ -4770,7 +4770,7 @@ C     23.9. - 20.12.
        DDDB=354
        DDDD=DDD
       END IF
-C     21.12. - 20.3.
+!     21.12. - 20.3.
       IF ((DDD .GE. 354) .OR. (DDD .LT. 79)) THEN
        SEZA=3
        SEZB=1
@@ -4785,7 +4785,7 @@ C     21.12. - 20.3.
       END IF
        SEZAI=MOD(SEZA-1,3)+1
        SEZBI=MOD(SEZB-1,3)+1
-C     550km level
+!     550km level
         N0A550=0.0
         N0B550=0.0
         DO 30 I=1,49
@@ -4794,7 +4794,7 @@ C     550km level
         N550A=N0A550
         N550B=N0B550
         N550=(N550B-N550A)/(DDDB-DDDA)*(DDDD-DDDA)+N550A
-C     900km level
+!     900km level
       N0A900=0.0
 	N0B900=0.0
 	DO 70 I=1,49
@@ -4803,7 +4803,7 @@ C     900km level
 	N900A=N0A900
 	N900B=N0B900
 	N900=(N900B-N900A)/(DDDB-DDDA)*(DDDD-DDDA)+N900A
-C     1500km level
+!     1500km level
       N0A150=0.0
       N0B150=0.0
 	DO 110 I=1,49
@@ -4812,7 +4812,7 @@ C     1500km level
 	N150A=N0A150
 	N150B=N0B150
 	N1500=(N150B-N150A)/(DDDB-DDDA)*(DDDD-DDDA)+N150A
-C     2500km level
+!     2500km level
       N0A250=0.0
 	N0B250=0.0
        DO 150 I=1,49
@@ -4822,15 +4822,15 @@ C     2500km level
        N250B=N0B250
        N2500=(N250B-N250A)/(DDDB-DDDA)*(DDDD-DDDA)+N250A
 
-C      IF (ALT .LT. 900) NO=(N900-N550)/350.0*(ALT-550)+N550
-C      IF ((ALT .GE. 900) .AND. (ALT .LT. 1500))
-C     &  NO=(N1500-N900)/600.0*(ALT-900)+N900
-c      IF (ALT .GE. 1500) NO=(N2500-N1500)/1000.0*(ALT-1500)+N1500
+!      IF (ALT .LT. 900) NO=(N900-N550)/350.0*(ALT-550)+N550
+!      IF ((ALT .GE. 900) .AND. (ALT .LT. 1500))
+!     &  NO=(N1500-N900)/600.0*(ALT-900)+N900
+!      IF (ALT .GE. 1500) NO=(N2500-N1500)/1000.0*(ALT-1500)+N1500
 
-C     O+ AND N+ may not increase above 1500km 
+!     O+ AND N+ may not increase above 1500km 
       IF (((ION .EQ. 0) .OR. (ION .EQ. 3)) .AND. (N2500 .GT. N1500)) 
      & N2500=N1500
-C     H+ may not decrease above 1500km 
+!     H+ may not decrease above 1500km 
       IF ((ION .EQ. 1) .AND. (N2500 .LT. N1500)) N2500=N1500
                    
       ANO(1)=N550
@@ -4865,21 +4865,21 @@ C     H+ may not decrease above 1500km
       NION=10**SUM       
       RETURN
       END
-C
-C
+!
+!
       REAL FUNCTION INVDPC(FL,DIMO,B0,DIPL)
-C---------------------------------------------------------------------------
-C INPUT:	FL		McIlwain L parameter, 
-C			DIMO	dipole moment in Gauss
-C           B0      magnetic field strength in Gauss 
-C           parameters FL, DIMO and B0 are needed for invariant latitude
-C			computation; uses a highly accurate polynomial expansion
-C			DIPL	dip latitude in degree
-C                	positive northward, in deg, range <-90.0;90.0>
-C RESULT:   invdip 	a "mix" coordinate of the dip latitude (DIPL) and 
-C 					of the invariant latitude; INVDIP is positive northward 
-C					in degree and ranges from -90.0 to 90.0.
-C---------------------------------------------------------------------------
+!---------------------------------------------------------------------------
+! INPUT:	FL		McIlwain L parameter, 
+!			DIMO	dipole moment in Gauss
+!           B0      magnetic field strength in Gauss 
+!           parameters FL, DIMO and B0 are needed for invariant latitude
+!			computation; uses a highly accurate polynomial expansion
+!			DIPL	dip latitude in degree
+!                	positive northward, in deg, range <-90.0;90.0>
+! RESULT:   invdip 	a "mix" coordinate of the dip latitude (DIPL) and 
+! 					of the invariant latitude; INVDIP is positive northward 
+!					in degree and ranges from -90.0 to 90.0.
+!---------------------------------------------------------------------------
       REAL FL,DIMO,B0,DIPL,DTOR,ASA,INVL,RINVL,RDIPL,ALFA,BETA
 	  DOUBLE PRECISION B(8),A
 	  COMMON/CONST/DTOR,PI
@@ -4890,7 +4890,7 @@ C---------------------------------------------------------------------------
      &        B(6)*A**5+B(7)*A**6+B(8)*A**7)
        IF (ASA .GT. 1.0) ASA=1.0
        IF (ASA .LT. 0.0) ASA=0.0
-C      invariant latitude (absolute value)
+!      invariant latitude (absolute value)
        RINVL=ACOS(SQRT(ASA))
        INVL=RINVL/DTOR
        RDIPL=DIPL*DTOR
@@ -4899,55 +4899,55 @@ C      invariant latitude (absolute value)
        INVDPC=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
        RETURN
        END
-C
-C                     
-C*************************************************************                  
-C************* PEAK VALUES ELECTRON DENSITY ******************                  
-C*************************************************************                  
-C
-C
+!
+!                     
+!*************************************************************                  
+!************* PEAK VALUES ELECTRON DENSITY ******************                  
+!*************************************************************                  
+!
+!
       real function FOUT(XMODIP,XLATI,XLONGI,UT,FF0)
-c--------------------------------------------------------------
-C CALCULATES CRITICAL FREQUENCY FOF2/MHZ USING SUBROUTINE GAMMA1.      
-C XMODIP = MODIFIED DIP LATITUDE, XLATI = GEOG. LATITUDE, XLONGI=
-C LONGITUDE (ALL IN DEG.), MONTH = MONTH, UT =  UNIVERSAL TIME 
-C (DEC. HOURS), FF0 = ARRAY WITH RZ12-ADJUSTED CCIR/URSI COEFF.
-C D.BILITZA,JULY 85.
-c--------------------------------------------------------------
+!--------------------------------------------------------------
+! CALCULATES CRITICAL FREQUENCY FOF2/MHZ USING SUBROUTINE GAMMA1.      
+! XMODIP = MODIFIED DIP LATITUDE, XLATI = GEOG. LATITUDE, XLONGI=
+! LONGITUDE (ALL IN DEG.), MONTH = MONTH, UT =  UNIVERSAL TIME 
+! (DEC. HOURS), FF0 = ARRAY WITH RZ12-ADJUSTED CCIR/URSI COEFF.
+! D.BILITZA,JULY 85.
+!--------------------------------------------------------------
       DIMENSION FF0(988)
       INTEGER QF(9)
       DATA QF/11,11,8,4,1,0,0,0,0/
       FOUT=GAMMA1(XMODIP,XLATI,XLONGI,UT,6,QF,9,76,13,988,FF0)
       RETURN
       END
-C
-C
+!
+!
       real function XMOUT(XMODIP,XLATI,XLONGI,UT,XM0)
-c--------------------------------------------------------------
-C CALCULATES PROPAGATION FACTOR M3000 USING THE SUBROUTINE GAMMA1.
-C XMODIP = MODIFIED DIP LATITUDE, XLATI = GEOG. LATITUDE, XLONGI=
-C LONGITUDE (ALL IN DEG.), MONTH = MONTH, UT =  UNIVERSAL TIME 
-C (DEC. HOURS), XM0 = ARRAY WITH RZ12-ADJUSTED CCIR/URSI COEFF.
-C D.BILITZA,JULY 85.
-c--------------------------------------------------------------
+!--------------------------------------------------------------
+! CALCULATES PROPAGATION FACTOR M3000 USING THE SUBROUTINE GAMMA1.
+! XMODIP = MODIFIED DIP LATITUDE, XLATI = GEOG. LATITUDE, XLONGI=
+! LONGITUDE (ALL IN DEG.), MONTH = MONTH, UT =  UNIVERSAL TIME 
+! (DEC. HOURS), XM0 = ARRAY WITH RZ12-ADJUSTED CCIR/URSI COEFF.
+! D.BILITZA,JULY 85.
+!--------------------------------------------------------------
       DIMENSION XM0(441)
       INTEGER QM(7)
       DATA QM/6,7,5,2,1,0,0/
       XMOUT=GAMMA1(XMODIP,XLATI,XLONGI,UT,4,QM,7,49,9,441,XM0)
       RETURN
       END
-C
-C
+!
+!
       REAL FUNCTION HMF2ED(XMAGBR,R,X,XM3)         
-c--------------------------------------------------------------
-C CALCULATES THE PEAK HEIGHT HMF2/KM FOR THE MAGNETIC                           
-C LATITUDE XMAGBR/DEGREE AND THE SMOOTHED ZUERICH SUNSPOT                         
-C NUMBER R USING CCIR-M3000 XM3 AND THE RATIO X=FOF2/FOE.
-C FOLLOWING CCIR RECOMMENDATION X IS LIMITED TO VALUE
-C GREATER OR EQUAL TO 1.7 .                       
-C [REF. D.BILITZA ET AL., TELECOMM.J., 46, 549-553, 1979]                       
-C D.BILITZA,1980.     
-c--------------------------------------------------------------
+!--------------------------------------------------------------
+! CALCULATES THE PEAK HEIGHT HMF2/KM FOR THE MAGNETIC                           
+! LATITUDE XMAGBR/DEGREE AND THE SMOOTHED ZUERICH SUNSPOT                         
+! NUMBER R USING CCIR-M3000 XM3 AND THE RATIO X=FOF2/FOE.
+! FOLLOWING CCIR RECOMMENDATION X IS LIMITED TO VALUE
+! GREATER OR EQUAL TO 1.7 .                       
+! [REF. D.BILITZA ET AL., TELECOMM.J., 46, 549-553, 1979]                       
+! D.BILITZA,1980.     
+!--------------------------------------------------------------
       F1=0.00232*R+0.222                         
       F2=1.2-0.0116*EXP(0.0239*R)            
       F3=0.096*(R-25.0)/150.0                      
@@ -4957,16 +4957,16 @@ c--------------------------------------------------------------
       HMF2ED=1490.0/(XM3+DELM)-176.0 
       RETURN          
       END             
-C
-C
+!
+!
       REAL FUNCTION XM3000HM(XMAGBR,R,X,HMF2)         
-c--------------------------------------------------------------
-C CALCULATES THE PROPAGATION FACTOR M3000 FOR THE MAGNETIC LATITUDE
-C XMAGBR/DEG. AND THE SMOOTHED ZUERICH SUNSPOT NUMBER R USING THE                        
-C PEAK HEIGHT HMF2/KM AND THE RATIO X=FOF2/FOE. Reverse of HMF2ED.                      
-C [REF. D.BILITZA ET AL., TELECOMM.J., 46, 549-553, 1979]                       
-C D.BILITZA,1980. ----- no longer used    
-c--------------------------------------------------------------
+!--------------------------------------------------------------
+! CALCULATES THE PROPAGATION FACTOR M3000 FOR THE MAGNETIC LATITUDE
+! XMAGBR/DEG. AND THE SMOOTHED ZUERICH SUNSPOT NUMBER R USING THE                        
+! PEAK HEIGHT HMF2/KM AND THE RATIO X=FOF2/FOE. Reverse of HMF2ED.                      
+! [REF. D.BILITZA ET AL., TELECOMM.J., 46, 549-553, 1979]                       
+! D.BILITZA,1980. ----- no longer used    
+!--------------------------------------------------------------
       F1=0.00232*R+0.222                         
       F2=1.2-0.0116*EXP(0.0239*R)            
       F3=0.096*(R-25.0)/150.0                      
@@ -4976,26 +4976,26 @@ c--------------------------------------------------------------
 	  XM3000HM=1490.0/(HMF2+176.0)-DELM
       RETURN          
       END             
-C
-C
+!
+!
 	SUBROUTINE  SHAMDHMF2 (RLAT,FLON,T,RZ,HMF2)
-C-------------------------------------------------------------------
-C	COMPUTES THE HOURLY VALUES OF hmF2 FROM A SET OF SH COEFFICIENTS
-C	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
-C	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER.
-C   PARAMETERS AND COEFFICIENTS ARE GIVEN IN DATA STATEMENTS.
-C
-C INPUT:	RLAT    The geogrphic latitude on the meridian given by 
-C					the local time (FLON), where the modified dip
-C                   latitude is the same as of the orginal site.
-C			FLON	=LONGITUDE+15.*UT(hours)
-C			T		Month as a REAL number (1.0 to 12.0)
-C			RZ		12-month running mean
-C OUTPUT	HMF2	F2 peak altitude in km
-C
-C  Altadill, D., S. Magdaleno, J.M. Torta, and E. Blanch 
-C     Adv. Space Res. 52, 1756-1769, 2013.
-C-------------------------------------------------------------------
+!-------------------------------------------------------------------
+!	COMPUTES THE HOURLY VALUES OF hmF2 FROM A SET OF SH COEFFICIENTS
+!	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
+!	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER.
+!   PARAMETERS AND COEFFICIENTS ARE GIVEN IN DATA STATEMENTS.
+!
+! INPUT:	RLAT    The geogrphic latitude on the meridian given by 
+!					the local time (FLON), where the modified dip
+!                   latitude is the same as of the orginal site.
+!			FLON	=LONGITUDE+15.*UT(hours)
+!			T		Month as a REAL number (1.0 to 12.0)
+!			RZ		12-month running mean
+! OUTPUT	HMF2	F2 peak altitude in km
+!
+!  Altadill, D., S. Magdaleno, J.M. Torta, and E. Blanch 
+!     Adv. Space Res. 52, 1756-1769, 2013.
+!-------------------------------------------------------------------
       PARAMETER   (IBO=0,JBO=1,KDIM=8,LDIM=4,L=-1)
       DIMENSION   FN(0:KDIM,0:KDIM), CONST(0:KDIM,0:KDIM)
       DIMENSION   GNM(0:KDIM,0:KDIM,1-IBO-JBO:LDIM),
@@ -5009,7 +5009,7 @@ C-------------------------------------------------------------------
       CHARACTER*1 IE       
       COMMON/AMTB/BINT,BEXT,RE,TZERO,IFIT,IB,KINT,LINT,KEXT,
      *              LEXT,KMAX,FN
-c     ,CONST
+!     ,CONST
 
       DATA THETA,RE,TZERO,IFIT,ICEN,IREF,IB,KINT,LINT,KEXT,LEXT
      *     /180.,6371.2,1.0,  -1,  0,   0,   2, 8,   4,   0,   -1/
@@ -5178,48 +5178,48 @@ c     ,CONST
          BEXT(M-1,N,J) = HNM(N,M,J)
          END IF
   302 CONTINUE
-C
+!
   500 CONTINUE
-C     **********************************************************
-C     SYNTHESIZES THE VALUE OF HMF2 FROM THE MODEL	
-C     **********************************************************
+!     **********************************************************
+!     SYNTHESIZES THE VALUE OF HMF2 FROM THE MODEL	
+!     **********************************************************
       CALL SCHNEVPDH (RZ,RLAT,FLON,dum,T,L,dum,dum,HMF2)
 	  RETURN
 9999  STOP
       END
-C
-C
+!
+!
       SUBROUTINE SCHNEVPDH (RZ,FLAT,FLON,R,T,L,BN,BE,BV)
-C------------------------------------------------------------------------
-C WHEN L IS POSITIVE:
-C COMPUTES SPHERICAL CAP HARMONIC (GEOCENTRIC) FIELD COMPONENTS
-C HORIZONTAL NORTH BN,HORIZONTAL EAST BE,AND VERTICAL DOWNWARD BV.
-C WHEN L IS NEGATIVE:
-C COMPUTES GENERAL FUNCTION BV, ITS HORIZONTAL NORTH DERIVATIVE BN,
-C AND ITS HORIZONTAL EAST DERIVATIVE BE, ON SPHERICAL CAP SURFACE.
-C NOTE THAT THESE ARE METRICAL DERIVATIVES, AND BE IS THE
-C LONGITUDINAL DERIVATIVE DIVIDED BY SIN(COLATITUDE).
-C	  INPUT:
-C FLAT,FLON,R ARE GEOCENTRIC SPHERICAL CAP LATITUDE,LONGITUDE,RADIAL
-C DISTANCE; T IS TIME.
-C L =  0  ON FIRST CALL:  RETURNS SPHERICAL CAP POLE POSITION FLATO,FLONO
-C         AND HALF-ANGLE THETA AS BN,BE, AND BV AFTER INITIALIZATION.
-C         ON SUBSEQUENT CALLS:  ACTS AS L=1.
-C      1  COMPUTES POTENTIAL FIELD COMPONENTS FROM INTERNAL COEFFICIENTS.
-C      2  COMPUTES POTENTIAL FIELD COMPONENTS FROM EXTERNAL COEFFICIENTS.
-C      3  COMPUTES FIELD FROM BOTH INTERNAL AND EXTERNAL COEFFICIENTS.
-C     -1  COMPUTES GENERAL FUNCTION BV AND DERIVATIVES BN WITH RESPECT TO
-C         LATITUDE AND BE WITH RESPECT TO LONGITUDE DIVIDED BY COS(LAT)
-C         (R IS DUMMY VARIABLE IN THIS CASE).
-C NOTE:   SUBROUTINE IS INITIALIZED DURING FIRST CALL REGARDLESS OF L.
-C
-C SUBROUTINE USED:  LEGFUN
-C
-C PARAMS & COEFFS TRANSFERRED FROM MAIN PROGRAM IN COMMON/AMTB/
-C
-C ADAPTED FROM SUBROUTINE SCHNEV OF G.V. HAINES (COMPUTERS & GEOSCIENCES, 
-C 14, 413-447, 1988)
-C------------------------------------------------------------------------
+!------------------------------------------------------------------------
+! WHEN L IS POSITIVE:
+! COMPUTES SPHERICAL CAP HARMONIC (GEOCENTRIC) FIELD COMPONENTS
+! HORIZONTAL NORTH BN,HORIZONTAL EAST BE,AND VERTICAL DOWNWARD BV.
+! WHEN L IS NEGATIVE:
+! COMPUTES GENERAL FUNCTION BV, ITS HORIZONTAL NORTH DERIVATIVE BN,
+! AND ITS HORIZONTAL EAST DERIVATIVE BE, ON SPHERICAL CAP SURFACE.
+! NOTE THAT THESE ARE METRICAL DERIVATIVES, AND BE IS THE
+! LONGITUDINAL DERIVATIVE DIVIDED BY SIN(COLATITUDE).
+!	  INPUT:
+! FLAT,FLON,R ARE GEOCENTRIC SPHERICAL CAP LATITUDE,LONGITUDE,RADIAL
+! DISTANCE; T IS TIME.
+! L =  0  ON FIRST CALL:  RETURNS SPHERICAL CAP POLE POSITION FLATO,FLONO
+!         AND HALF-ANGLE THETA AS BN,BE, AND BV AFTER INITIALIZATION.
+!         ON SUBSEQUENT CALLS:  ACTS AS L=1.
+!      1  COMPUTES POTENTIAL FIELD COMPONENTS FROM INTERNAL COEFFICIENTS.
+!      2  COMPUTES POTENTIAL FIELD COMPONENTS FROM EXTERNAL COEFFICIENTS.
+!      3  COMPUTES FIELD FROM BOTH INTERNAL AND EXTERNAL COEFFICIENTS.
+!     -1  COMPUTES GENERAL FUNCTION BV AND DERIVATIVES BN WITH RESPECT TO
+!         LATITUDE AND BE WITH RESPECT TO LONGITUDE DIVIDED BY COS(LAT)
+!         (R IS DUMMY VARIABLE IN THIS CASE).
+! NOTE:   SUBROUTINE IS INITIALIZED DURING FIRST CALL REGARDLESS OF L.
+!
+! SUBROUTINE USED:  LEGFUN
+!
+! PARAMS & COEFFS TRANSFERRED FROM MAIN PROGRAM IN COMMON/AMTB/
+!
+! ADAPTED FROM SUBROUTINE SCHNEV OF G.V. HAINES (COMPUTERS & GEOSCIENCES, 
+! 14, 413-447, 1988)
+!------------------------------------------------------------------------
 
       PARAMETER   (IBO=0,JBO=1,KDIM=8,LDIM=4)                           
       DIMENSION   FN(0:KDIM,0:KDIM), CONST(0:KDIM,0:KDIM)
@@ -5229,7 +5229,7 @@ C------------------------------------------------------------------------
      *            BEXT(0:KDIM,0:KDIM,1-IBO-JBO:LDIM)
       COMMON/AMTB/BINT,BEXT,RE,TZERO,IFIT,IB,KINT,LINT,KEXT,
      *              LEXT,KMAX,FN
-C     ,CONST
+!     ,CONST
       CHARACTER*1 IE,RESP
   	  DATA ((CONST(N,M), M=0,N), N=0,KDIM)
      *	 /4*1.,1.73205,0.866025,1.,2.44949,1.93649,0.7905691,1.,
@@ -5239,22 +5239,22 @@ C     ,CONST
      *      5.69951,2.42182,0.647260,1.,6.,12.5499,16.9926,16.4531,
      *      11.8645,6.40755,2.50683,0.626707/
 
-C     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS BASIS FUNCTIONS
-C              1          LEGENDRE POLYNOMIALS
-C              2          FOURIER SERIES
-C              3          COSINE SERIES
-C              4          SINE SERIES
-C     NOTE:    TZERO AND THINT MAY DEPEND ON IBF.
+!     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS BASIS FUNCTIONS
+!              1          LEGENDRE POLYNOMIALS
+!              2          FOURIER SERIES
+!              3          COSINE SERIES
+!              4          SINE SERIES
+!     NOTE:    TZERO AND THINT MAY DEPEND ON IBF.
       IBF   =  2                                                        
       T1=1.
       T2=12.
       CALL TBFIT (T1,T2,IBF,THINT,TZERO)                                
 
-C      IF (L .NE. 0)  GO TO 100
-C      BN = FLATO
-C      BE = FLONO
-C      BV = THETA
-C      RETURN
+!      IF (L .NE. 0)  GO TO 100
+!      BN = FLATO
+!      BE = FLONO
+!      BV = THETA
+!      RETURN
 
   100 IF (L .GE. 0)  THEN
          IF (IFIT .LT. 0)  GO TO 999
@@ -5315,7 +5315,7 @@ C      RETURN
   102 CONTINUE
       incept = 0                                                            set up
       if ((ibf.eq.2 .or. ibf.eq.3) .and. incept .eq. 1)  then
-c     change to intercept form of fourier series.
+!     change to intercept form of fourier series.
           do i=2,lint,4-ibf
           delt(i) = 1. - delt(i)
           enddo
@@ -5411,159 +5411,159 @@ c     change to intercept form of fourier series.
       RETURN
   999 STOP
       END
-C
-C
+!
+!
       subroutine SDMF2(UT,monthut,F107A,xmodip,long,hmF2)
-c--------------------------------------------------------------------------
-c    Global median model of the F2-layer peak height
-c
-c  Requires the following subroutines and functions:
-c     SDMF2, hmF2_med_SD, read_data_SD, fun_hmF2_SD,
-c     fun_Gk, Legendre, fun_hmF2UT, Koeff_UT, fun_Akp_UT,
-c     fun_Fk_UT, fun_Gk_UT  
-c
-c Author of the code:
-c         Valentin Shubin
-c         Pushkov Institute of Terrestrial Magnetism,
-c         Ionosphere and Radio wave propagation (IZMIRAN)
-c         Moscow, Troitsk, 142190, Russia
-c         e-mail: shubin@izmiran.ru
-c         
-c     [Ref. V.N. Shubin. Global median model of the F2-layer
-c     peak height based on ionospheric radio-occultation and
-c     ground-based Digisonde observations. Advances in Space Research (2015)
-c     http://dx.doi.org/10.1016/j.asr.2015.05.029]
-c
-c  Input:
-c    UT      - universal time (real)
-c    monthut - month (integer)
-c    xmodip  - modified dip latitude in degrees (real)
-c    long    - geodatic longitude    in degrees (real)
-c    F107A   - F10.7 index averaged over the 3 Sun rotations 
-c              in units of 10^-22 W/(m^2 Hz) (real)
-c
-c  Output:
-c    hmF2  - F2-layer peak height in km (real)
-c--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!    Global median model of the F2-layer peak height
+!
+!  Requires the following subroutines and functions:
+!     SDMF2, hmF2_med_SD, read_data_SD, fun_hmF2_SD,
+!     fun_Gk, Legendre, fun_hmF2UT, Koeff_UT, fun_Akp_UT,
+!     fun_Fk_UT, fun_Gk_UT  
+!
+! Author of the code:
+!         Valentin Shubin
+!         Pushkov Institute of Terrestrial Magnetism,
+!         Ionosphere and Radio wave propagation (IZMIRAN)
+!         Moscow, Troitsk, 142190, Russia
+!         e-mail: shubin@izmiran.ru
+!         
+!     [Ref. V.N. Shubin. Global median model of the F2-layer
+!     peak height based on ionospheric radio-occultation and
+!     ground-based Digisonde observations. Advances in Space Research (2015)
+!     http://dx.doi.org/10.1016/j.asr.2015.05.029]
+!
+!  Input:
+!    UT      - universal time (real)
+!    monthut - month (integer)
+!    xmodip  - modified dip latitude in degrees (real)
+!    long    - geodatic longitude    in degrees (real)
+!    F107A   - F10.7 index averaged over the 3 Sun rotations 
+!              in units of 10^-22 W/(m^2 Hz) (real)
+!
+!  Output:
+!    hmF2  - F2-layer peak height in km (real)
+!--------------------------------------------------------------------------
       implicit none
-c     .. scalar arguments ..
+!     .. scalar arguments ..
       integer monthut
       real F107A
       real UT, hmF2
       real xmodip, long
-c     .. local scalars ..
+!     .. local scalars ..
       integer i
       double precision T
-c     .. local arrays ..
+!     .. local arrays ..
 	  double precision xUT(0:23)
-c	.. array in common ..
+!	.. array in common ..
 	  double precision hmF2_UT(0:23)
 	  common/hmF2UT/hmF2_UT
-c     .. function references .
+!     .. function references .
       real hmF2_med_SD, fun_hmF2UT
-c
+!
       hmF2_UT = 0.0
 	  do i=0,23
          hmF2_UT(i) = hmF2_med_SD(i,monthut,F107A,xmodip,long)
 	     xUT(i) = dble(i)
          end do
-c 
+! 
       T = dble(UT)
       hmF2 = fun_hmF2UT(T) 
-c
+!
       return
       end
-c
-c
+!
+!
       real function hmF2_med_SD(iUT,monthut,F107A,xmodip,long)
-c---------------------------------------------------------------------
-c    Input: 
-c      iUT     - universal time (real)
-c      monthut - month (integer)
-c      F107A   - F10.7 index averaged over the 3 Sun rotations 
-c                in units of 10^-22 W/(m^2 Hz) (real)
-c      xmodip  - modified dip latitude in degrees (real)
-c      long    - geodatic longitude    in degrees (real)
-c
-c    function to interpolate hmF2 between the two levels of solar activity
-c    used the following auxiliary subroutines and functions:
-c    read_data_SD, fun_hmF2_SD
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
+!    Input: 
+!      iUT     - universal time (real)
+!      monthut - month (integer)
+!      F107A   - F10.7 index averaged over the 3 Sun rotations 
+!                in units of 10^-22 W/(m^2 Hz) (real)
+!      xmodip  - modified dip latitude in degrees (real)
+!      long    - geodatic longitude    in degrees (real)
+!
+!    function to interpolate hmF2 between the two levels of solar activity
+!    used the following auxiliary subroutines and functions:
+!    read_data_SD, fun_hmF2_SD
+!---------------------------------------------------------------------
       implicit none
-c	..   scalar arguments ..
+!	..   scalar arguments ..
       integer monthut, iUT
       real F107A
       real xmodip, long
-c	real xmodip, long, umr, pi
-c	..   local scalars ..
+!	real xmodip, long, umr, pi
+!	..   local scalars ..
       real cov, cov1, cov2
       real a, b, hmF2_1, hmF2_2
       double precision teta
-c	..   local arrays ..
+!	..   local arrays ..
       double precision coeff_month(0:148,0:47)
       double precision Kf(0:148)
       real ft1(12), ft2(12)
-c
-c    Arrays ft1 (12) and ft2 (12) are the median values of F10.7A,
-c    which were used as the margins for
-c    the low and high solar activity levels      
-c
-c               Jan   Feb   Mar   Apr   May  Jun
+!
+!    Arrays ft1 (12) and ft2 (12) are the median values of F10.7A,
+!    which were used as the margins for
+!    the low and high solar activity levels      
+!
+!               Jan   Feb   Mar   Apr   May  Jun
 	data ft1/ 73.6, 72.3, 71.8, 70.9, 73.6,73.0,
      *          71.1, 69.4, 69.1, 70.9, 72.3,74.6/
 	data ft2/144.2,142.9,167.2,125.3,124.4,127.9,
      *         142.0,165.9,132.6,142.0,145.6,143.0/
-c               Jul   Aug   Sep   Oct   Nov  Dec
-c	.. local in common ..
+!               Jul   Aug   Sep   Oct   Nov  Dec
+!	.. local in common ..
 	double precision umr
 	common/constt/umr
-c	common/const/umr,pi
-c     .. function references ..
+!	common/const/umr,pi
+!     .. function references ..
 	real fun_hmF2_SD
-c     .. subroutine references ..
-c     read_data_SD
-c
+!     .. subroutine references ..
+!     read_data_SD
+!
 	umr=atan(1.0)*4./180
       teta = 90.0-xmodip
-c
+!
       call read_data_SD(monthut,coeff_month)
       Kf = coeff_month(0:148,iUT)
 	hmF2_1 = fun_hmF2_SD(teta,long,Kf)
       Kf = coeff_month(0:148,iUT+24)
 	hmF2_2 = fun_hmF2_SD(teta,long,Kf)
-c
+!
       cov = F107A
 	cov1 = ft1(monthut) 
 	cov2 = ft2(monthut)
-c 
+! 
  	a = (hmF2_2 - hmF2_1)/log(cov2/cov1)
 	b =  hmF2_2 - a*log(cov2)
 	hmF2_med_SD = a*log(cov) + b
-c
+!
       return
       end
-c
-c
+!
+!
       subroutine read_data_SD(month,coeff_month)
-c------------------------------------------------------------------
-c    subroutine to read arrays mcsat11.datÖ mcsat22.dat
-c    with coefficients of hmF2 spatial decomposition
-c    for for 12 month, 24 UT hour and two solar activity levels
-c------------------------------------------------------------------
+!------------------------------------------------------------------
+!    subroutine to read arrays mcsat11.datÖ mcsat22.dat
+!    with coefficients of hmF2 spatial decomposition
+!    for for 12 month, 24 UT hour and two solar activity levels
+!------------------------------------------------------------------
 	implicit none
-c     .. scalar arguments ..
+!     .. scalar arguments ..
 	integer month
-c     .. array arguments ..
+!     .. array arguments ..
 	double precision coeff_month(0:148,0:47)
-c     .. local scalars ..
+!     .. local scalars ..
 	integer coeff_month_read(1:12)
 	character(256) filedata
 	integer i, j
-c     .. local arrays ..
+!     .. local arrays ..
 	double precision coeff_month_all(0:148,0:47,1:12)
 	save coeff_month_all
 	data coeff_month_read /12*0/
-c
+!
       if (coeff_month_read(month) .eq. 0) then
         write(filedata, 10) month+10
         open(10, File=filedata, status='old')
@@ -5573,82 +5573,82 @@ c
 	  close(10)
 	  coeff_month_read(month) = 1
 	end if
-c
+!
       coeff_month = coeff_month_all(0:148,0:47,month)	
-c
-c    Previous operator can be replaced by
-c
-c      do i=0,148
-c	   do j=0,47 
-c	      coeff_month(i,j) = coeff_month_all(i,j,month)
-c        end do
-c	end do	   
-c
+!
+!    Previous operator can be replaced by
+!
+!      do i=0,148
+!	   do j=0,47 
+!	      coeff_month(i,j) = coeff_month_all(i,j,month)
+!        end do
+!	end do	   
+!
 	  return
 	
-c 10   format('data\mcsat',i2,'.dat')
+! 10   format('data\mcsat',i2,'.dat')
  10   format('mcsat',i2,'.dat')
  20   format(6(d12.5))
       end
-c
-c      
+!
+!      
       real function fun_hmF2_SD(teta,long,Kf)
-c---------------------------------------------------------------------
-c    Input: 
-c      teta - (90-modip) in degrees
-c      long - geodatic longitude in degrees
-c      Kf   - coefficients of hmF2 spatial decomposition 
-c
-c    function to calculate spherical harmonics decomposition
-c    for the spatial dependencies of hmF2
-c    used the following auxiliary subroutines and functions:
-c    fun_Gk, Legendre
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
+!    Input: 
+!      teta - (90-modip) in degrees
+!      long - geodatic longitude in degrees
+!      Kf   - coefficients of hmF2 spatial decomposition 
+!
+!    function to calculate spherical harmonics decomposition
+!    for the spatial dependencies of hmF2
+!    used the following auxiliary subroutines and functions:
+!    fun_Gk, Legendre
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
       double precision teta
       real long
-c     .. array arguments ..
+!     .. array arguments ..
       double precision Kf(0:148)
-c	.. local scalars ..
+!	.. local scalars ..
       integer k
       double precision hmF2
-c	 .. local arrays ..
+!	 .. local arrays ..
       double precision Gk(0:148)
-c     .. subroutine references ..
-c     fun_Gk
-c
+!     .. subroutine references ..
+!     fun_Gk
+!
 	call fun_Gk(teta,long,Gk)
 	hmF2 = 0.d0
 	do k=0,148
 	   hmF2 = hmF2 + Kf(k)*Gk(k) 
 	end do
       fun_hmF2_SD = hmF2
-c
+!
       return
       end
-c
-c
+!
+!
       subroutine fun_Gk(teta,long,Gk)
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
       double precision teta
       real long
-c      real long, umr, pi
-c     .. array arguments ..
+!      real long, umr, pi
+!     .. array arguments ..
       double precision Gk(0:148)
-c	.. local scalars ..
+!	.. local scalars ..
       integer mm, nn, m, n, k
-c	.. local arrays ..
+!	.. local arrays ..
 	double precision Pl_mn(0:8,0:12)
-c	.. local in common ..
+!	.. local in common ..
 	double precision umr
 	common/constt/umr
-c	common/const/umr,pi
-c     .. subroutine references ..
-c     Legendre
-c
+!	common/const/umr,pi
+!     .. subroutine references ..
+!     Legendre
+!
       Pl_mn = 0.d0
 	mm = 8
 	nn = 12
@@ -5669,48 +5669,48 @@ c
            end do
          end if
       end do
-c
+!
       return
       end
-c
-c
+!
+!
       subroutine Legendre(mm,nn,p,teta)
-c---------------------------------------------------------------------
-c     Input:
-c       mm       - harmonics for longitude
-c       nn       - harmonics for the modified dip latitude (modip) 
-c       teta     - (90-modip) in degrees
-c    Output:
-c       P(mm,nn) - associated Legendre function    
-c
-c    subroutine to calculate associated Legendre function P(mm,nn)
-c    with Schmidt normalization
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
+!     Input:
+!       mm       - harmonics for longitude
+!       nn       - harmonics for the modified dip latitude (modip) 
+!       teta     - (90-modip) in degrees
+!    Output:
+!       P(mm,nn) - associated Legendre function    
+!
+!    subroutine to calculate associated Legendre function P(mm,nn)
+!    with Schmidt normalization
+!---------------------------------------------------------------------
 	  implicit none
-c     .. scalar arguments ..
+!     .. scalar arguments ..
       integer mm, nn
-c      real umr, pi
+!      real umr, pi
       double precision teta
-c     .. array arguments ..
+!     .. array arguments ..
       double precision p(0:mm,0:nn)
-c     .. local scalars ..
+!     .. local scalars ..
       integer j,l,m,n
       double precision z, s
-c	.. local in common ..
+!	.. local in common ..
 	  double precision umr
 	  common/constt/umr
-c	  common/const/umr,pi
-c
+!	  common/const/umr,pi
+!
       p = 0.0
 	  z=cos(umr*teta)
       p(0,0)=1.
       p(0,1)=z
       if (mm.ne.0) p(1,1)=sin(umr*teta)
-c
+!
       do j=2,mm
          p(j,j)=(2*j-1)*p(j-1,j-1)*p(1,1)
       end do
-c
+!
       do m=0,mm
 	   do n=1,nn
 		  if (m.gt.n) then
@@ -5726,7 +5726,7 @@ c
             end if
          end do
       end do
-c
+!
       do n=1,nn
          do m=1,mm
 		  if (m.gt.n) then
@@ -5740,40 +5740,40 @@ c
 	      p(m,n)=p(m,n)*sqrt(2./s)
         end do
       end do
-c
+!
       return
       end
-c
-c
+!
+!
       real function fun_hmF2UT(T)
-c---------------------------------------------------------------------
-c    Input: T - universal time        
-c 
-c    function to calculate Fourier  decomposition
-c    for the temporal variations of hmF2
-c    used the following auxiliary subroutines:
-c    Koeff_UT, fun_Akp_UT, fun_Fk_UT, fun_Gk_UT
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
+!    Input: T - universal time        
+! 
+!    function to calculate Fourier  decomposition
+!    for the temporal variations of hmF2
+!    used the following auxiliary subroutines:
+!    Koeff_UT, fun_Akp_UT, fun_Fk_UT, fun_Gk_UT
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
       double precision T
-c	.. local scalars ..
+!	.. local scalars ..
       integer k, mm, mk
-c      real dtr, dumr
+!      real dtr, dumr
       double precision hmF2
-c   .. local arrays ..	
+!   .. local arrays ..	
 	  double precision Gk_UT(0:6), Kf_UT(0:6)
-c	.. local in common ..	
+!	.. local in common ..	
 	  double precision dtr
 	  common/radUT/dtr
-c	  common/const1/dtr,dumr
-c   .. subroutine references ..
-c     Koeff_UT, fun_Gk_UT
-c
+!	  common/const1/dtr,dumr
+!   .. subroutine references ..
+!     Koeff_UT, fun_Gk_UT
+!
       dtr=atan(1.0)*4.0/12.0
       mm = 3
 	  mk = 2*mm
-c
+!
 	  call Koeff_UT(mm,mk,Kf_UT)
       call fun_Gk_UT(mm,mk,t,Gk_UT)
 	  hmF2 = 0.d0
@@ -5781,27 +5781,27 @@ c
 	    hmF2 = hmF2 + Kf_UT(k)*Gk_UT(k) 
 	  end do
       fun_hmF2UT = hmF2
-c
+!
       return
       end
-c
-c
+!
+!
       subroutine Koeff_UT(mm,mk,Kf_UT)
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
       implicit none
-c	..  scalar arguments ..
+!	..  scalar arguments ..
       integer mm, mk
-c   .. array arguments ..
+!   .. array arguments ..
 	  double precision Kf_UT(0:mk)
-c	.. local scalars ..
+!	.. local scalars ..
       integer k, m
       double precision sum_D
-c   .. local arrays ..
+!   .. local arrays ..
 	  double precision Akp_UT(0:mk,0:mk)
 	  double precision Dk_UT(0:mk)
-c   .. subroutine references ..
-c   fun_Akp_UT 
-c
+!   .. subroutine references ..
+!   fun_Akp_UT 
+!
       call fun_Akp_UT(mm,mk,Akp_UT,Dk_UT)
       Kf_UT = 0.d0
       do k=mk,0,-1
@@ -5814,28 +5814,28 @@ c
 
       return
 	  end
-c
-c
+!
+!
       subroutine fun_Akp_UT(mm,mk,Akp_UT,Dk_UT)
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
       integer mm, mk
-c   .. array arguments ..
+!   .. array arguments ..
       double precision Akp_UT(0:mk,0:mk), Dk_UT(0:mk)
-c	.. local scalars ..
+!	.. local scalars ..
 	  integer i, k, p
 	  double precision t
 	  double precision sum_An, sum_Dn
 	  double precision sum_Ad, sum_Dd
-c   .. local arrays ..
+!   .. local arrays ..
 	  double precision Gk_UT(0:mk), Fk_UT(0:mk)
-c	.. array in common ..	
+!	.. array in common ..	
 	  double precision hmF2_UT(0:23)
 	  common/hmF2UT/hmF2_UT
-c   .. subroutine references ..
-c	fun_Gk_UT, fun_Fk_UT
-c
+!   .. subroutine references ..
+!	fun_Gk_UT, fun_Fk_UT
+!
       Gk_UT = 0.d0
       Gk_UT(0) = 1.0
 	  Fk_UT = 0.d0
@@ -5865,7 +5865,7 @@ c
 	        Dk_UT(p) = sum_Dn/sum_Dd
             end if
 	  end do
-c
+!
       p=mk
       sum_Dn=0.d0
       sum_Dd=0.d0
@@ -5877,24 +5877,24 @@ c
          sum_Dd = sum_Dd + Fk_UT(p)*Fk_UT(p)
       end do
       Dk_UT(p) = sum_Dn/sum_Dd
-c
+!
       return
       end
-c
-c
+!
+!
       subroutine fun_Fk_UT(mk,Gk_UT,Akp_UT,Fk_UT)
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
 	  integer mk
-c   .. array arguments ..
+!   .. array arguments ..
 	  double precision Gk_UT(0:mk)
 	  double precision Akp_UT(0:mk,0:mk)
 	  double precision Fk_UT(0:mk)
-c	.. local scalars ..
+!	.. local scalars ..
       integer k, p
       double precision sum_G
-c
+!
       Fk_UT = 0.d0
       do k=0,mk
          sum_G = 0.d0
@@ -5904,27 +5904,27 @@ c
          end do
          Fk_UT(k) = sum_G + Gk_UT(k)
       end do
-c
+!
       return
       end
-c
-c
+!
+!
 	subroutine fun_Gk_UT(mm,mk,t,Gk_UT)
-c---------------------------------------------------------------------
+!---------------------------------------------------------------------
       implicit none
-c	.. scalar arguments ..
+!	.. scalar arguments ..
       integer mm, mk
-c      real dtr, dumr
+!      real dtr, dumr
       double precision t
-c   .. array arguments ..
+!   .. array arguments ..
 	  double precision Gk_UT(0:mk)
-c	.. local scalars ..
+!	.. local scalars ..
       integer m, k
-c	.. local in common ..
+!	.. local in common ..
 	  double precision dtr
 	  common/radUT/dtr
-c	  common/const1/dtr, dumr
-c
+!	  common/const1/dtr, dumr
+!
 	  Gk_UT = 0.d0
         k = 0
         do m=0,mm
@@ -5937,24 +5937,24 @@ c
 		    k = k + 2
           end if
        end do
-c
+!
       return
       end
-C
-C
+!
+!
       REAL FUNCTION FOF1ED(YLATI,R,CHI)
-c--------------------------------------------------------------
-C CALCULATES THE F1 PEAK PLASMA FREQUENCY (FOF1/MHZ)
-C INPUT:   
-C		YLATI	ABSOLUT VALUE OF DIP-LATITUDE IN DEGREE
-c       R		12-MONTH RUNNING MEAN OF SUNSPOT NUMBER 
-c       CHI		SOLAR ZENITH ANGLE IN DEGREE
-C REFERENCE: 
-c       E.D.DUCHARME ET AL., RADIO SCIENCE 6, 369-378, 1971
-C                                      AND 8, 837-839, 1973
-c       HOWEVER WITH MAGNETIC DIP LATITUDE INSTEAD OF GEOMAGNETIC
-c       DIPOLE LATITUDE, EYFRIG, 1979                    
-C--------------------------------------------- D. BILITZA, 1988.   
+!--------------------------------------------------------------
+! CALCULATES THE F1 PEAK PLASMA FREQUENCY (FOF1/MHZ)
+! INPUT:   
+!		YLATI	ABSOLUT VALUE OF DIP-LATITUDE IN DEGREE
+!       R		12-MONTH RUNNING MEAN OF SUNSPOT NUMBER 
+!       CHI		SOLAR ZENITH ANGLE IN DEGREE
+! REFERENCE: 
+!       E.D.DUCHARME ET AL., RADIO SCIENCE 6, 369-378, 1971
+!                                      AND 8, 837-839, 1973
+!       HOWEVER WITH MAGNETIC DIP LATITUDE INSTEAD OF GEOMAGNETIC
+!       DIPOLE LATITUDE, EYFRIG, 1979                    
+!--------------------------------------------- D. BILITZA, 1988.   
         COMMON/CONST/UMR,PI
 	    fof1ed=0.0
 	    if (chi.gt.90.0) return
@@ -5972,11 +5972,11 @@ C--------------------------------------------- D. BILITZA, 1988.
         FOF1ED = FOF1     
         RETURN
         END             
-C
-C
+!
+!
 	real function f1_c1(xmodip,hour,suxnon,saxnon)
-c F1 layer shape parameter C1 after Reinisch and Huang, Advances in
-c Space Research, Volume 25, Number 1, 81-88, 2000.
+! F1 layer shape parameter C1 after Reinisch and Huang, Advances in
+! Space Research, Volume 25, Number 1, 81-88, 2000.
 
         common	/const/umr,pi
         pi = umr * 180.
@@ -5995,20 +5995,20 @@ c Space Research, Volume 25, Number 1, 81-88, 2000.
 	    f1_c1=c1
 	    return
 	    end
-c
-c
+!
+!
         subroutine f1_prob (sza,glat,rz12,f1prob,f1probl)
-c--------------------------------------------------------------------------
-c Occurrence probability of F1 layer after Scotto et al., Advances in
-c Space Research, Volume 20, Number 9, 1773-1775, 1997.
-c
-c Input: 	sza		solar zenith angle in degrees 
-c 			glat	geomagnetic latitude in degrees
-C			rz12	12-month running mean of sunspot number
-c Output: 	f1prob	F1 occurrence probability without L-condition cases 
-c 			f1probl	F1 occurrence probability with L-condition cases
-c--------------------------------------------------------------------------
-c
+!--------------------------------------------------------------------------
+! Occurrence probability of F1 layer after Scotto et al., Advances in
+! Space Research, Volume 20, Number 9, 1773-1775, 1997.
+!
+! Input: 	sza		solar zenith angle in degrees 
+! 			glat	geomagnetic latitude in degrees
+!			rz12	12-month running mean of sunspot number
+! Output: 	f1prob	F1 occurrence probability without L-condition cases 
+! 			f1probl	F1 occurrence probability with L-condition cases
+!--------------------------------------------------------------------------
+!
         common /const/umr,pi
 
 	    xarg = 0.5 + 0.5 * cos(sza*umr)
@@ -6024,27 +6024,27 @@ c
         f1probl=f1prl
 	    return
 	    end
-C
-C
+!
+!
         REAL FUNCTION FOEEDI(COV,XHI,XHIM,XLATI)
-C-------------------------------------------------------
-C CALCULATES FOE/MHZ BY THE EDINBURGH-METHOD.      
-C INPUT: 
-C 	COV		MONTHLY MEAN 10.7CM SOLAR RADIO FLUX measured at 
-C           ground level  
-C   XHI		SOLAR ZENITH ANGLE IN DEGREE 
-C   XHIM	SOLAR ZENITH ANGLE AT NOON IN DEGREE
-C   XLATI 	ABSOLUTE VALUE OF GEOGRAPHIC LATITUDE IN DEGREE, 
-C REFERENCE: 
-C       KOURIS-MUGGELETON, CCIR DOC. 6/3/07, 1973
-C       TROST, J. GEOPHYS. RES. 84, 2736, 1979 (was used
-C               to improve the nighttime varition)
-C       RAWER AND BILITZA, Adv. Space Res. 10(8), 5-14, 1990
-C D.BILITZA--------------------------------- AUGUST 1986.    
+!-------------------------------------------------------
+! CALCULATES FOE/MHZ BY THE EDINBURGH-METHOD.      
+! INPUT: 
+! 	COV		MONTHLY MEAN 10.7CM SOLAR RADIO FLUX measured at 
+!           ground level  
+!   XHI		SOLAR ZENITH ANGLE IN DEGREE 
+!   XHIM	SOLAR ZENITH ANGLE AT NOON IN DEGREE
+!   XLATI 	ABSOLUTE VALUE OF GEOGRAPHIC LATITUDE IN DEGREE, 
+! REFERENCE: 
+!       KOURIS-MUGGELETON, CCIR DOC. 6/3/07, 1973
+!       TROST, J. GEOPHYS. RES. 84, 2736, 1979 (was used
+!               to improve the nighttime varition)
+!       RAWER AND BILITZA, Adv. Space Res. 10(8), 5-14, 1990
+! D.BILITZA--------------------------------- AUGUST 1986.    
         COMMON/CONST/UMR,PI
-C variation with solar activity (factor A) ...............
+! variation with solar activity (factor A) ...............
         A=1.0+0.0094*(COV-66.0)                      
-C variation with noon solar zenith angle (B) and with latitude (C)
+! variation with noon solar zenith angle (B) and with latitude (C)
         SL=COS(XLATI*UMR)
         IF(XLATI.LT.32.0) THEN
                 SM=-1.93+1.92*SL                             
@@ -6055,35 +6055,35 @@ C variation with noon solar zenith angle (B) and with latitude (C)
         ENDIF
         if(XHIM.ge.90.) XHIM=89.999
         B = COS(XHIM*UMR) ** SM
-C variation with solar zenith angle (D) ..........................        
+! variation with solar zenith angle (D) ..........................        
         IF(XLATI.GT.12.0) THEN
                 SP=1.2
         ELSE
                 SP=1.31         
         ENDIF
-C adjusted solar zenith angle during nighttime (XHIC) .............
+! adjusted solar zenith angle during nighttime (XHIC) .............
         XHIC=XHI-3.*ALOG(1.+EXP((XHI-89.98)/3.))   
         D=COS(XHIC*UMR)**SP       
-C determine foE**4 ................................................
+! determine foE**4 ................................................
         R4FOE=A*B*C*D     
-C minimum allowable foE (foe_min=sqrt[SMIN])...............................
+! minimum allowable foE (foe_min=sqrt[SMIN])...............................
         SMIN=0.121+0.0015*(COV-60.)
         SMIN=SMIN*SMIN
         IF(R4FOE.LT.SMIN) R4FOE=SMIN                     
         FOEEDI=R4FOE**0.25                           
         RETURN          
         END   
-C
-C
+!
+!
         REAL FUNCTION XMDED(XHI,R,YW)                
-C D. BILITZA, 1978, CALCULATES ELECTRON DENSITY OF D MAXIMUM.                   
-C XHI/DEG. IS SOLAR ZENITH ANGLE, R SMOOTHED ZURICH SUNSPOT NUMBER              
-C AND YW/M-3 THE ASSUMED CONSTANT NIGHT VALUE.     
-C [REF.: D.BILITZA, WORLD DATA CENTER A REPORT UAG-82,7,BOULDER,1981]
-C corrected 4/25/97 - D. Bilitza
-c
+! D. BILITZA, 1978, CALCULATES ELECTRON DENSITY OF D MAXIMUM.                   
+! XHI/DEG. IS SOLAR ZENITH ANGLE, R SMOOTHED ZURICH SUNSPOT NUMBER              
+! AND YW/M-3 THE ASSUMED CONSTANT NIGHT VALUE.     
+! [REF.: D.BILITZA, WORLD DATA CENTER A REPORT UAG-82,7,BOULDER,1981]
+! corrected 4/25/97 - D. Bilitza
+!
         COMMON/CONST/UMR,PI
-c
+!
         if(xhi.ge.90) goto 100
         Y = 6.05E8 + 0.088E8 * R
         yy = cos ( xhi * umr )
@@ -6100,25 +6100,25 @@ c
 100     XMDED=YW        
         RETURN          
         END
-C
-C
+!
+!
         REAL FUNCTION GAMMA1(SMODIP,SLAT,SLONG,HOUR,
      &                          IHARM,NQ,K1,M,MM,M3,SFE)      
-C---------------------------------------------------------------
-C CALCULATES GAMMA1=FOF2 OR M3000 USING CCIR NUMERICAL MAP                      
-C COEFFICIENTS SFE(M3) FOR MODIFIED DIP LATITUDE (SMODIP/DEG)
-C GEOGRAPHIC LATITUDE (SLAT/DEG) AND LONGITUDE (SLONG/DEG)  
-C AND UNIVERSIAL TIME (HOUR/DECIMAL HOURS). IHARM IS THE MAXIMUM
-C NUMBER OF HARMONICS USED FOR DESCRIBING DIURNAL VARIATION.
-C NQ(K1) IS AN INTEGER ARRAY GIVING THE HIGHEST DEGREES IN 
-C LATITUDE FOR EACH LONGITUDE HARMONIC WHERE K1 GIVES THE NUMBER 
-C OF LONGITUDE HARMONICS. M IS THE NUMBER OF COEFFICIENTS FOR 
-C DESCRIBING VARIATIONS WITH SMODIP, SLAT, AND SLONG. MM IS THE
-C NUMBER OF COEFFICIENTS FOR THE FOURIER TIME SERIES DESCRIBING
-C VARIATIONS WITH UT.
-C M=1+NQ(1)+2*[NQ(2)+1]+2*[NQ(3)+1]+... , MM=2*IHARM+1, M3=M*MM  
-C SHEIKH,4.3.77.      
-C---------------------------------------------------------------
+!---------------------------------------------------------------
+! CALCULATES GAMMA1=FOF2 OR M3000 USING CCIR NUMERICAL MAP                      
+! COEFFICIENTS SFE(M3) FOR MODIFIED DIP LATITUDE (SMODIP/DEG)
+! GEOGRAPHIC LATITUDE (SLAT/DEG) AND LONGITUDE (SLONG/DEG)  
+! AND UNIVERSIAL TIME (HOUR/DECIMAL HOURS). IHARM IS THE MAXIMUM
+! NUMBER OF HARMONICS USED FOR DESCRIBING DIURNAL VARIATION.
+! NQ(K1) IS AN INTEGER ARRAY GIVING THE HIGHEST DEGREES IN 
+! LATITUDE FOR EACH LONGITUDE HARMONIC WHERE K1 GIVES THE NUMBER 
+! OF LONGITUDE HARMONICS. M IS THE NUMBER OF COEFFICIENTS FOR 
+! DESCRIBING VARIATIONS WITH SMODIP, SLAT, AND SLONG. MM IS THE
+! NUMBER OF COEFFICIENTS FOR THE FOURIER TIME SERIES DESCRIBING
+! VARIATIONS WITH UT.
+! M=1+NQ(1)+2*[NQ(2)+1]+2*[NQ(3)+1]+... , MM=2*IHARM+1, M3=M*MM  
+! SHEIKH,4.3.77.      
+!---------------------------------------------------------------
       REAL*8 C(12),S(12),COEF(100),SUM             
       DIMENSION NQ(K1),XSINX(13),SFE(M3)           
       COMMON/CONST/UMR,PI
@@ -6173,34 +6173,34 @@ C---------------------------------------------------------------
 
       RETURN          
       END 
-C
-C                     
-C************************************************************                   
-C***************** PROFILE PARAMETERS ***********************                   
-C************************************************************                 
-C
-C
+!
+!                     
+!************************************************************                   
+!***************** PROFILE PARAMETERS ***********************                   
+!************************************************************                 
+!
+!
 
 	      SUBROUTINE TOPH05(COVI,AMLAT,TIME,HMAX,HT05,SG)
-C---------------------------------------------------------------------------------
-C Gulyaeva T.L. (2003) Variations in the half-width of the topside ionosphere 
-C    according to the observations by space ionosondes ISIS 1,ISIS 2, and IK19.
-C    International J. of Geomagnetism and Aeronomy, 4(3), 201-207.
-C Gulyaeva T.L., Titheridge J.E. (2006) Advanced specification of electron density 
-C    and temperature in the IRI ionosphere-plasmasphere model. 
-C    Adv. Space Res. 38(11), 2587-2595, doi:10.1016/j.asr.2005.08.045.
-C
-C  Implementation of empirical RAT=(h05top-hmF2)/hmF2 derived from ISIS and IK19
-C  topside electron density profiles to obtain half peak density topside height
-C  h05top  from the Chebishev polinomial coefficients given for 
-C  (1) 4 levels of solar activity: Rz= 0,  50, 100, 150 replaced by
-C      solar radio flux          covi=60, 106, 152, 198
-C  (2) 10 selected grids of geomagnetic latitude (N=S):0,10,20,30,40,50,60,70,80,90
-C  (3) 5 selected grids of local time: 0, 6, 12, 18, 24.
-C  (4) 4 seasonal grids: 1 equinox(SG=90deg), 2 summer (SG=180), 
-C                        3 equinox (SG=270), 4 winter(SG=360)
-C   SG=season grids=90,180,270,360
-C---------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------
+! Gulyaeva T.L. (2003) Variations in the half-width of the topside ionosphere 
+!    according to the observations by space ionosondes ISIS 1,ISIS 2, and IK19.
+!    International J. of Geomagnetism and Aeronomy, 4(3), 201-207.
+! Gulyaeva T.L., Titheridge J.E. (2006) Advanced specification of electron density 
+!    and temperature in the IRI ionosphere-plasmasphere model. 
+!    Adv. Space Res. 38(11), 2587-2595, doi:10.1016/j.asr.2005.08.045.
+!
+!  Implementation of empirical RAT=(h05top-hmF2)/hmF2 derived from ISIS and IK19
+!  topside electron density profiles to obtain half peak density topside height
+!  h05top  from the Chebishev polinomial coefficients given for 
+!  (1) 4 levels of solar activity: Rz= 0,  50, 100, 150 replaced by
+!      solar radio flux          covi=60, 106, 152, 198
+!  (2) 10 selected grids of geomagnetic latitude (N=S):0,10,20,30,40,50,60,70,80,90
+!  (3) 5 selected grids of local time: 0, 6, 12, 18, 24.
+!  (4) 4 seasonal grids: 1 equinox(SG=90deg), 2 summer (SG=180), 
+!                        3 equinox (SG=270), 4 winter(SG=360)
+!   SG=season grids=90,180,270,360
+!---------------------------------------------------------------------------------
       DIMENSION CVLEV(4)	
 	  COMMON   /BLOCK1/HMF2,XNMF2,XHMF1,F1REG         
      *         /QTOP/Y05,H05TOP,QF,XNETOP,XM3000,HHALF,TAU
@@ -6215,10 +6215,10 @@ C-------------------------------------------------------------------------------
 	       IF(M1.EQ.10) M2=10
         L2=L1+1
 	       IF(L1.EQ.5) L2=5
-C
-C INTERPOLATE RAT FOR GIVEN RZI
-C Call Chebishev approximation to interpolate for given ABMLAT, HRLT
-C
+!
+! INTERPOLATE RAT FOR GIVEN RZI
+! Call Chebishev approximation to interpolate for given ABMLAT, HRLT
+!
 	  call CHEBISH(CVLEV(IR),TIME,ABMLAT,XX,SG)
         IF (IR.EQ.4) THEN
 	          RAT05=XX
@@ -6229,108 +6229,108 @@ C
 10    HT05=HMAX*(1.+RAT05)
 	  RETURN
 	  END
-C
-C	  
+!
+!	  
 	SUBROUTINE CHEBISH(COVS,HOURLT,ABMLAT,RATCH,SG)
-C---------------------------------------------------------------------------------
-C CHEBISHEV POLINOMIALS FOR ABMLAT(10),HOURLT(5)
-C CR((C0...C5),(LT=0,6,...24),(SG=season grids=90,180,270,360)
-C							(COV=60,106,152,198)
-C---------------------------------------------------------------------------------
-c      REAL UK(0:10),CR(0:5,5,3,4),YI(5),YY(5,3)
+!---------------------------------------------------------------------------------
+! CHEBISHEV POLINOMIALS FOR ABMLAT(10),HOURLT(5)
+! CR((C0...C5),(LT=0,6,...24),(SG=season grids=90,180,270,360)
+!							(COV=60,106,152,198)
+!---------------------------------------------------------------------------------
+!      REAL UK(0:10),CR(0:5,5,3,4),YI(5),YY(5,3)
       REAL BR(6,5,3,4),YI(5),YY(5,3)
       REAL PL1(5),PL2(5),PL3(5),CL(0:3)
-C
+!
       COMMON /CONST/rad,pi  
       DATA PL1/-2.,-1.,0.,1.,2./
   	  DATA PL2/2.,-1.,-2.,-1.,2./
   	  DATA PL3/-1.,2.,0.,-2.,1./
       DATA BR/
-C Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=60 (mlat/10=0,1,...,9)
-C Equinox	B0MLAT:
+! Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=60 (mlat/10=0,1,...,9)
+! Equinox	B0MLAT:
      *  -1.5859,  3.5789, -3.7884, 2.7094,-1.2962,.6759
      *, -5.3449, 12.8379,-12.0165, 5.9746,-1.9084,.7669
      *,-12.8000, 35.3084,-38.0043,19.6004,-4.4974,.6975
      *,  5.8282,-13.3538,  9.1674,-0.9593,-0.8909,.6062
      *, -1.5859,  3.5789, -3.7884, 2.7094,-1.2962,.6759
-C Summer	B0MLAT    
+! Summer	B0MLAT    
      *, -7.1103, 21.0389,-24.5539,14.1607,-3.8537,.7266
      *,  5.5333,-10.6242,  4.8751, 1.0587,-1.0821,.7527
      *,-15.4487, 42.9269,-45.0314,21.4718,-4.2116,.6026
      *, -6.6436, 16.4533,-15.5142, 6.8287,-1.2871,.4976
      *, -7.1103, 21.0389,-24.5539,14.1607,-3.8537,.7266
-C Winter   B0MLAT                                                                       
+! Winter   B0MLAT                                                                       
      *, 14.9103,-35.2337, 27.3078,-6.5362,-0.6265,.7509
      *,  2.3846, -5.8840,  3.7023, 0.8525,-1.2663,.7086
      *, -9.8846, 26.6649,-27.0173,12.6959,-2.6536,.6295
      *,  1.7692, -2.3578, -0.7945, 2.2477,-0.9691,.5719
      *, 14.9103,-35.2337, 27.3078,-6.5362,-0.6265,.7509
-C Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=106 (mlat=0,10,...,90)
-C Equinox	B1MLAT
+! Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=106 (mlat=0,10,...,90)
+! Equinox	B1MLAT
      *, -4.1218, 10.6136,-11.4922, 6.0470,-1.3620,.5563
      *,  0.9077,  2.9562, -8.9880, 6.8680,-1.9621,.7737
      *,-16.2744, 42.8047,-43.7009,20.7965,-4.0697,.6619
      *,-17.3038, 44.3336,-40.9249,15.9042,-2.1554,.4796
      *, -4.1218, 10.6136,-11.4922, 6.0470,-1.3620,.5563
-C Summer	B1MLAT  
+! Summer	B1MLAT  
      *, -4.9692, 16.5753,-21.3543,12.7061,-3.1758,.6446
      *,  1.9000, -2.8167, -0.9962, 3.0687,-1.3454,.6859
      *,  7.6769,-14.8343,  6.7030, 1.5578,-1.0626,.4291
      *,  5.4833,-10.6322,  4.7571, 1.2178,-0.8223,.4615
      *, -4.9692, 16.5753,-21.3543,12.7061,-3.1758,.6446
-C Winter	B1MLAT  
+! Winter	B1MLAT  
      *, -4.7282, 13.4491,-15.6931, 8.8388,-1.9732,.5874
      *,  5.6756,-14.8458, 11.8927,-2.2632,-0.6122,.6948
      *,-14.2872, 40.0829,-41.2716,18.1696,-2.7203,.4916
      *,-13.6128, 33.4657,-29.7231,11.0972,-1.2884,.5034
      *, -4.7282, 13.4491,-15.6931, 8.8388,-1.9732,.5874
-C Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=152 (mlat=0,10,...,90)
-C Equinox	B2MLAT
+! Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=152 (mlat=0,10,...,90)
+! Equinox	B2MLAT
      *, -3.3282, 10.4296,-12.4722, 6.7623,-1.5172,.4931
      *, -8.9744, 20.1311,-17.4552, 7.6518,-1.7371,.6702
      *, 12.0462,-27.8932, 20.6241,-4.5781, 0.0814,.3501
      *,-17.0551, 42.3258,-37.1874,13.3608,-1.4804,.4216
      *, -3.3282, 10.4296,-12.4722, 6.7623,-1.5172,.4931
-C Summer	B2MLAT  
+! Summer	B2MLAT  
      *,  7.3077,-17.1579, 11.6872,-0.7405,-1.0298,.5754
      *, 19.2641,-45.1886, 34.3297,-8.1879,-0.1875,.6562
      *,  6.0987,-11.0903,  4.3569, 1.4001,-0.7309,.3885
      *,  5.9295,-13.9205, 10.2347,-2.2818, 0.0853,.3915
      *,  7.3077,-17.1579, 11.6872,-0.7405,-1.0298,.5754
-C Winter	B2MLAT  
+! Winter	B2MLAT  
      *, -1.6821,  8.6010,-13.6570, 8.6307,-1.9846,.5635
      *,  5.4679,-12.3750,  7.5620, 0.5394,-1.4415,.6659
      *, -8.0821, 21.9288,-21.8597, 9.3455,-1.4644,.3599
      *, -8.3000, 19.3076,-16.3295, 6.1619,-0.9144,.3846
      *, -1.6821,  8.6010,-13.6570, 8.6307,-1.9846,.5635
-C Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=198 (mlat=0,10,...,90)
-C Equinox	B3MLAT
+! Polinomial Coefficients B1,B2,B3,B4,B5,B6 for COV=198 (mlat=0,10,...,90)
+! Equinox	B3MLAT
      *,-16.4051, 28.2880,-16.0982, 4.6328,-1.0405,.5486
      *, 13.0846,-34.8291, 30.0074,-8.6402, 0.1529,.6165
      *, 19.7474,-42.7116, 28.9430,-6.0487, 0.1492,.3748
      *, 16.2795,-36.6982, 26.5094,-6.3492, 0.2926,.3946
      *,-16.4051, 28.2880,-16.0982, 4.6328,-1.0405,.5486
-C Summer	B3MLAT
+! Summer	B3MLAT
      *,  4.6410,-13.7931, 11.6548,-1.9248,-0.7246,.5264
      *, -2.4090,  3.1805, -2.8423, 2.8861,-0.9937,.5234
      *,  6.3410,-13.9643,  8.2461,-0.0186,-0.7009,.3582
      *,  9.0987,-20.8618, 14.7262,-2.8798,-0.0512,.3662
      *,  4.6410,-13.7931, 11.6548,-1.9248,-0.7246,.5264
-C Winter	B3MLAT
+! Winter	B3MLAT
      *, -4.6526, 12.1878,-14.4047, 8.5226,-2.0493,.5903
      *,  3.9821, -6.9477,  0.8382, 3.4898,-1.5694,.6283
      *, -7.0474, 17.3974,-17.3465, 8.3671,-1.5708,.3759
      *,  4.2782, -9.9880,  5.9834, 0.0975,-0.4900,.3842
      *, -4.6526, 12.1878,-14.4047, 8.5226,-2.0493,.5903/
 
-C	DATA UL/-2.,-1.,0.,1.,2./
+!	DATA UL/-2.,-1.,0.,1.,2./
 
 	do k=0,3
 	cl(k)=0.
 	enddo
-C
+!
 	IR=IFIX((covs-60.)/46.)+1	
-C Given geomagnetic latitude parameter:
+! Given geomagnetic latitude parameter:
 	xi=abmlat/100.
 	DO LS=1,3
           DO LL=1,5
@@ -6345,7 +6345,7 @@ C Given geomagnetic latitude parameter:
       YY(LL,LS)=B1+xi*(B2+xi*(B3+xi*(B4+xi*(B5+xi*B6))))
 	ENDDO
 	ENDDO            ! end of season/day cycle
-C Apply seasonal interpolation
+! Apply seasonal interpolation
 	 do i=1,5
 	p0=(2.*YY(i,1)+YY(i,2)+YY(i,3))/4.
 	p1=(YY(i,3)-YY(i,2))/2.
@@ -6368,29 +6368,29 @@ C Apply seasonal interpolation
 
 	RETURN
 	END	
-C
-C
+!
+!
 	SUBROUTINE  SHAMDB0D (RLAT,FLON,T,RZ,B)
-C-------------------------------------------------------------------
-C	COMPUTES THE HOURLY VALUES OF B0 FROM A SET OF SH COEFFICIENTS
-C	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
-C	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER
-C
-C INPUT:	RLAT    The geogrphic latitude on the meridian given by 
-C					the local time (FLON), where the modified dip
-C                   latitude is the same as of the orginal site.
-C			FLON	=LONGITUDE+15.*UT(hours)
-C			T		Month as a REAL number (1.0 to 12.0)
-C			RZ		12-month running mean
-C OUTOUT	B		=B0
-C
-C  Blanch E., D. Arrazola, D. Altadill, D. Buresova, M. Mosert, 
-C     Adv. Space Res. 39, 701-710, 2007.
-C  Altadill, D., D. Arrazola, E. Blanch, D. Buresova, 
-C     Adv. Space Res. 42, 610-616, 2008.
-C  Altadill, D., J.M. Torta, and E. Blanch, 
-C     Adv. Space Res. 43,1825-1834, 2009.
-C-------------------------------------------------------------------
+!-------------------------------------------------------------------
+!	COMPUTES THE HOURLY VALUES OF B0 FROM A SET OF SH COEFFICIENTS
+!	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
+!	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER
+!
+! INPUT:	RLAT    The geogrphic latitude on the meridian given by 
+!					the local time (FLON), where the modified dip
+!                   latitude is the same as of the orginal site.
+!			FLON	=LONGITUDE+15.*UT(hours)
+!			T		Month as a REAL number (1.0 to 12.0)
+!			RZ		12-month running mean
+! OUTOUT	B		=B0
+!
+!  Blanch E., D. Arrazola, D. Altadill, D. Buresova, M. Mosert, 
+!     Adv. Space Res. 39, 701-710, 2007.
+!  Altadill, D., D. Arrazola, E. Blanch, D. Buresova, 
+!     Adv. Space Res. 42, 610-616, 2008.
+!  Altadill, D., J.M. Torta, and E. Blanch, 
+!     Adv. Space Res. 43,1825-1834, 2009.
+!-------------------------------------------------------------------
       PARAMETER   (IBO=0,JBO=1,KDIM=6,LDIM=4,L=-1)
       DIMENSION   FN(0:KDIM,0:KDIM), CONST(0:KDIM,0:KDIM)
       DIMENSION   GNM(0:KDIM,0:KDIM,1-IBO-JBO:LDIM),
@@ -6538,30 +6538,30 @@ C-------------------------------------------------------------------
          BEXT(M-1,N,J) = HNM(N,M,J)
          END IF
   302 CONTINUE
-C
+!
   500 CONTINUE
-C     **********************************************************
-C     SYNTHESIZES THE VALUE OF B0 FROM THE MODEL	
-C     **********************************************************
+!     **********************************************************
+!     SYNTHESIZES THE VALUE OF B0 FROM THE MODEL	
+!     **********************************************************
       CALL SCHNEVPD(RZ,RLAT,FLON,dum,T,L,dum,dum,B)
 	  RETURN
 9999  STOP
       END
-C
-C
+!
+!
       SUBROUTINE  SHAB1D (FLAT,FLON,T,RZ,B)
-C-------------------------------------------------------------------
-C	COMPUTES THE HOURLY VALUES OF B1 FROM A SET OF SH COEFFICIENTS
-C	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
-C	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER
-C
-C   PARAMETERS ARE THE SAME AS IN SHAMDB0D, EXCEPT:
-C		FLAT	Geographic latitude
-C		B		=B1
-C
-C	***** PARAMS & COEFFS IN DATA SENTENCES *****
-C-------------------------------------------------------------------
-C
+!-------------------------------------------------------------------
+!	COMPUTES THE HOURLY VALUES OF B1 FROM A SET OF SH COEFFICIENTS
+!	IN A POINT OF A GIVEN GEOCENTRIC LATITUDE AND LONGITUDE
+!	OF THE EARTH'S SURFACE FOR A GIVEN MONTH AND A GIVEN SUSPOT NUMER
+!
+!   PARAMETERS ARE THE SAME AS IN SHAMDB0D, EXCEPT:
+!		FLAT	Geographic latitude
+!		B		=B1
+!
+!	***** PARAMS & COEFFS IN DATA SENTENCES *****
+!-------------------------------------------------------------------
+!
       PARAMETER   (IBO=0,JBO=1,KDIM=6,LDIM=4,L=-1)
       DIMENSION   FN(0:KDIM,0:KDIM), CONST(0:KDIM,0:KDIM)
       DIMENSION   GNM(0:KDIM,0:KDIM,1-IBO-JBO:LDIM),
@@ -6696,48 +6696,48 @@ C
   302 CONTINUE
 
   500 CONTINUE
-C     **********************************************************
-C     SYNTHESIZES THE VALUE OF B1 FROM THE MODEL	
-C     **********************************************************
+!     **********************************************************
+!     SYNTHESIZES THE VALUE OF B1 FROM THE MODEL	
+!     **********************************************************
       CALL SCHNEVPD(RZ,FLAT,FLON,dum,T,L,dum,dum,B)
-C
+!
       RETURN
 9999  STOP
       END
-C
-C
+!
+!
       SUBROUTINE SCHNEVPD (RZ,FLAT,FLON,R,T,L,BN,BE,BV)
-C-------------------------------------------------------------------
-C     WHEN L IS POSITIVE:
-C     COMPUTES SPHERICAL CAP HARMONIC (GEOCENTRIC) FIELD COMPONENTS
-C     HORIZONTAL NORTH BN,HORIZONTAL EAST BE,AND VERTICAL DOWNWARD BV.
-C     WHEN L IS NEGATIVE:
-C     COMPUTES GENERAL FUNCTION BV, ITS HORIZONTAL NORTH DERIVATIVE BN,
-C     AND ITS HORIZONTAL EAST DERIVATIVE BE, ON SPHERICAL CAP SURFACE.
-C     NOTE THAT THESE ARE METRICAL DERIVATIVES, AND BE IS THE
-C     LONGITUDINAL DERIVATIVE DIVIDED BY SIN(COLATITUDE).
+!-------------------------------------------------------------------
+!     WHEN L IS POSITIVE:
+!     COMPUTES SPHERICAL CAP HARMONIC (GEOCENTRIC) FIELD COMPONENTS
+!     HORIZONTAL NORTH BN,HORIZONTAL EAST BE,AND VERTICAL DOWNWARD BV.
+!     WHEN L IS NEGATIVE:
+!     COMPUTES GENERAL FUNCTION BV, ITS HORIZONTAL NORTH DERIVATIVE BN,
+!     AND ITS HORIZONTAL EAST DERIVATIVE BE, ON SPHERICAL CAP SURFACE.
+!     NOTE THAT THESE ARE METRICAL DERIVATIVES, AND BE IS THE
+!     LONGITUDINAL DERIVATIVE DIVIDED BY SIN(COLATITUDE).
 
-C     FLAT,FLON,R ARE GEOCENTRIC SPHERICAL CAP LATITUDE,LONGITUDE,RADIAL
-C     DISTANCE; T IS TIME.
+!     FLAT,FLON,R ARE GEOCENTRIC SPHERICAL CAP LATITUDE,LONGITUDE,RADIAL
+!     DISTANCE; T IS TIME.
 
-C     L =  0  ON FIRST CALL:  RETURNS SPHERICAL CAP POLE POSITION FLATO,FLONO
-C             AND HALF-ANGLE THETA AS BN,BE, AND BV AFTER INITIALIZATION.
-C             ON SUBSEQUENT CALLS:  ACTS AS L=1.
-C          1  COMPUTES POTENTIAL FIELD COMPONENTS FROM INTERNAL COEFFICIENTS.
-C          2  COMPUTES POTENTIAL FIELD COMPONENTS FROM EXTERNAL COEFFICIENTS.
-C          3  COMPUTES FIELD FROM BOTH INTERNAL AND EXTERNAL COEFFICIENTS.
-C         -1  COMPUTES GENERAL FUNCTION BV AND DERIVATIVES BN WITH RESPECT TO
-C             LATITUDE AND BE WITH RESPECT TO LONGITUDE DIVIDED BY COS(LAT)
-C             (R IS DUMMY VARIABLE IN THIS CASE).
-C     NOTE:   SUBROUTINE IS INITIALIZED DURING FIRST CALL REGARDLESS OF L.
+!     L =  0  ON FIRST CALL:  RETURNS SPHERICAL CAP POLE POSITION FLATO,FLONO
+!             AND HALF-ANGLE THETA AS BN,BE, AND BV AFTER INITIALIZATION.
+!             ON SUBSEQUENT CALLS:  ACTS AS L=1.
+!          1  COMPUTES POTENTIAL FIELD COMPONENTS FROM INTERNAL COEFFICIENTS.
+!          2  COMPUTES POTENTIAL FIELD COMPONENTS FROM EXTERNAL COEFFICIENTS.
+!          3  COMPUTES FIELD FROM BOTH INTERNAL AND EXTERNAL COEFFICIENTS.
+!         -1  COMPUTES GENERAL FUNCTION BV AND DERIVATIVES BN WITH RESPECT TO
+!             LATITUDE AND BE WITH RESPECT TO LONGITUDE DIVIDED BY COS(LAT)
+!             (R IS DUMMY VARIABLE IN THIS CASE).
+!     NOTE:   SUBROUTINE IS INITIALIZED DURING FIRST CALL REGARDLESS OF L.
 
-C     SUBPROGRAM USED:  LEGFUN
+!     SUBPROGRAM USED:  LEGFUN
 
-C	***** PARAMS & COEFFS TRANSFERRED FROM MAIN PROGRAM *****
+!	***** PARAMS & COEFFS TRANSFERRED FROM MAIN PROGRAM *****
 
-C	ADAPTED FROM SUBROUTINE SCHNEV OF G.V. HAINES (COMPUTERS & GEOSCIENCES, 
-C      14, 413-447, 1988)
-C-------------------------------------------------------------------
+!	ADAPTED FROM SUBROUTINE SCHNEV OF G.V. HAINES (COMPUTERS & GEOSCIENCES, 
+!      14, 413-447, 1988)
+!-------------------------------------------------------------------
 
       PARAMETER   (IBO=0,JBO=1,KDIM=6,LDIM=4)                                     
       DIMENSION   FN(0:KDIM,0:KDIM), CONST(0:KDIM,0:KDIM)
@@ -6748,7 +6748,7 @@ C-------------------------------------------------------------------
       COMMON/ATB/BINT,BEXT,RE,TZERO,IFIT,IB,KINT,LINT,KEXT,
      *              LEXT,KMAX,FN
       CHARACTER*1 IE,RESP
-C
+!
       DATA ((CONST(N,M), M=0,N), N=0,KDIM)
      *	 /4*1.,1.73205,0.866025,1.,2.44949,1.93649,0.7905691,1.,
      *	  3.16228,3.35410,2.09165,0.739510,1.,3.87298,5.12348,
@@ -6757,22 +6757,22 @@ C
 
         dfarg=(atan(1.0)*4.)/180.
 
-C     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS BASIS FUNCTIONS
-C              1          LEGENDRE POLYNOMIALS
-C              2          FOURIER SERIES
-C              3          COSINE SERIES
-C              4          SINE SERIES
-C     NOTE:    TZERO AND THINT MAY DEPEND ON IBF.
+!     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS BASIS FUNCTIONS
+!              1          LEGENDRE POLYNOMIALS
+!              2          FOURIER SERIES
+!              3          COSINE SERIES
+!              4          SINE SERIES
+!     NOTE:    TZERO AND THINT MAY DEPEND ON IBF.
       IBF   =  2                                                       
       T1=1.
       T2=12.
       CALL TBFIT (T1,T2,IBF,THINT,TZERO)                                
 
-C      IF (L .NE. 0)  GO TO 100
-C      BN = FLATO
-C      BE = FLONO
-C      BV = THETA
-C      RETURN
+!      IF (L .NE. 0)  GO TO 100
+!      BN = FLATO
+!      BE = FLONO
+!      BV = THETA
+!      RETURN
 
   100 IF (L .GE. 0)  THEN
          IF (IFIT .LT. 0)  GO TO 999
@@ -6833,7 +6833,7 @@ C      RETURN
   102 CONTINUE
       incept = 0                                                              
       if ((ibf.eq.2 .or. ibf.eq.3) .and. incept .eq. 1)  then
-c     change to intercept form of fourier series.
+!     change to intercept form of fourier series.
           do i=2,lint,4-ibf
           delt(i) = 1. - delt(i)
           enddo
@@ -6929,30 +6929,30 @@ c     change to intercept form of fourier series.
       RETURN
   999 STOP
       END
-C
-C
+!
+!
       SUBROUTINE TBFIT (T1,T2,IBF,THINT,TZERO)
-C-------------------------------------------------------------------
-C	COURTESY OF G.V. HAINES
-C
-C     T2    =  BEGINNING OF TIME INTERVAL.
-C     T1    =  END OF TIME INTERVAL.
-C     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS TEMPORAL BASIS FUNCTIONS
-C              1          LEGENDRE POLYNOMIALS
-C              2          FOURIER SERIES
-C              3          COSINE SERIES
-C              4          SINE SERIES
-C              5          COSINE + SINE SERIES
-C     TZERO =  TIME-TRANSLATION PARAMETER:
-C              FOR IBF.LE.1, CHOOSE TZERO = CENTER OF TIME INTERVAL
-C              FOR IBF.GE.2, CHOOSE TZERO = BEGINNING OF TIME INTERVAL.
-C     THINT =  TIME-SCALING PARAMETER. THINT = HALF OF TIME INTERVAL T2-T1
-C              FOR IBF.LE.1; PI*HALF OF TIME INTERVAL FOR IBF.EQ.2;
-C              AND PI*TIME INTERVAL FOR IBF.GE.3.
-C     NOTE:    CHOOSING TZERO AND THINT IN THIS WAY SCALES TIME
-C              TO (-1,1) FOR IBF.LE.1;  TO (0,2PI) FOR IBF.EQ.2;
-C              AND TO (0,PI) FOR IBF.GE.3.
-C-------------------------------------------------------------------
+!-------------------------------------------------------------------
+!	COURTESY OF G.V. HAINES
+!
+!     T2    =  BEGINNING OF TIME INTERVAL.
+!     T1    =  END OF TIME INTERVAL.
+!     IBF   =  0   TO USE ORDINARY POLYNOMIALS AS TEMPORAL BASIS FUNCTIONS
+!              1          LEGENDRE POLYNOMIALS
+!              2          FOURIER SERIES
+!              3          COSINE SERIES
+!              4          SINE SERIES
+!              5          COSINE + SINE SERIES
+!     TZERO =  TIME-TRANSLATION PARAMETER:
+!              FOR IBF.LE.1, CHOOSE TZERO = CENTER OF TIME INTERVAL
+!              FOR IBF.GE.2, CHOOSE TZERO = BEGINNING OF TIME INTERVAL.
+!     THINT =  TIME-SCALING PARAMETER. THINT = HALF OF TIME INTERVAL T2-T1
+!              FOR IBF.LE.1; PI*HALF OF TIME INTERVAL FOR IBF.EQ.2;
+!              AND PI*TIME INTERVAL FOR IBF.GE.3.
+!     NOTE:    CHOOSING TZERO AND THINT IN THIS WAY SCALES TIME
+!              TO (-1,1) FOR IBF.LE.1;  TO (0,2PI) FOR IBF.EQ.2;
+!              AND TO (0,PI) FOR IBF.GE.3.
+!-------------------------------------------------------------------
 
       IBFI  = IBF
       IF (IBFI .LE. 1)  THEN
@@ -6962,29 +6962,29 @@ C-------------------------------------------------------------------
          ENDIF
       THINT = T2 - T1
       IF (IBFI .LE. 2)  THINT = THINT/2.D0
-C      IF (IBFI .EQ. 4)  THEN
-C          DELT(0) = 0.D0
-C         ELSE
-C          DELT(0) = 1.D0
-C         ENDIF
+!      IF (IBFI .EQ. 4)  THEN
+!          DELT(0) = 0.D0
+!         ELSE
+!          DELT(0) = 1.D0
+!         ENDIF
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE LEGFUN (M,FN,CONST,COLAT,P,DP,PMS,IPRT)
-C-------------------------------------------------------------------
-C     SERIES FORM FOR ASSOCIATED LEGENDRE FUNCTION P, ITS DERIVATIVE DP,
-C     AND THE FUNCTION PMS=P*M/SIN(COLAT), IN POWERS OF (1-COS(COLAT))/2.
-C     INTEGRAL ORDER M, REAL DEGREE FN, NORMALIZING CONSTANT CONST.
-C     COLATITUDE COLAT IN DEGREES.
-C     IPRT = 0     NO PRINT-OUT
-C            1     PRINT PARAMETERS AND P SERIES
-C            2     PRINT PARAMETERS AND DP SERIES
-C            3     PRINT PARAMETERS AND BOTH P AND DP SERIES
-C           -1     PRINT PARAMETERS ONLY
-C     INPUT M,FN,CONST,COLAT,IPRT.   OUTPUT P,DP,PMS
-C	ADAPTED FROM G.V. HAINES (COMPUTERS & GEOSCIENCES, 14, 413-447, 1988).
-C-------------------------------------------------------------------
+!-------------------------------------------------------------------
+!     SERIES FORM FOR ASSOCIATED LEGENDRE FUNCTION P, ITS DERIVATIVE DP,
+!     AND THE FUNCTION PMS=P*M/SIN(COLAT), IN POWERS OF (1-COS(COLAT))/2.
+!     INTEGRAL ORDER M, REAL DEGREE FN, NORMALIZING CONSTANT CONST.
+!     COLATITUDE COLAT IN DEGREES.
+!     IPRT = 0     NO PRINT-OUT
+!            1     PRINT PARAMETERS AND P SERIES
+!            2     PRINT PARAMETERS AND DP SERIES
+!            3     PRINT PARAMETERS AND BOTH P AND DP SERIES
+!           -1     PRINT PARAMETERS ONLY
+!     INPUT M,FN,CONST,COLAT,IPRT.   OUTPUT P,DP,PMS
+!	ADAPTED FROM G.V. HAINES (COMPUTERS & GEOSCIENCES, 14, 413-447, 1988).
+!-------------------------------------------------------------------
       REAL*8  		FNN,AL,A,B,PNM,DPNM
       DIMENSION  	AM(60), BM(60)
       LOGICAL		mess
@@ -7017,34 +7017,34 @@ C-------------------------------------------------------------------
       A = (B*X)/J
       PNM = PNM + A
       AL = A
-C     STORE P OR DP SERIES FOR PRINTOUT.
+!     STORE P OR DP SERIES FOR PRINTOUT.
       IF (IPRT .LE. 0)  GO TO 150
       IF (IPRT .EQ. 2)  GO TO 145
       AM(J) = A
       IF (IPRT .EQ. 1)  GO TO 150
   145 BM(J) = B
-C     CHECK FOR TERMINATION OF SERIES.
+!     CHECK FOR TERMINATION OF SERIES.
   150 ABSA = ABS(A)
       ABSB = ABS(B)
       IF (ABSB .GE. 1.E-7)  GO TO 160
       IF (ABSA .LT. 1.E-7)  GO TO 110
   160 IF (ABSB .GE. 1.E+13)  GO TO 105
       IF (ABSA .GE. 1.E+13)  GO TO 105
-C     CHANGE CHECK LIMITS ACCORDING TO ACCURACY DESIRED AND ACCORDING
-C     TO WORD SIZE OF COMPUTER.
-C     FOR 32-BIT WORD, DOUBLE PRECISION, E-8 AND E+8 GIVE 7 DIGITS ACCURACY.
-C     FOR 60-BIT WORD, DOUBLE PRECISION, E-15 AND E+15 GIVE 14 DIGITS ACCURACY.
-C     FOR 60-BIT WORD, SINGLE PRECISION, E-8 AND E+7 GIVE 7 DIGITS ACCURACY.
-C     (DOUBLE OR SINGLE PRECISION REFER TO FNN,AL,A,B,PNM,DPNM)
+!     CHANGE CHECK LIMITS ACCORDING TO ACCURACY DESIRED AND ACCORDING
+!     TO WORD SIZE OF COMPUTER.
+!     FOR 32-BIT WORD, DOUBLE PRECISION, E-8 AND E+8 GIVE 7 DIGITS ACCURACY.
+!     FOR 60-BIT WORD, DOUBLE PRECISION, E-15 AND E+15 GIVE 14 DIGITS ACCURACY.
+!     FOR 60-BIT WORD, SINGLE PRECISION, E-8 AND E+7 GIVE 7 DIGITS ACCURACY.
+!     (DOUBLE OR SINGLE PRECISION REFER TO FNN,AL,A,B,PNM,DPNM)
       IF (J .LT. JMAX)  GO TO 100
-C     CONVERGENCE SLOW OR JMAX TOO SMALL
+!     CONVERGENCE SLOW OR JMAX TOO SMALL
   105 CONTINUE
-C     NUMERICAL ERROR UNACCEPTABLY LARGE DUE TO ADDING OF
-C     LARGE AND SMALL NUMBERS.
+!     NUMERICAL ERROR UNACCEPTABLY LARGE DUE TO ADDING OF
+!     LARGE AND SMALL NUMBERS.
       if (mess) WRITE(konsol,108) M,FN,CONST,J,A,B
   108 FORMAT (//12H ** ERROR **/1X,I5,F10.5,E15.7,I5,2D15.7)
       STOP
-C     SERIES TRUNCATED SUCCESSFULLY.
+!     SERIES TRUNCATED SUCCESSFULLY.
   110 PS = PNM
       DPS = DPNM
       IF (M .NE. 0)  GO TO 115
@@ -7056,7 +7056,7 @@ C     SERIES TRUNCATED SUCCESSFULLY.
       P = PS*S
       DP = DPS*S*S/2. + C*PMS
   120 CONTINUE
-C     PRINT TERMS OF SERIES
+!     PRINT TERMS OF SERIES
       IF (IPRT .EQ. 0)  RETURN
       if (mess) WRITE(konsol,125) M,FN,CONST,COLAT,P,DP,PMS,J
   125 FORMAT (/1X,I5,F10.5,E20.12,F10.2,3F25.14,I5)
@@ -7066,41 +7066,41 @@ C     PRINT TERMS OF SERIES
   130 FORMAT (1X,16E8.1)
       IF (IPRT .EQ. 1)  RETURN
   135 CONTINUE
-C  135 PRINT *, (BM(I),I=1,J)
+!  135 PRINT *, (BM(I),I=1,J)
       RETURN
       END
-C      
-C      
+!      
+!      
         REAL FUNCTION B0_98 ( HOUR, SAX, SUX, NSEASN, R, ZLO, ZMODIP)
-C-----------------------------------------------------------------
-C Interpolation procedure for bottomside thickness parameter B0.
-C Array B0F(ILT,ISEASON,IR,ILATI) distinguishes between day and
-C night (ILT=1,2), four seasons (ISEASON is northern season with
-C ISEASON=1 northern spring), low and high solar activity Rz12=10,
-C 100 (IR=1,2), and modified dip latitudes of 0, 18 and 45
-C degress (ILATI=1,2,3). In the DATA statement the first value
-C corresponds to B0F(1,1,1,1), the second to B0F(2,1,1,1), the
-C third to B0F(1,2,1,1) and so on.
-C
-C input:
-C       hour    LT in decimal hours
-C       SAX     time of sunrise in decimal hours
-C       SUX     time of sunset in decimal hours
-C       nseasn  season in northern hemisphere (1=spring)
-C       R       12-month running mean of sunspot number
-C       ZLO     longitude
-C       ZMODIP  modified dip latitude
-C
-C JUNE 1989 --------------------------------------- Dieter Bilitza
-C
-C Updates (B0_new -> B0_98):
-C
-C 01/98 corrected to include a smooth transition at the modip equator
-C       and no discontinuity at the equatorial change in season.
-C 09/98 new B0 values incl values at the magnetic equator
-C 10/98 longitude as input to determine if magnetic equator in northern 
-C         or southern hemisphere
-C-------------------------------------------------------------------
+!-----------------------------------------------------------------
+! Interpolation procedure for bottomside thickness parameter B0.
+! Array B0F(ILT,ISEASON,IR,ILATI) distinguishes between day and
+! night (ILT=1,2), four seasons (ISEASON is northern season with
+! ISEASON=1 northern spring), low and high solar activity Rz12=10,
+! 100 (IR=1,2), and modified dip latitudes of 0, 18 and 45
+! degress (ILATI=1,2,3). In the DATA statement the first value
+! corresponds to B0F(1,1,1,1), the second to B0F(2,1,1,1), the
+! third to B0F(1,2,1,1) and so on.
+!
+! input:
+!       hour    LT in decimal hours
+!       SAX     time of sunrise in decimal hours
+!       SUX     time of sunset in decimal hours
+!       nseasn  season in northern hemisphere (1=spring)
+!       R       12-month running mean of sunspot number
+!       ZLO     longitude
+!       ZMODIP  modified dip latitude
+!
+! JUNE 1989 --------------------------------------- Dieter Bilitza
+!
+! Updates (B0_new -> B0_98):
+!
+! 01/98 corrected to include a smooth transition at the modip equator
+!       and no discontinuity at the equatorial change in season.
+! 09/98 new B0 values incl values at the magnetic equator
+! 10/98 longitude as input to determine if magnetic equator in northern 
+!         or southern hemisphere
+!-------------------------------------------------------------------
       REAL      NITVAL
       DIMENSION B0F(2,4,2,3),bfr(2,2,3),bfd(2,3),zx(5),g(6),dd(5)
       DATA      B0F/201,68,210,61,192,68,199,67,240,80,245,83,
@@ -7111,14 +7111,14 @@ C-------------------------------------------------------------------
 
         num_lat=3
 
-C jseasn is southern hemisphere season
+! jseasn is southern hemisphere season
         jseasn=nseasn+2
         if(jseasn.gt.4) jseasn=jseasn-4
 
         zz = zmodip + 90.
         zz0 = 0.
 
-C Interpolation in Rz12: linear from 10 to 100
+! Interpolation in Rz12: linear from 10 to 100
         DO 7035 ISL=1,num_lat
           DO 7034 ISD=1,2
             bfr(isd,1,isl) = b0f(isd,nseasn,1,isl) +
@@ -7126,8 +7126,8 @@ C Interpolation in Rz12: linear from 10 to 100
             bfr(isd,2,isl) = b0f(isd,jseasn,1,isl) +
      &      (b0f(isd,jseasn,2,isl) - b0f(isd,jseasn,1,isl))/90.*(R-10.)
 7034      continue
-C Interpolation day/night with transitions at SAX (sunrise)
-C and SUX (sunset) for northern/southern hemisphere iss=1/2
+! Interpolation day/night with transitions at SAX (sunrise)
+! and SUX (sunset) for northern/southern hemisphere iss=1/2
           do 7033 iss=1,2
                 DAYVAL = BFR(1,ISS,ISL)
                 NITVAL = BFR(2,ISS,ISL)
@@ -7135,26 +7135,26 @@ C and SUX (sunset) for northern/southern hemisphere iss=1/2
 7033      continue
 7035    continue
 
-C Interpolation with epstein-transitions in modified dip latitude.
-C Transitions at +/-18 and +/-45 degrees; constant above +/-45.
-C
-C g(1:5) are the latitudinal slopes of B0;
-C       g(1) is for the region from -90 to -45 degrees
-C       g(2) is for the region from -45 to -18 degrees
-C       g(3) is for the region from -18 to   0 degrees
-C       g(4) is for the region from   0 to  18 degrees
-C       g(5) is for the region from  18 to  45 degrees
-C       g(6) is for the region from  45 to  90 degrees
-C
-C B0 =  bfd(2,3) at modip = -45,
-C       bfd(2,2) at modip = -18,
-C       bfd(2,1) or bfd(1,1) at modip = 0,
-C       bfd(1,2) at modip = 20,
-C       bfd(1,3) at modip = 45.
-C If the Longitude is between 200 and 320 degrees then the modip 
-C equator is in the southern hemisphere and bfd(2,1) is used at the 
-C equator, otherwise bfd(1,1) is used.
-c
+! Interpolation with epstein-transitions in modified dip latitude.
+! Transitions at +/-18 and +/-45 degrees; constant above +/-45.
+!
+! g(1:5) are the latitudinal slopes of B0;
+!       g(1) is for the region from -90 to -45 degrees
+!       g(2) is for the region from -45 to -18 degrees
+!       g(3) is for the region from -18 to   0 degrees
+!       g(4) is for the region from   0 to  18 degrees
+!       g(5) is for the region from  18 to  45 degrees
+!       g(6) is for the region from  45 to  90 degrees
+!
+! B0 =  bfd(2,3) at modip = -45,
+!       bfd(2,2) at modip = -18,
+!       bfd(2,1) or bfd(1,1) at modip = 0,
+!       bfd(1,2) at modip = 20,
+!       bfd(1,3) at modip = 45.
+! If the Longitude is between 200 and 320 degrees then the modip 
+! equator is in the southern hemisphere and bfd(2,1) is used at the 
+! equator, otherwise bfd(1,1) is used.
+!
         zx1=bfd(2,3)
         zx2=bfd(2,2)
         zx3=bfd(1,1)
@@ -7168,8 +7168,8 @@ c
         g(5) = ( zx5 - zx4 ) / 27.
         g(6) = 0.
 
-c        bb0 = bfd(2,3)
-c      SUM = bb0
+!        bb0 = bfd(2,3)
+!      SUM = bb0
         sum=zx1
       DO 1 I=1,5
         aa = eptr(zz ,dd(i),zx(i))
@@ -7181,21 +7181,21 @@ c      SUM = bb0
 
         RETURN
         END
-C
-C
+!
+!
       SUBROUTINE TAL(SHABR,SDELTA,SHBR,SDTDH0,AUS6,SPT)                         
-C-----------------------------------------------------------
-C CALCULATES THE COEFFICIENTS SPT FOR THE POLYNOMIAL
-C Y(X)=1+SPT(1)*X**2+SPT(2)*X**3+SPT(3)*X**4+SPT(4)*X**5               
-C TO FIT THE VALLEY IN Y, REPRESENTED BY:                
-C Y(X=0)=1, THE X VALUE OF THE DEEPEST VALLEY POINT (SHABR),                    
-C THE PRECENTAGE DEPTH (SDELTA), THE WIDTH (SHBR) AND THE                       
-C DERIVATIVE DY/DX AT THE UPPER VALLEY BOUNDRY (SDTDH0).                        
-C IF THERE IS AN UNWANTED ADDITIONAL EXTREMUM IN THE VALLEY                     
-C REGION, THEN AUS6=.TRUE., ELSE AUS6=.FALSE..     
-C FOR -SDELTA THE COEFF. ARE CALCULATED FOR THE FUNCTION                        
-C Y(X)=EXP(SPT(1)*X**2+...+SPT(4)*X**5).           
-C-----------------------------------------------------------
+!-----------------------------------------------------------
+! CALCULATES THE COEFFICIENTS SPT FOR THE POLYNOMIAL
+! Y(X)=1+SPT(1)*X**2+SPT(2)*X**3+SPT(3)*X**4+SPT(4)*X**5               
+! TO FIT THE VALLEY IN Y, REPRESENTED BY:                
+! Y(X=0)=1, THE X VALUE OF THE DEEPEST VALLEY POINT (SHABR),                    
+! THE PRECENTAGE DEPTH (SDELTA), THE WIDTH (SHBR) AND THE                       
+! DERIVATIVE DY/DX AT THE UPPER VALLEY BOUNDRY (SDTDH0).                        
+! IF THERE IS AN UNWANTED ADDITIONAL EXTREMUM IN THE VALLEY                     
+! REGION, THEN AUS6=.TRUE., ELSE AUS6=.FALSE..     
+! FOR -SDELTA THE COEFF. ARE CALCULATED FOR THE FUNCTION                        
+! Y(X)=EXP(SPT(1)*X**2+...+SPT(4)*X**5).           
+!-----------------------------------------------------------
       DIMENSION SPT(4)                             
       LOGICAL AUS6    
       AUS6=.FALSE.
@@ -7231,23 +7231,23 @@ C-----------------------------------------------------------
       IF(Z2.GT.0.0.AND.Z2.LT.SHBR) AUS6=.TRUE.     
 300   RETURN          
       END             
-C
-C
+!
+!
         SUBROUTINE VALGUL(XHI,HVB,VWU,VWA,VDP)
-C --------------------------------------------------------------------- 
-C   CALCULATES E-F VALLEY PARAMETERS; T.L. GULYAEVA, ADVANCES IN
-C   SPACE RESEARCH 7, #6, 39-48, 1987.
-C
-C       INPUT:  XHI     SOLAR ZENITH ANGLE [DEGREE]
-C       
-C       OUTPUT: VDP     VALLEY DEPTH  (NVB/NME)
-C               VWU     VALLEY WIDTH  [KM]
-C               VWA     VALLEY WIDTH  (SMALLER, CORRECTED BY RAWER)
-C               HVB     HEIGHT OF VALLEY BASE [KM]
-C -----------------------------------------------------------------------
-C
+! --------------------------------------------------------------------- 
+!   CALCULATES E-F VALLEY PARAMETERS; T.L. GULYAEVA, ADVANCES IN
+!   SPACE RESEARCH 7, #6, 39-48, 1987.
+!
+!       INPUT:  XHI     SOLAR ZENITH ANGLE [DEGREE]
+!       
+!       OUTPUT: VDP     VALLEY DEPTH  (NVB/NME)
+!               VWU     VALLEY WIDTH  [KM]
+!               VWA     VALLEY WIDTH  (SMALLER, CORRECTED BY RAWER)
+!               HVB     HEIGHT OF VALLEY BASE [KM]
+! -----------------------------------------------------------------------
+!
         COMMON  /CONST/UMR,PI
-C
+!
         CS = 0.1 + COS(UMR*XHI)
         ABC = ABS(CS)
         VDP = 0.45 * CS / (0.1 + ABC ) + 0.55
@@ -7258,37 +7258,37 @@ C
         HVB = 1000. / ( 7.024 + 0.224 * CS + 0.966 * ABC )
         RETURN
         END
-C
-C
+!
+!
       Subroutine DRegion(z,it,f,vKp,f5SW,f6WA,elg)
-c-----------------------------------------------------------------------
-c Reference: Danilov, Rodevich, and Smirnova, Adv. Space Res.  
-C     15, #2, 165, 1995.
-C
-C Input:     z    - solar zenith angle in degrees
-C            it   - season (month)
-C            f    - F10.7 solar radio flux (daily)
-C            vKp  - Kp magnetic index (3-hour)
-C            f5SW - indicator for Stratospheric Warming (SW) conditions
-C                   =0 no SW, =0.5 minor SW, =1 major SW
-C            f6WA - indicator for Winter Anomaly (WA) conditions
-C                   =0 no WA, =0.5 weak WA, =1 strong WA
-C Criteria for SW and WA indicators:
-C      SW minor:  Temperature increase at the 30 hPa level by 10 deg.
-C      SA major:  The same but by 20 degrees.
-C         Temperature data for each year are published  
-C         in Beilage zur Berliner Wetterkarte (K. Labitzke et al.).
-C      WA weak:   An increase of the absorption in the 2-2.8 MHz  
-C                 range at short A3 paths by 15 dB
-C      WA strong: The same by 30 dB.
-C 
-C       Only for month 12 to 2 (winter).
-C
-C Output:      elg(7)  alog10 of electron density [cm-3] at h=60,65,
-C                  70,75,80,85, and 90km
-c-----------------------------------------------------------------------
-c            
-cor   dimension h(7),A0(7),A1(7),A2(7),A3(7),A4(7),A5(7),A6(7),elg(7)
+!-----------------------------------------------------------------------
+! Reference: Danilov, Rodevich, and Smirnova, Adv. Space Res.  
+!     15, #2, 165, 1995.
+!
+! Input:     z    - solar zenith angle in degrees
+!            it   - season (month)
+!            f    - F10.7 solar radio flux (daily)
+!            vKp  - Kp magnetic index (3-hour)
+!            f5SW - indicator for Stratospheric Warming (SW) conditions
+!                   =0 no SW, =0.5 minor SW, =1 major SW
+!            f6WA - indicator for Winter Anomaly (WA) conditions
+!                   =0 no WA, =0.5 weak WA, =1 strong WA
+! Criteria for SW and WA indicators:
+!      SW minor:  Temperature increase at the 30 hPa level by 10 deg.
+!      SA major:  The same but by 20 degrees.
+!         Temperature data for each year are published  
+!         in Beilage zur Berliner Wetterkarte (K. Labitzke et al.).
+!      WA weak:   An increase of the absorption in the 2-2.8 MHz  
+!                 range at short A3 paths by 15 dB
+!      WA strong: The same by 30 dB.
+! 
+!       Only for month 12 to 2 (winter).
+!
+! Output:      elg(7)  alog10 of electron density [cm-3] at h=60,65,
+!                  70,75,80,85, and 90km
+!-----------------------------------------------------------------------
+!            
+!or   dimension h(7),A0(7),A1(7),A2(7),A3(7),A4(7),A5(7),A6(7),elg(7)
       dimension A0(7),A1(7),A2(7),A3(7),A4(7),A5(7),A6(7),elg(7)
       data A0/1.0,1.2,1.4,1.5,1.6,1.7,3.0/
       data A1/0.6,0.8,1.1,1.2,1.3,1.4,1.0/
@@ -7326,24 +7326,24 @@ cor   dimension h(7),A0(7),A1(7),A2(7),A3(7),A4(7),A5(7),A6(7),elg(7)
      *         +A5(i)*f5SW+A6(i)*f6WA
    1     continue
          end
-C
-C
-C
-C                     
-C************************************************************                   
-C*************** EARTH MAGNETIC FIELD ***********************                   
-C**************************************************************                 
-C
-C
+!
+!
+!
+!                     
+!************************************************************                   
+!*************** EARTH MAGNETIC FIELD ***********************                   
+!**************************************************************                 
+!
+!
       SUBROUTINE FIELDG(DLAT,DLONG,ALT,X,Y,Z,F,DIP,DEC,SMODIP)                  
-C THIS IS A SPECIAL VERSION OF THE POGO 68/10 MAGNETIC FIELD                    
-C LEGENDRE MODEL. TRANSFORMATION COEFF. G(144) VALID FOR 1973.                  
-C INPUT: DLAT, DLONG=GEOGRAPHIC COORDINATES/DEG.(-90/90,0/360),                 
-C        ALT=ALTITUDE/KM.                          
-C OUTPUT: F TOTAL FIELD (GAUSS), Z DOWNWARD VERTICAL COMPONENT                  
-C        X,Y COMPONENTS IN THE EQUATORIAL PLANE (X TO ZERO LONGITUDE).          
-C        DIP INCLINATION ANGLE(DEGREE). SMODIP RAWER'S MODFIED DIP.             
-C SHEIK,1977.         
+! THIS IS A SPECIAL VERSION OF THE POGO 68/10 MAGNETIC FIELD                    
+! LEGENDRE MODEL. TRANSFORMATION COEFF. G(144) VALID FOR 1973.                  
+! INPUT: DLAT, DLONG=GEOGRAPHIC COORDINATES/DEG.(-90/90,0/360),                 
+!        ALT=ALTITUDE/KM.                          
+! OUTPUT: F TOTAL FIELD (GAUSS), Z DOWNWARD VERTICAL COMPONENT                  
+!        X,Y COMPONENTS IN THE EQUATORIAL PLANE (X TO ZERO LONGITUDE).          
+!        DIP INCLINATION ANGLE(DEGREE). SMODIP RAWER'S MODFIED DIP.             
+! SHEIK,1977.         
       DIMENSION H(144),XI(3),G(144),FEL1(72),FEL2(72)
       COMMON/CONST/UMR,PI                           
       DATA FEL1/0.0, 0.1506723,0.0101742, -0.0286519, 0.0092606,                
@@ -7449,18 +7449,18 @@ C SHEIK,1977.
       SMODIP=SMODIP/UMR                            
       RETURN          
       END             
-C
-C
-C************************************************************                   
-C*********** INTERPOLATION AND REST ***************************                 
-C**************************************************************                 
-C
-C
+!
+!
+!************************************************************                   
+!*********** INTERPOLATION AND REST ***************************                 
+!**************************************************************                 
+!
+!
       SUBROUTINE REGFA1(X11,X22,FX11,FX22,EPS,FW,F,SCHALT,X) 
-C REGULA-FALSI-PROCEDURE TO FIND X WITH F(X)-FW=0. X1,X2 ARE THE                
-C STARTING VALUES. THE COMUTATION ENDS WHEN THE X-INTERVAL                      
-C HAS BECOME LESS THEN EPS . IF SIGN(F(X1)-FW)= SIGN(F(X2)-FW)                  
-C THEN SCHALT=.TRUE.  
+! REGULA-FALSI-PROCEDURE TO FIND X WITH F(X)-FW=0. X1,X2 ARE THE                
+! STARTING VALUES. THE COMUTATION ENDS WHEN THE X-INTERVAL                      
+! HAS BECOME LESS THEN EPS . IF SIGN(F(X1)-FW)= SIGN(F(X2)-FW)                  
+! THEN SCHALT=.TRUE.  
       LOGICAL L1,LINKS,K,SCHALT                    
       SCHALT=.FALSE.
       EP=EPS  
@@ -7502,88 +7502,88 @@ C THEN SCHALT=.TRUE.
       GOTO 200        
 800   RETURN          
       END             
-C
-C
-C******************************************************************
-C********** ZENITH ANGLE, DAY OF YEAR, TIME ***********************
-C******************************************************************
-C
-C
+!
+!
+!******************************************************************
+!********** ZENITH ANGLE, DAY OF YEAR, TIME ***********************
+!******************************************************************
+!
+!
         subroutine soco (ld,t,flat,Elon,height,
      &          DECLIN, ZENITH, SUNRSE, SUNSET)
-c--------------------------------------------------------------------
-c       s/r to calculate the solar declination, zenith angle, and
-c       sunrise & sunset times  - based on Newbern Smith's algorithm
-c       [leo mcnamara, 1-sep-86, last modified 16-jun-87]
-c       {dieter bilitza, 30-oct-89, modified for IRI application}
-c
-c in:   ld      local day of year
-c       t       local hour (decimal)
-c       flat    northern latitude in degrees
-c       elon    east longitude in degrees
-c		height	height in km
-c
-c out:  declin      declination of the sun in degrees
-c       zenith      zenith angle of the sun in degrees
-c       sunrse      local time of sunrise in hours 
-c       sunset      local time of sunset in hours 
-c-------------------------------------------------------------------
-c
+!--------------------------------------------------------------------
+!       s/r to calculate the solar declination, zenith angle, and
+!       sunrise & sunset times  - based on Newbern Smith's algorithm
+!       [leo mcnamara, 1-sep-86, last modified 16-jun-87]
+!       {dieter bilitza, 30-oct-89, modified for IRI application}
+!
+! in:   ld      local day of year
+!       t       local hour (decimal)
+!       flat    northern latitude in degrees
+!       elon    east longitude in degrees
+!		height	height in km
+!
+! out:  declin      declination of the sun in degrees
+!       zenith      zenith angle of the sun in degrees
+!       sunrse      local time of sunrise in hours 
+!       sunset      local time of sunset in hours 
+!-------------------------------------------------------------------
+!
         common/const/dtr,pi     /const1/humr,dumr
-c amplitudes of Fourier coefficients  --  1955 epoch.................
+! amplitudes of Fourier coefficients  --  1955 epoch.................
         data    p1,p2,p3,p4,p6 /
      &  0.017203534,0.034407068,0.051610602,0.068814136,0.103221204 /
-c
-c s/r is formulated in terms of WEST longitude.......................
+!
+! s/r is formulated in terms of WEST longitude.......................
         wlon = 360. - Elon
-c
-c time of equinox for 1980...........................................
+!
+! time of equinox for 1980...........................................
         td = ld + (t + Wlon/15.) / 24.
         te = td + 0.9369
-c
-c declination of the sun..............................................
+!
+! declination of the sun..............................................
         dcl = 23.256 * sin(p1*(te-82.242)) + 0.381 * sin(p2*(te-44.855))
      &      + 0.167 * sin(p3*(te-23.355)) - 0.013 * sin(p4*(te+11.97))
      &      + 0.011 * sin(p6*(te-10.41)) + 0.339137
         DECLIN = dcl
         dc = dcl * dtr
-c
-c the equation of time................................................
+!
+! the equation of time................................................
         tf = te - 0.5
         eqt = -7.38*sin(p1*(tf-4.)) - 9.87*sin(p2*(tf+9.))
      &      + 0.27*sin(p3*(tf-53.)) - 0.2*cos(p4*(tf-17.))
         et = eqt * dtr / 4.
-c
+!
         fa = flat * dtr
         phi = humr * ( t - 12.) + et
-c
+!
         a = sin(fa) * sin(dc)
         b = cos(fa) * cos(dc)
         	cosx = a + b * cos(phi)
         	if(abs(cosx).gt.1.) cosx=sign(1.,cosx)
         zenith = acos(cosx) / dtr
-c
-c calculate sunrise and sunset times --  at the ground...........
-c see Explanatory Supplement to the Ephemeris (1961) pg 401......
-c sunrise at height h metres is at...............................
+!
+! calculate sunrise and sunset times --  at the ground...........
+! see Explanatory Supplement to the Ephemeris (1961) pg 401......
+! sunrise at height h metres is at...............................
 		h=height*1000.
         chih = 90.83 + 0.0347 * sqrt(h)
-c this includes corrections for horizontal refraction and........
-c semi-diameter of the solar disk................................
+! this includes corrections for horizontal refraction and........
+! semi-diameter of the solar disk................................
         ch = cos(chih * dtr)
         cosphi = (ch -a ) / b
-c if abs(secphi) > 1., sun does not rise/set.....................
-c allow for sun never setting - high latitude summer.............
+! if abs(secphi) > 1., sun does not rise/set.....................
+! allow for sun never setting - high latitude summer.............
         secphi = 999999.
         if(cosphi.ne.0.) secphi = 1./cosphi
         sunset = 99.
         sunrse = 99.
         if(secphi.gt.-1.0.and.secphi.le.0.) return
-c allow for sun never rising - high latitude winter..............
+! allow for sun never rising - high latitude winter..............
         sunset = -99.
         sunrse = -99.
         if(secphi.gt.0.0.and.secphi.lt.1.) return
-c
+!
         	cosx = cosphi
         	if(abs(cosx).gt.1.) cosx=sign(1.,cosx)
         phi = acos(cosx)
@@ -7593,20 +7593,20 @@ c
         sunset = 12. + phi - et
         if(sunrse.lt.0.) sunrse = sunrse + 24.
         if(sunset.ge.24.) sunset = sunset - 24.
-c
+!
         return
         end
-c
-C
+!
+!
       FUNCTION HPOL(HOUR,TW,XNW,SA,SU,DSA,DSU)            
-C-------------------------------------------------------
-C PROCEDURE FOR SMOOTH TIME-INTERPOLATION USING EPSTEIN  
-C STEP FUNCTION AT SUNRISE (SA) AND SUNSET (SU). THE 
-C STEP-WIDTH FOR SUNRISE IS DSA AND FOR SUNSET DSU.
-C TW,NW ARE THE DAY AND NIGHT VALUE OF THE PARAMETER TO 
-C BE INTERPOLATED. SA AND SU ARE TIME OF SUNRIES AND 
-C SUNSET IN DECIMAL HOURS.
-C BILITZA----------------------------------------- 1979.
+!-------------------------------------------------------
+! PROCEDURE FOR SMOOTH TIME-INTERPOLATION USING EPSTEIN  
+! STEP FUNCTION AT SUNRISE (SA) AND SUNSET (SU). THE 
+! STEP-WIDTH FOR SUNRISE IS DSA AND FOR SUNSET DSU.
+! TW,NW ARE THE DAY AND NIGHT VALUE OF THE PARAMETER TO 
+! BE INTERPOLATED. SA AND SU ARE TIME OF SUNRIES AND 
+! SUNSET IN DECIMAL HOURS.
+! BILITZA----------------------------------------- 1979.
         IF(ABS(SU).GT.25.) THEN
                 IF(SU.GT.0.0) THEN
                         HPOL=TW
@@ -7619,29 +7619,29 @@ C BILITZA----------------------------------------- 1979.
      &  (XNW-TW)*EPST(HOUR,DSU,SU) 
       RETURN          
       END       
-C      
-C
+!      
+!
         SUBROUTINE MODA(IN,IYEAR,MONTH,IDAY,IDOY,NRDAYMO)
-C-------------------------------------------------------------------
-C CALCULATES DAY OF YEAR (IDOY, ddd) FROM YEAR (IYEAR, yy or yyyy), 
-C MONTH (MONTH, mm) AND DAY OF MONTH (IDAY, dd) IF IN=0, OR MONTH 
-C AND DAY FROM YEAR AND DAY OF YEAR IF IN=1. NRDAYMO is an output 
-C parameter providing the number of days in the specific month.
-C-------------------------------------------------------------------
+!-------------------------------------------------------------------
+! CALCULATES DAY OF YEAR (IDOY, ddd) FROM YEAR (IYEAR, yy or yyyy), 
+! MONTH (MONTH, mm) AND DAY OF MONTH (IDAY, dd) IF IN=0, OR MONTH 
+! AND DAY FROM YEAR AND DAY OF YEAR IF IN=1. NRDAYMO is an output 
+! parameter providing the number of days in the specific month.
+!-------------------------------------------------------------------
         DIMENSION       MM(12)
         DATA            MM/31,28,31,30,31,30,31,31,30,31,30,31/
 
         IMO=0
         MOBE=0
-c
-c  leap year rule: years evenly divisible by 4 are leap years, except
-c  years also evenly divisible by 100 are not leap years, except years 
-c  also evenly divisible by 400 are leap years. The year 2000 therefore 
-C  is a leap year. The 100 and 400 year exception rule
-c     if((iyear/4*4.eq.iyear).and.(iyear/100*100.ne.iyear)) mm(2)=29
-c  will become important again in the year 2100 which is not a leap 
-C  year.
-c
+!
+!  leap year rule: years evenly divisible by 4 are leap years, except
+!  years also evenly divisible by 100 are not leap years, except years 
+!  also evenly divisible by 400 are leap years. The year 2000 therefore 
+!  is a leap year. The 100 and 400 year exception rule
+!     if((iyear/4*4.eq.iyear).and.(iyear/100*100.ne.iyear)) mm(2)=29
+!  will become important again in the year 2100 which is not a leap 
+!  year.
+!
         mm(2)=28
         if(iyear/4*4.eq.iyear) mm(2)=29
 
@@ -7665,25 +7665,25 @@ c
                 IDAY=IDOY-MOOLD
         RETURN
         END             
-c
-c
+!
+!
         subroutine ut_lt(mode,ut,slt,glong,iyyy,ddd)
-c -----------------------------------------------------------------
-c Converts Universal Time UT (decimal hours) into Solar Local Time
-c SLT (decimal hours) for given date (iyyy is year, e.g. 1995; ddd
-c is day of year, e.g. 1 for Jan 1) and geodatic longitude in degrees.
-C For mode=0 UT->LT and for mode=1 LT->UT
-c Please NOTE that iyyy and ddd are input as well as output parameters
-c since the determined LT may be for a day before or after the UT day.
-c ------------------------------------------------- bilitza nov 95
+! -----------------------------------------------------------------
+! Converts Universal Time UT (decimal hours) into Solar Local Time
+! SLT (decimal hours) for given date (iyyy is year, e.g. 1995; ddd
+! is day of year, e.g. 1 for Jan 1) and geodatic longitude in degrees.
+! For mode=0 UT->LT and for mode=1 LT->UT
+! Please NOTE that iyyy and ddd are input as well as output parameters
+! since the determined LT may be for a day before or after the UT day.
+! ------------------------------------------------- bilitza nov 95
         integer         ddd,dddend
 
         xlong=glong
         if(glong.gt.180) xlong=glong-360
         if(mode.ne.0) goto 1
-c
-c UT ---> LT
-c
+!
+! UT ---> LT
+!
         SLT=UT+xlong/15.
         if((SLT.ge.0.).and.(SLT.le.24.)) goto 2
         if(SLT.gt.24.) goto 3
@@ -7692,10 +7692,10 @@ c
                 if(ddd.lt.1.) then
                         iyyy=iyyy-1
                         ddd=365
-c
-c leap year if evenly divisible by 4 and not by 100, except if evenly
-c divisible by 400. Thus 2000 will be a leap year.
-c
+!
+! leap year if evenly divisible by 4 and not by 100, except if evenly
+! divisible by 400. Thus 2000 will be a leap year.
+!
                         if(iyyy/4*4.eq.iyyy) ddd=366
                         endif
                 goto 2
@@ -7708,9 +7708,9 @@ c
                         ddd=1
                         endif
                 goto 2
-c
-c LT ---> UT
-c
+!
+! LT ---> UT
+!
 1       UT=SLT-xlong/15.
         if((UT.ge.0.).and.(UT.le.24.)) goto 2
         if(UT.gt.24.) goto 5
@@ -7732,32 +7732,32 @@ c
                         endif
 2       return
         end
-C
-C
+!
+!
 
       SUBROUTINE SUN (IYEAR,IDAY,IHOUR,MIN,ISEC,GST,SLONG,SRASN,SDEC)
-C-----------------------------------------------------------------------------
-C  CALCULATES FOUR QUANTITIES NECESSARY FOR COORDINATE TRANSFORMATIONS
-C  WHICH DEPEND ON SUN POSITION (AND, HENCE, ON UNIVERSAL TIME AND SEASON)
-C
-C-------  INPUT PARAMETERS:
-C  IYR,IDAY,IHOUR,MIN,ISEC -  YEAR, DAY, AND UNIVERSAL TIME IN HOURS, MINUTES,
-C    AND SECONDS  (IDAY=1 CORRESPONDS TO JANUARY 1).
-C
-C-------  OUTPUT PARAMETERS:
-C  GST - GREENWICH MEAN SIDEREAL TIME, SLONG - LONGITUDE ALONG ECLIPTIC
-C  SRASN - RIGHT ASCENSION,  SDEC - DECLINATION  OF THE SUN (RADIANS)
-C  ORIGINAL VERSION OF THIS SUBROUTINE HAS BEEN COMPILED FROM:
-C  RUSSELL, C.T., COSMIC ELECTRODYNAMICS, 1971, V.2, PP.184-196.
-C
-C  LAST MODIFICATION:  MARCH 31, 2003 (ONLY SOME NOTATION CHANGES)
-C
-C     ORIGINAL VERSION WRITTEN BY:    Gilbert D. Mead
-C-----------------------------------------------------------------------------
-C
+!-----------------------------------------------------------------------------
+!  CALCULATES FOUR QUANTITIES NECESSARY FOR COORDINATE TRANSFORMATIONS
+!  WHICH DEPEND ON SUN POSITION (AND, HENCE, ON UNIVERSAL TIME AND SEASON)
+!
+!-------  INPUT PARAMETERS:
+!  IYR,IDAY,IHOUR,MIN,ISEC -  YEAR, DAY, AND UNIVERSAL TIME IN HOURS, MINUTES,
+!    AND SECONDS  (IDAY=1 CORRESPONDS TO JANUARY 1).
+!
+!-------  OUTPUT PARAMETERS:
+!  GST - GREENWICH MEAN SIDEREAL TIME, SLONG - LONGITUDE ALONG ECLIPTIC
+!  SRASN - RIGHT ASCENSION,  SDEC - DECLINATION  OF THE SUN (RADIANS)
+!  ORIGINAL VERSION OF THIS SUBROUTINE HAS BEEN COMPILED FROM:
+!  RUSSELL, C.T., COSMIC ELECTRODYNAMICS, 1971, V.2, PP.184-196.
+!
+!  LAST MODIFICATION:  MARCH 31, 2003 (ONLY SOME NOTATION CHANGES)
+!
+!     ORIGINAL VERSION WRITTEN BY:    Gilbert D. Mead
+!-----------------------------------------------------------------------------
+!
       DOUBLE PRECISION DJ,FDAY
       COMMON /CONST/UMR,PI
-C
+!
       IF(IYEAR.LT.1901.OR.IYEAR.GT.2099) RETURN
       FDAY=DFLOAT(IHOUR*3600+MIN*60+ISEC)/86400.D0
       DJ=365*(IYEAR-1900)+(IYEAR-1901)/4+IDAY-0.5D0+FDAY
@@ -7771,10 +7771,10 @@ C
       OBLIQ=(23.45229-0.0130125*T)*UMR
       SOB=SIN(OBLIQ)
       SLP=SLONG-9.924E-5
-C
-C   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  DUE TO
-C   THE ORBITAL MOTION OF THE EARTH
-C
+!
+!   THE LAST CONSTANT IS A CORRECTION FOR THE ANGULAR ABERRATION  DUE TO
+!   THE ORBITAL MOTION OF THE EARTH
+!
       SIN1=SOB*SIN(SLP)
       COS1=SQRT(1.-SIN1**2)
       SC=SIN1/COS1
@@ -7782,42 +7782,42 @@ C
       SRASN=3.141592654-ATAN2(COS(OBLIQ)/SOB*SC,-COS(SLP)/COS1)
       RETURN
       END
-C      
-C
-C *********************************************************************
-C ************************ EPSTEIN FUNCTIONS **************************
-C *********************************************************************
-C REF:  H. G. BOOKER, J. ATMOS. TERR. PHYS. 39, 619-623, 1977
-C       K. RAWER, ADV. SPACE RES. 4, #1, 11-15, 1984
-C *********************************************************************
-C
-C
+!      
+!
+! *********************************************************************
+! ************************ EPSTEIN FUNCTIONS **************************
+! *********************************************************************
+! REF:  H. G. BOOKER, J. ATMOS. TERR. PHYS. 39, 619-623, 1977
+!       K. RAWER, ADV. SPACE RES. 4, #1, 11-15, 1984
+! *********************************************************************
+!
+!
         REAL FUNCTION  RLAY ( X, XM, SC, HX )
-C -------------------------------------------------------- RAWER  LAYER
+! -------------------------------------------------------- RAWER  LAYER
         Y1  = EPTR ( X , SC, HX )
         Y1M = EPTR ( XM, SC, HX )
         Y2M = EPST ( XM, SC, HX )
         RLAY = Y1 - Y1M - ( X - XM ) * Y2M / SC
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION D1LAY ( X, XM, SC, HX )
-C ------------------------------------------------------------ dLAY/dX
+! ------------------------------------------------------------ dLAY/dX
         D1LAY = ( EPST(X,SC,HX) - EPST(XM,SC,HX) ) /  SC
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION D2LAY ( X, XM, SC, HX )
-C ---------------------------------------------------------- d2LAY/dX2
+! ---------------------------------------------------------- d2LAY/dX2
         D2LAY = EPLA(X,SC,HX) /  (SC * SC)
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION EPTR ( X, SC, HX )
-C --------------------------------------------------------- TRANSITION
+! --------------------------------------------------------- TRANSITION
         COMMON/ARGEXP/ARGMAX
         D1 = ( X - HX ) / SC
         IF (ABS(D1).LT.ARGMAX) GOTO 1
@@ -7830,10 +7830,10 @@ C --------------------------------------------------------- TRANSITION
 1       EPTR = ALOG ( 1. + EXP( D1 ))
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION EPST ( X, SC, HX )
-C -------------------------------------------------------------- STEP
+! -------------------------------------------------------------- STEP
         COMMON/ARGEXP/ARGMAX
         D1 = ( X - HX ) / SC
         IF (ABS(D1).LT.ARGMAX) GOTO 1
@@ -7846,17 +7846,17 @@ C -------------------------------------------------------------- STEP
 1       EPST = 1. / ( 1. + EXP( -D1 ))
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION EPSTEP ( Y2, Y1, SC, HX, X)
-C---------------------------------------------- STEP FROM Y1 TO Y2      
+!---------------------------------------------- STEP FROM Y1 TO Y2      
         EPSTEP = Y1 + ( Y2 - Y1 ) * EPST ( X, SC, HX)
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION EPLA ( X, SC, HX )
-C ------------------------------------------------------------ PEAK 
+! ------------------------------------------------------------ PEAK 
         COMMON/ARGEXP/ARGMAX
         D1 = ( X - HX ) / SC
         IF (ABS(D1).LT.ARGMAX) GOTO 1
@@ -7867,13 +7867,13 @@ C ------------------------------------------------------------ PEAK
         EPLA = D0 / ( D2 * D2 )
         RETURN
         END
-c
-c
+!
+!
         FUNCTION XE2TO5(H,HMF2,NL,HX,SC,AMP)
-C----------------------------------------------------------------------
-C NORMALIZED ELECTRON DENSITY (N/NMF2) FOR THE MIDDLE IONOSPHERE FROM 
-C HME TO HMF2 USING LAY-FUNCTIONS.
-C----------------------------------------------------------------------
+!----------------------------------------------------------------------
+! NORMALIZED ELECTRON DENSITY (N/NMF2) FOR THE MIDDLE IONOSPHERE FROM 
+! HME TO HMF2 USING LAY-FUNCTIONS.
+!----------------------------------------------------------------------
         DIMENSION       HX(NL),SC(NL),AMP(NL)
         SUM = 1.0
         DO 1 I=1,NL
@@ -7883,14 +7883,14 @@ C----------------------------------------------------------------------
         XE2TO5 = sum
         RETURN
         END
-C
-C
+!
+!
         REAL FUNCTION XEN(H,HMF2,XNMF2,HME,NL,HX,SC,AMP)
-C----------------------------------------------------------------------
-C ELECTRON DENSITY WITH NEW MIDDLE IONOSPHERE
-C----------------------------------------------------------------------
+!----------------------------------------------------------------------
+! ELECTRON DENSITY WITH NEW MIDDLE IONOSPHERE
+!----------------------------------------------------------------------
         DIMENSION       HX(NL),SC(NL),AMP(NL)
-C
+!
         IF(H.LT.HMF2) GOTO 100
                 XEN = XE1(H)
                 RETURN
@@ -7900,45 +7900,45 @@ C
 200     XEN = XE6(H)
         RETURN
         END
-C
-C
+!
+!
         SUBROUTINE ROGUL(IDAY,XHI,SX,GRO)
-C --------------------------------------------------------------------- 
-C   CALCULATES RATIO H0.5/HMF2 FOR HALF-DENSITY POINT (NE(H0.5)=0.5*
-C   NMF2) T. GULYAEVA, ADVANCES IN SPACE RESEARCH 7, #6, 39-48, 1987.
-C
-C       INPUT:  IDAY    DAY OF YEAR
-C               XHI     SOLAR ZENITH ANGLE [DEGREE]
-C       
-C       OUTPUT: GRO     RATIO OF HALF DENSITY HEIGHT TO F PEAK HEIGHT
-C               SX      SMOOTHLY VARYING SEASON PARAMTER (SX=1 FOR 
-C                       DAY=1; SX=3 FOR DAY=180; SX=2 FOR EQUINOX)
-C ---------------------------------------------------------------------
-C
+! --------------------------------------------------------------------- 
+!   CALCULATES RATIO H0.5/HMF2 FOR HALF-DENSITY POINT (NE(H0.5)=0.5*
+!   NMF2) T. GULYAEVA, ADVANCES IN SPACE RESEARCH 7, #6, 39-48, 1987.
+!
+!       INPUT:  IDAY    DAY OF YEAR
+!               XHI     SOLAR ZENITH ANGLE [DEGREE]
+!       
+!       OUTPUT: GRO     RATIO OF HALF DENSITY HEIGHT TO F PEAK HEIGHT
+!               SX      SMOOTHLY VARYING SEASON PARAMTER (SX=1 FOR 
+!                       DAY=1; SX=3 FOR DAY=180; SX=2 FOR EQUINOX)
+! ---------------------------------------------------------------------
+!
         common  /const1/humr,dumr
         SX = 2. - COS ( IDAY * dumr )
         XS = ( XHI - 20. * SX) / 15.
         GRO = 0.8 - 0.2 / ( 1. + EXP(XS) )
-c same as gro=0.6+0.2/(1+exp(-xs))
+! same as gro=0.6+0.2/(1+exp(-xs))
         RETURN
         END
-C
-C
+!
+!
         SUBROUTINE LNGLSN ( N, A, B, AUS)
-C --------------------------------------------------------------------
-C SOLVES QUADRATIC SYSTEM OF LINEAR EQUATIONS:
-C
-C       INPUT:  N       NUMBER OF EQUATIONS (= NUMBER OF UNKNOWNS)
-C               A(N,N)  MATRIX (LEFT SIDE OF SYSTEM OF EQUATIONS)
-C               B(N)    VECTOR (RIGHT SIDE OF SYSTEM)
-C
-C       OUTPUT: AUS     =.TRUE.   NO SOLUTION FOUND
-C                       =.FALSE.  SOLUTION IS IN  A(N,J) FOR J=1,N
-C --------------------------------------------------------------------
-C
+! --------------------------------------------------------------------
+! SOLVES QUADRATIC SYSTEM OF LINEAR EQUATIONS:
+!
+!       INPUT:  N       NUMBER OF EQUATIONS (= NUMBER OF UNKNOWNS)
+!               A(N,N)  MATRIX (LEFT SIDE OF SYSTEM OF EQUATIONS)
+!               B(N)    VECTOR (RIGHT SIDE OF SYSTEM)
+!
+!       OUTPUT: AUS     =.TRUE.   NO SOLUTION FOUND
+!                       =.FALSE.  SOLUTION IS IN  A(N,J) FOR J=1,N
+! --------------------------------------------------------------------
+!
         DIMENSION       A(5,5), B(5), AZV(10)
         LOGICAL         AUS
-C
+!
         NN = N - 1
         AUS = .FALSE.
         DO 1 K=1,N-1
@@ -7990,31 +7990,31 @@ C
 6       CONTINUE
         RETURN
         END
-C
-C
+!
+!
         SUBROUTINE LSKNM ( N, M, M0, M1, HM, SC, HX, W,X,Y,VAR,SING)
-C --------------------------------------------------------------------
-C   DETERMINES LAY-FUNCTIONS AMPLITUDES FOR A NUMBER OF CONSTRAINTS:
-C
-C       INPUT:  N       NUMBER OF AMPLITUDES ( LAY-FUNCTIONS)
-C               M       NUMBER OF CONSTRAINTS
-C               M0      NUMBER OF POINT CONSTRAINTS
-C               M1      NUMBER OF FIRST DERIVATIVE CONSTRAINTS
-C               HM      F PEAK ALTITUDE  [KM]
-C               SC(N)   SCALE PARAMETERS FOR LAY-FUNCTIONS  [KM]
-C               HX(N)   HEIGHT PARAMETERS FOR LAY-FUNCTIONS  [KM]
-C               W(M)    WEIGHT OF CONSTRAINTS
-C               X(M)    ALTITUDES FOR CONSTRAINTS  [KM]
-C               Y(M)    LOG(DENSITY/NMF2) FOR CONSTRAINTS
-C
-C       OUTPUT: VAR(M)  AMPLITUDES
-C               SING    =.TRUE.   NO SOLUTION
-C ---------------------------------------------------------------------
-C
+! --------------------------------------------------------------------
+!   DETERMINES LAY-FUNCTIONS AMPLITUDES FOR A NUMBER OF CONSTRAINTS:
+!
+!       INPUT:  N       NUMBER OF AMPLITUDES ( LAY-FUNCTIONS)
+!               M       NUMBER OF CONSTRAINTS
+!               M0      NUMBER OF POINT CONSTRAINTS
+!               M1      NUMBER OF FIRST DERIVATIVE CONSTRAINTS
+!               HM      F PEAK ALTITUDE  [KM]
+!               SC(N)   SCALE PARAMETERS FOR LAY-FUNCTIONS  [KM]
+!               HX(N)   HEIGHT PARAMETERS FOR LAY-FUNCTIONS  [KM]
+!               W(M)    WEIGHT OF CONSTRAINTS
+!               X(M)    ALTITUDES FOR CONSTRAINTS  [KM]
+!               Y(M)    LOG(DENSITY/NMF2) FOR CONSTRAINTS
+!
+!       OUTPUT: VAR(M)  AMPLITUDES
+!               SING    =.TRUE.   NO SOLUTION
+! ---------------------------------------------------------------------
+!
         LOGICAL         SING
         DIMENSION       VAR(N), HX(N), SC(N), W(M), X(M), Y(M),
      &                  BLI(5), ALI(5,5), XLI(5,10)
-C
+!
         M01=M0+M1
         SCM=0
         DO 1 J=1,5
@@ -8043,43 +8043,43 @@ C
                 ENDIF
         RETURN
         END
-C
-C
+!
+!
         SUBROUTINE INILAY(NIGHT,F1REG,XNMF2,XNMF1,XNME,VNE,HMF2,HMF1, 
      &                          HME,HV1,HV2,HHALF,HXL,SCL,AMP,IQUAL)
-C-------------------------------------------------------------------
-C CALCULATES AMPLITUDES FOR LAY FUNCTIONS
-C D. BILITZA, DECEMBER 1988
-C
-C INPUT:        NIGHT   LOGICAL VARIABLE FOR DAY/NIGHT DISTINCTION
-C               F1REG   LOGICAL VARIABLE FOR F1 OCCURRENCE
-C               XNMF2   F2 PEAK ELECTRON DENSITY [M-3]
-C               XNMF1   F1 PEAK ELECTRON DENSITY [M-3]
-C               XNME    E  PEAK ELECTRON DENSITY [M-3]
-C               VNE     ELECTRON DENSITY AT VALLEY BASE [M-3]
-C               HMF2    F2 PEAK ALTITUDE [KM]
-C               HMF1    F1 PEAK ALTITUDE [KM]
-C               HME     E  PEAK ALTITUDE [KM]
-C               HV1     ALTITUDE OF VALLEY TOP [KM]
-C               HV2     ALTITUDE OF VALLEY BASE [KM]
-C               HHALF   ALTITUDE OF HALF-F2-PEAK-DENSITY [KM]
-C
-C OUTPUT:       HXL(4)  HEIGHT PARAMETERS FOR LAY FUNCTIONS [KM] 
-C               SCL(4)  SCALE PARAMETERS FOR LAY FUNCTIONS [KM]
-C               AMP(4)  AMPLITUDES FOR LAY FUNCTIONS
-C               IQUAL   =0 ok, =1 ok using second choice for HXL(1)
-C                       =2 NO SOLUTION
-C---------------------------------------------------------------  
+!-------------------------------------------------------------------
+! CALCULATES AMPLITUDES FOR LAY FUNCTIONS
+! D. BILITZA, DECEMBER 1988
+!
+! INPUT:        NIGHT   LOGICAL VARIABLE FOR DAY/NIGHT DISTINCTION
+!               F1REG   LOGICAL VARIABLE FOR F1 OCCURRENCE
+!               XNMF2   F2 PEAK ELECTRON DENSITY [M-3]
+!               XNMF1   F1 PEAK ELECTRON DENSITY [M-3]
+!               XNME    E  PEAK ELECTRON DENSITY [M-3]
+!               VNE     ELECTRON DENSITY AT VALLEY BASE [M-3]
+!               HMF2    F2 PEAK ALTITUDE [KM]
+!               HMF1    F1 PEAK ALTITUDE [KM]
+!               HME     E  PEAK ALTITUDE [KM]
+!               HV1     ALTITUDE OF VALLEY TOP [KM]
+!               HV2     ALTITUDE OF VALLEY BASE [KM]
+!               HHALF   ALTITUDE OF HALF-F2-PEAK-DENSITY [KM]
+!
+! OUTPUT:       HXL(4)  HEIGHT PARAMETERS FOR LAY FUNCTIONS [KM] 
+!               SCL(4)  SCALE PARAMETERS FOR LAY FUNCTIONS [KM]
+!               AMP(4)  AMPLITUDES FOR LAY FUNCTIONS
+!               IQUAL   =0 ok, =1 ok using second choice for HXL(1)
+!                       =2 NO SOLUTION
+!---------------------------------------------------------------  
         DIMENSION       XX(8),YY(8),WW(8),AMP(4),HXL(4),SCL(4)
         LOGICAL         SSIN,NIGHT,F1REG
-c
-c constants --------------------------------------------------------
+!
+! constants --------------------------------------------------------
                 NUMLAY=4
                 NC1 = 2
                 ALG102=ALOG10(2.)
-c
-c constraints: xx == height     yy == log(Ne/NmF2)    ww == weights
-c -----------------------------------------------------------------
+!
+! constraints: xx == height     yy == log(Ne/NmF2)    ww == weights
+! -----------------------------------------------------------------
                 ALOGF = ALOG10(XNMF2)
                 ALOGEF = ALOG10(XNME) - ALOGF
                 XHALF=XNMF2/2.
@@ -8097,10 +8097,10 @@ c -----------------------------------------------------------------
                 WW(2) = 1.
                 WW(3) = 2.
                 WW(4) = 5.
-c
-c geometric paramters for LAY -------------------------------------
-c difference to earlier version:  HXL(3) = HV2 + SCL(3)
-c
+!
+! geometric paramters for LAY -------------------------------------
+! difference to earlier version:  HXL(3) = HV2 + SCL(3)
+!
                 SCL0 = 0.7 * ( 0.216 * ( HMF2 - HHALF ) + 56.8 )
                 SCL(1) = 0.8 * SCL0
                 SCL(2) = 10.
@@ -8109,10 +8109,10 @@ c
                 HXL(3) = HV2
                 HFFF=HHALF
                 XFFF=XHALF
-c
-C DAY CONDITION--------------------------------------------------
-c earlier tested:       HXL(2) = HMF1 + SCL(2)
-c 
+!
+! DAY CONDITION--------------------------------------------------
+! earlier tested:       HXL(2) = HMF1 + SCL(2)
+! 
             IF(NIGHT) GOTO 7711
                 NUMCON = 8
                 HXL(1) = 0.9 * HMF2
@@ -8126,14 +8126,14 @@ c
                 WW(5) = 1.
                 WW(7) = 50.
                 WW(8) = 500.
-c without F-region ----------------------------------------------
+! without F-region ----------------------------------------------
                 IF(F1REG) GOTO 100
                         HXL(2)=(HMF2+HHALF)/2.
                         YY(6) = 0.
                         WW(6) = 0.
                         WW(1) = 1.
                         GOTO 7722
-c with F-region --------------------------------------------
+! with F-region --------------------------------------------
 100             YY(6) = ALOG10(XNMF1) - ALOGF
                 WW(6) = 3.
                 IF((XNMF1-XHALF)*(HMF1-HHALF).LT.0.0) THEN
@@ -8150,14 +8150,14 @@ c with F-region --------------------------------------------
                   XFFF=XHALF
                 ENDIF
                 GOTO 7722
-c
-C NIGHT CONDITION---------------------------------------------------
-c different HXL,SCL values were tested including: 
-c       SCL(1) = HMF2 * 0.15 - 27.1     HXL(2) = 200.   
-c       HXL(2) = HMF1 + SCL(2)          HXL(3) = 140.
-c       SCL(3) = 5.                     HXL(4) = HME + SCL(4)
-c       HXL(4) = 105.                   
-c
+!
+! NIGHT CONDITION---------------------------------------------------
+! different HXL,SCL values were tested including: 
+!       SCL(1) = HMF2 * 0.15 - 27.1     HXL(2) = 200.   
+!       HXL(2) = HMF1 + SCL(2)          HXL(3) = 140.
+!       SCL(3) = 5.                     HXL(4) = HME + SCL(4)
+!       HXL(4) = 105.                   
+!
 7711            NUMCON = 7
                 HXL(1) = HHALF
                   HXL1T  = 0.4 * HMF2 + 30.
@@ -8173,14 +8173,14 @@ c
                 WW(7) = 500.
                 HFFF=HHALF
                 XFFF=XHALF
-c
-C are valley-top and bottomside point compatible ? -------------
-C
+!
+! are valley-top and bottomside point compatible ? -------------
+!
 7722    IF((HV1-HFFF)*(XNME-XFFF).LT.0.0) WW(2)=0.5
         IF(HV1.LE.HV2+5.0) WW(2)=0.5
-c
-C DETERMINE AMPLITUDES-----------------------------------------
-C
+!
+! DETERMINE AMPLITUDES-----------------------------------------
+!
             NC0=NUMCON-NC1
             IQUAL=0
 2299        CALL LSKNM(NUMLAY,NUMCON,NC0,NC1,HMF2,SCL,HXL,WW,XX,YY,
@@ -8194,53 +8194,53 @@ C
 1937        IF(SSIN) IQUAL=2
             RETURN
             END
-c
-c
+!
+!
            subroutine read_ig_rz 
-c----------------------------------------------------------------
-c Reads the Rz12 and IG12 indices file IG_RZ.DAT from I/O UNIT=12 
-c and stores the indices in COMMON:
-c		common/igrz/aig,arziyst,iyed   with aig(806),arz(806),
-c											start year (iyst)
-c                                           end year (iyed)
-c 
-c The indices file IG_RZ.DAT is structured as follows (values are 
-c separated by comma): 
-c   day, month, year of the last update of this file,
-c   a blank line
-c   start month, start year, end month, end year,
-c   a blank line
-c   the IG index for December of start year minus 1 (this value is 
-c		needed for interpolating from 1st to 15th of first year)
-c   the 12 IG indices (13-months running mean) for start year, 
-c   the 12 IG indices for the second year 
-c       .. and so on until the last year,
-c   the 12 IG indices for the last year 
-c   the IG index for January of end year plus 1 (needed for interpolation)
-c   a blank line
-c   the Rz index for December of start year minus 1 
-c   the 12 Rz indices (13-months running mean) for the start year,
-c   the 12 Rz indices for the second year 
-c       .. and so on until the last year.
-c   the 12 Rz indices for the last year 
-c   the Rz index for January of end year plus 1 
-c 
-c A negative Rz index means that the given index is the 13-months-
-C running mean of the solar radio flux (F10.7). The close correlation 
-C between (Rz)12 and (F10.7)12 is used to compute the (Rz)12 indices.
-c
-c An IG index of -111 indicates that no IG values are available for the
-c time period. In this case a correlation function between (IG)12 and 
-C (Rz)12 is used to obtain (IG)12.
-c
-c The computation of the 13-month-running mean for month M requires the
-c indices for the six months preceeding M and the six months following 
-C M (month: M-6, ..., M+6). To calculate the current running mean one 
-C therefore requires predictions of the indix for the next six months. 
-C Starting from six months before the UPDATE DATE (listed at the top of 
-c the file) and onward the indices are therefore based on indices 
-c predictions.
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+! Reads the Rz12 and IG12 indices file IG_RZ.DAT from I/O UNIT=12 
+! and stores the indices in COMMON:
+!		common/igrz/aig,arziyst,iyed   with aig(806),arz(806),
+!											start year (iyst)
+!                                           end year (iyed)
+! 
+! The indices file IG_RZ.DAT is structured as follows (values are 
+! separated by comma): 
+!   day, month, year of the last update of this file,
+!   a blank line
+!   start month, start year, end month, end year,
+!   a blank line
+!   the IG index for December of start year minus 1 (this value is 
+!		needed for interpolating from 1st to 15th of first year)
+!   the 12 IG indices (13-months running mean) for start year, 
+!   the 12 IG indices for the second year 
+!       .. and so on until the last year,
+!   the 12 IG indices for the last year 
+!   the IG index for January of end year plus 1 (needed for interpolation)
+!   a blank line
+!   the Rz index for December of start year minus 1 
+!   the 12 Rz indices (13-months running mean) for the start year,
+!   the 12 Rz indices for the second year 
+!       .. and so on until the last year.
+!   the 12 Rz indices for the last year 
+!   the Rz index for January of end year plus 1 
+! 
+! A negative Rz index means that the given index is the 13-months-
+! running mean of the solar radio flux (F10.7). The close correlation 
+! between (Rz)12 and (F10.7)12 is used to compute the (Rz)12 indices.
+!
+! An IG index of -111 indicates that no IG values are available for the
+! time period. In this case a correlation function between (IG)12 and 
+! (Rz)12 is used to obtain (IG)12.
+!
+! The computation of the 13-month-running mean for month M requires the
+! indices for the six months preceeding M and the six months following 
+! M (month: M-6, ..., M+6). To calculate the current running mean one 
+! therefore requires predictions of the indix for the next six months. 
+! Starting from six months before the UPDATE DATE (listed at the top of 
+! the file) and onward the indices are therefore based on indices 
+! predictions.
+!----------------------------------------------------------------
 
            integer	iyst,iyend,iymst,iupd,iupm,iupy,imst,imend
            real		aig(806),arz(806)
@@ -8249,68 +8249,68 @@ c----------------------------------------------------------------
 
            open(unit=12,file='ig_rz.dat',FORM='FORMATTED',status='old')
 
-c-web- special for web version
-c            open(unit=12,file=
-c     *         '/var/www/omniweb/cgi/vitmo/IRI/ig_rz.dat',
-c     *         FORM='FORMATTED',status='old')
+!-web- special for web version
+!            open(unit=12,file=
+!     *         '/var/www/omniweb/cgi/vitmo/IRI/ig_rz.dat',
+!     *         FORM='FORMATTED',status='old')
 
-c Read the update date, the start date and the end date (mm,yyyy), and
-c get number of data points to read.
+! Read the update date, the start date and the end date (mm,yyyy), and
+! get number of data points to read.
 
             read(12,*) iupd,iupm,iupy
             read(12,*) imst,iyst,imend,iyend
             iymst=iyst*100+imst
             iymend=iyend*100+imend
 
-c inum_vals= 12-imst+1+(iyend-iyst-1)*12 +imend + 2
-c 1st year \ full years       \last y\ before & after
+! inum_vals= 12-imst+1+(iyend-iyst-1)*12 +imend + 2
+! 1st year \ full years       \last y\ before & after
 
             inum_vals= 3-imst+(iyend-iyst)*12 +imend
 
-c read all the IG12 (ionoindx) and Rz12 (indrz) values
+! read all the IG12 (ionoindx) and Rz12 (indrz) values
             read(12,*) (aig(i),i=1,inum_vals)
             read(12,*) (arz(i),i=1,inum_vals)
-c            do 1 jj=1,inum_vals
-c                rrr=arz(jj)
-c                ggg=aig(jj)
-c                if(rrr.lt.0.0) then
-c                    covr=abs(rrr)
-c                    rrr=33.52*sqrt(covr+85.12)-408.99
-c                    if(rrr.lt.0.0) rrr=0.0
-c                    endif
-c                if(ggg.le.-90.) then
-c                    zi=-12.349154+(1.4683266-2.67690893e-03*rrr)*rrr
-c                    if(zi.gt.274.0) zi=274.0
-c                    ggg=zi
-c                    endif
-c                arz(jj)=rrr
-c                aig(jj)=ggg    
-c1               continue
+!            do 1 jj=1,inum_vals
+!                rrr=arz(jj)
+!                ggg=aig(jj)
+!                if(rrr.lt.0.0) then
+!                    covr=abs(rrr)
+!                    rrr=33.52*sqrt(covr+85.12)-408.99
+!                    if(rrr.lt.0.0) rrr=0.0
+!                    endif
+!                if(ggg.le.-90.) then
+!                    zi=-12.349154+(1.4683266-2.67690893e-03*rrr)*rrr
+!                    if(zi.gt.274.0) zi=274.0
+!                    ggg=zi
+!                    endif
+!                arz(jj)=rrr
+!                aig(jj)=ggg    
+!1               continue
 
             close(unit=12)
 
             return
             end
-c
-c
+!
+!
            subroutine tcon(yr,mm,day,idn,rz,ig,rsn,nmonth)
-c----------------------------------------------------------------
-c input:        yr,mm,day       year(yyyy),month(mm),day(dd)
-c               idn             day of year(ddd)
-c output:       rz(3)           12-month-smoothed solar sunspot number
-c               ig(3)           12-month-smoothed IG index
-c               rsn             interpolation parameter
-c               nmonth          previous or following month depending
-c                               on day
-c
-c Uses read_ig_rz and common/igrz/ to get indices 
-c 
-c rz(1) & ig(1) contain the indices for the month mm and rz(2) & ig(2)
-c for the previous month (if day less than 15) or for the following
-c month (if day greater than 15). These indices are for the mid of the 
-c month. The indices for the given day are obtained by linear 
-c interpolation and are stored in rz(3) and ig(3).
-c----------------------------------------------------------------
+!----------------------------------------------------------------
+! input:        yr,mm,day       year(yyyy),month(mm),day(dd)
+!               idn             day of year(ddd)
+! output:       rz(3)           12-month-smoothed solar sunspot number
+!               ig(3)           12-month-smoothed IG index
+!               rsn             interpolation parameter
+!               nmonth          previous or following month depending
+!                               on day
+!
+! Uses read_ig_rz and common/igrz/ to get indices 
+! 
+! rz(1) & ig(1) contain the indices for the month mm and rz(2) & ig(2)
+! for the previous month (if day less than 15) or for the following
+! month (if day greater than 15). These indices are for the mid of the 
+! month. The indices for the given day are obtained by linear 
+! interpolation and are stored in rz(3) and ig(3).
+!----------------------------------------------------------------
 
            integer	yr,mm,day,iyst,iyend,iymst
            integer	imst,iymend
@@ -8334,7 +8334,7 @@ c----------------------------------------------------------------
 
 		iyst=iymst/100
 		imst=iymst-iyst*100
-c       num=12-imst+1+(yr-iyst-1)*12+mm+1
+!       num=12-imst+1+(yr-iyst-1)*12+mm+1
         num=2-imst+(yr-iyst)*12+mm
 
         rz(1)=indrz(num)
@@ -8344,13 +8344,13 @@ c       num=12-imst+1+(yr-iyst-1)*12+mm+1
         call MODA(0,yr,mm,midm,idd1,nrdaym)
 
         if(day.lt.midm) goto 1926
-c day is at or after mid of month
+! day is at or after mid of month
                 imm2=mm+1
                 if(imm2.gt.12) then
                         imm2=1
                         iyy2=yr+1
                         idd2=380            ! =365+15 mid-January
-c               if((yr/4*4.eq.yr).and.(yr/100*100.ne.yr)) idd2=381
+!               if((yr/4*4.eq.yr).and.(yr/100*100.ne.yr)) idd2=381
                         if(yr/4*4.eq.yr) idd2=381
                 else
                         iyy2=yr
@@ -8384,60 +8384,60 @@ c               if((yr/4*4.eq.yr).and.(yr/100*100.ne.yr)) idd2=381
 1927    nmonth=imm2
             return
             end
-C
-C
+!
+!
 		subroutine readapf107
-C-------------------------------------------------------------------------
-c Reads APF107.DAT file (on UNIT=13) and stores contents in COMMON block:
-C 	COMMON/AAP,AF107,N/ with  AAP(23000,9) and AF107(23000,3)
-C		AAP(*,1)	3-hour Ap indices for the UT interval )0-3)
-C		AAP(*,2)	3-hour Ap indices for the UT interval )3-6)
-C          ....                       ....
-C		AAP(*,8)	3-hour Ap indices for the UT interval )21-6)
-C		AAP(*,9)	daily Ap
-C		AF107(*,1)	F10.7 radio flux for the day
-C		AF107(*,2)	81-day average of F10.7 radio flux 
-C		AF107(*,3)	365-day average of F10.7
-C       N           total number of records
-c
-c APF107.DAT is structured as follows:
-c 		JY(I3),JMN(I3),JD(I3)	year, month, day 
-c		IIAP(8)	(8I3)			3-hour Ap indices for the UT intervals 
-c								(0-3(,(3-6(,(6-9(, .., (18-21(,(21-24(
-c		IAPD (I3)				daily Ap
-c		IR (I3)					sunspot number for the day (empty)
-c		F107 (F5.1)				F10.7 radio flux for the day
-c		F107_81 (F5.1)			81-day average of F10.7 radio flux 
-c       F107_365 (F5.1)         365-day average of F10.7 centered on 
-c                               the date of interest. At start and end  
-c								of index file it takes all available  
-c                               indices, e.g. for the first date the 
-c                               average is only over 40 F10.7 values  
-c                               and over 41 values on the 2nd date.  
-c
-c If date is outside the range of the Ap indices file then IAP(1)=-5  
-C-------------------------------------------------------------------------
-C
+!-------------------------------------------------------------------------
+! Reads APF107.DAT file (on UNIT=13) and stores contents in COMMON block:
+! 	COMMON/AAP,AF107,N/ with  AAP(23000,9) and AF107(23000,3)
+!		AAP(*,1)	3-hour Ap indices for the UT interval )0-3)
+!		AAP(*,2)	3-hour Ap indices for the UT interval )3-6)
+!          ....                       ....
+!		AAP(*,8)	3-hour Ap indices for the UT interval )21-6)
+!		AAP(*,9)	daily Ap
+!		AF107(*,1)	F10.7 radio flux for the day
+!		AF107(*,2)	81-day average of F10.7 radio flux 
+!		AF107(*,3)	365-day average of F10.7
+!       N           total number of records
+!
+! APF107.DAT is structured as follows:
+! 		JY(I3),JMN(I3),JD(I3)	year, month, day 
+!		IIAP(8)	(8I3)			3-hour Ap indices for the UT intervals 
+!								(0-3(,(3-6(,(6-9(, .., (18-21(,(21-24(
+!		IAPD (I3)				daily Ap
+!		IR (I3)					sunspot number for the day (empty)
+!		F107 (F5.1)				F10.7 radio flux for the day
+!		F107_81 (F5.1)			81-day average of F10.7 radio flux 
+!       F107_365 (F5.1)         365-day average of F10.7 centered on 
+!                               the date of interest. At start and end  
+!								of index file it takes all available  
+!                               indices, e.g. for the first date the 
+!                               average is only over 40 F10.7 values  
+!                               and over 41 values on the 2nd date.  
+!
+! If date is outside the range of the Ap indices file then IAP(1)=-5  
+!-------------------------------------------------------------------------
+!
         INTEGER		aap(23000,9),iiap(8)
         DIMENSION 	af107(23000,3)
         COMMON		/apfa/aap,af107,n
 
         Open(13,FILE='apf107.dat',FORM='FORMATTED',STATUS='OLD')
-c-web-sepcial vfor web version
-c      OPEN(13,FILE='/var/www/omniweb/cgi/vitmo/IRI/apf107.dat',
-c     *    FORM='FORMATTED',STATUS='OLD')
+!-web-sepcial vfor web version
+!      OPEN(13,FILE='/var/www/omniweb/cgi/vitmo/IRI/apf107.dat',
+!     *    FORM='FORMATTED',STATUS='OLD')
 
 		i=1
 1       READ(13,10,END=21) JY,JMN,JD,iiap,iapda,IR,F107D,F107_81,
      *        F107_365
 10      FORMAT(3I3,9I3,I3,3F5.1)
 
-c 		adate(i)=jy*10000+jmn*100+jd 
+! 		adate(i)=jy*10000+jmn*100+jd 
 		do j=1,8 
              aap(i,j)=iiap(j)
              enddo
 		aap(i,9)=iapda
-c		irza(i)=ir
+!		irza(i)=ir
  		if(F107_81.lt.-4.) F107_81=F107D
  		if(F107_365.lt.-4.) F107_365=F107D
 		af107(i,1)=f107d 
@@ -8451,22 +8451,22 @@ c		irza(i)=ir
         CLOSE(13)
 		return
 		end
-C
-C
+!
+!
 
         SUBROUTINE APF(ISDATE,HOUR,IAP)
-c-----------------------------------------------------------------------
-c Finds 3-hourly Ap indices for IRI-STORM model
-c    INPUTS: 	ISDATE		Array-index from APF_ONLY
-c			    HOUR		UT in decimal hours
-c    OUTPUT:    IAP(1:13)	3-hourly Ap index
-c							IAP(13) Ap index for current UT
-c							IAP(1) AP index for UT-39 hours.
-c
-c Gets indices from COMMON/APFA/
-c
-c If date is outside the range of the Ap indices file than IAP(1)=-5  
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! Finds 3-hourly Ap indices for IRI-STORM model
+!    INPUTS: 	ISDATE		Array-index from APF_ONLY
+!			    HOUR		UT in decimal hours
+!    OUTPUT:    IAP(1:13)	3-hourly Ap index
+!							IAP(13) Ap index for current UT
+!							IAP(1) AP index for UT-39 hours.
+!
+! Gets indices from COMMON/APFA/
+!
+! If date is outside the range of the Ap indices file than IAP(1)=-5  
+!-----------------------------------------------------------------------
 
         INTEGER		aap(23000,9),iiap(8),iap(13)
         DIMENSION 	af107(23000,3)
@@ -8519,31 +8519,31 @@ c-----------------------------------------------------------------------
       
 20    RETURN
       END
-C
-C
+!
+!
         SUBROUTINE APFMSIS(ISDATE,HOUR,IAPO)
-c-----------------------------------------------------------------------
-c Finds 3-hourly Ap indices for NRLMSIS00 model 
-c    INPUTS: 	ISDATE		Array-index from APF_ONLY
-c				HOUR		UT in decimal hours
-c    OUTPUT:   	IAPO(1:7)	3-hourly Ap index
-C  
-C IAPO(1) DAILY AP
-C IAPO(2) 3-HR AP INDEX FOR CURRENT TIME			   	
-C IAPO(3) 3-HR AP INDEX FOR 3 HRS BEFORE CURRENT TIME	
-C IAPO(4) 3-HR AP INDEX FOR 6 HRS BEFORE CURRENT TIME	
-C IAPO(5) 3-HR AP INDEX FOR 9 HRS BEFORE CURRENT TIME  
-C IAPO(6) AVERAGE OF EIGHT 3-HR AP INDICIES FROM 12 TO 33 HRS PRIOR
-C         TO CURRENT TIME
-C IAPO(7) AVERAGE OF EIGHT 3 HR AP INDICIES FROM 36 TO 57 HRS PRIOR
-C         TO CURRENT TIME
-c
-c The 3-hour UT intervals during the day are: (0-3),)3-6),)6-9),)9-12),
-c )12-15),)15-18),)18-21),)21-24(.
-c 
-c If date is outside the range of the Ap indices file then IAPO(2)=-5  
-c-----------------------------------------------------------------------
-c
+!-----------------------------------------------------------------------
+! Finds 3-hourly Ap indices for NRLMSIS00 model 
+!    INPUTS: 	ISDATE		Array-index from APF_ONLY
+!				HOUR		UT in decimal hours
+!    OUTPUT:   	IAPO(1:7)	3-hourly Ap index
+!  
+! IAPO(1) DAILY AP
+! IAPO(2) 3-HR AP INDEX FOR CURRENT TIME			   	
+! IAPO(3) 3-HR AP INDEX FOR 3 HRS BEFORE CURRENT TIME	
+! IAPO(4) 3-HR AP INDEX FOR 6 HRS BEFORE CURRENT TIME	
+! IAPO(5) 3-HR AP INDEX FOR 9 HRS BEFORE CURRENT TIME  
+! IAPO(6) AVERAGE OF EIGHT 3-HR AP INDICIES FROM 12 TO 33 HRS PRIOR
+!         TO CURRENT TIME
+! IAPO(7) AVERAGE OF EIGHT 3 HR AP INDICIES FROM 36 TO 57 HRS PRIOR
+!         TO CURRENT TIME
+!
+! The 3-hour UT intervals during the day are: (0-3),)3-6),)6-9),)9-12),
+! )12-15),)15-18),)18-21),)21-24(.
+! 
+! If date is outside the range of the Ap indices file then IAPO(2)=-5  
+!-----------------------------------------------------------------------
+!
 		REAL 		IAPO
         INTEGER		aap(23000,9),iiap(8)
         DIMENSION 	af107(23000,3),iap(20),lm(12),iapo(7)
@@ -8558,10 +8558,10 @@ c
 
 		iapo(1)=aap(is,9)		
 
-C There must be at least 20 indices available
+! There must be at least 20 indices available
         if((is-1)*8+ihour.lt.20) goto 21      	
 
-C assemble Ap values as needed by MSIS
+! assemble Ap values as needed by MSIS
         j1=ihour+1
         do i=1,ihour
            iap(j1-i)=aap(is,i)
@@ -8595,8 +8595,8 @@ C assemble Ap values as needed by MSIS
         do 26 i=1,8
            sum1=sum1+iap(4+i)
 26         sum2=sum2+iap(12+i)
-c        iapo(6)=int(sum1/8.+.5)
-c        iapo(7)=int(sum2/8.+.5)
+!        iapo(6)=int(sum1/8.+.5)
+!        iapo(7)=int(sum2/8.+.5)
         iapo(6)=sum1/8.
         iapo(7)=sum2/8.
         goto 20
@@ -8609,32 +8609,32 @@ c        iapo(7)=int(sum2/8.+.5)
 
 	  RETURN
       END
-C
-C
+!
+!
         SUBROUTINE APF_ONLY(IYYYY,IMN,ID,F107D,F107PD,F107_81,F107_365,
      *        IAPDA,ISDATE)
-c-----------------------------------------------------------------------
-c Finds daily F10.7, daily Ap, and 81-day and 365-day F10.7 index: 
-c
-c    INPUTS:   IYYYY (yyyy)	year 
-c              IMN (mm)		month 
-c	           ID (dd)		day 
-c    OUTPUT:   F107D		F10.7 index for the day (adjusted 
-c								to 1AU)
-C              F107PD  		F10.7 index for one day prior (used in MSIS)
-c              F107_81		F10.7 average over 3 solar rotations
-c                               (81 days, centered on the current day) 
-c              F107_365 	F10.7 12-month running mean
-c              IAPDA		Daily Ap
-c              ISDATE		Array-index for the specified date (for
-c                                use in APF subroutine.
-c 
-c Using COMMON/apfa/ for indices
-c
-c Is used for vdrift and foeedi.
-c
-c If date is outside the range of indices file than F107D=F107_81=-11.1  
-c-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! Finds daily F10.7, daily Ap, and 81-day and 365-day F10.7 index: 
+!
+!    INPUTS:   IYYYY (yyyy)	year 
+!              IMN (mm)		month 
+!	           ID (dd)		day 
+!    OUTPUT:   F107D		F10.7 index for the day (adjusted 
+!								to 1AU)
+!              F107PD  		F10.7 index for one day prior (used in MSIS)
+!              F107_81		F10.7 average over 3 solar rotations
+!                               (81 days, centered on the current day) 
+!              F107_365 	F10.7 12-month running mean
+!              IAPDA		Daily Ap
+!              ISDATE		Array-index for the specified date (for
+!                                use in APF subroutine.
+! 
+! Using COMMON/apfa/ for indices
+!
+! Is used for vdrift and foeedi.
+!
+! If date is outside the range of indices file than F107D=F107_81=-11.1  
+!-----------------------------------------------------------------------
 
         INTEGER		aap(23000,9),iiap(8),lm(12)
         DIMENSION 	af107(23000,3)
@@ -8683,21 +8683,21 @@ c-----------------------------------------------------------------------
     
 20    RETURN
       END
-C      
-C
-C----------------------STORM MODEL --------------------------------
-C
+!      
+!
+!----------------------STORM MODEL --------------------------------
+!
       SUBROUTINE CONVER(rga,rgo,rgma)
 
-C     This subroutine converts a geographic latitude and longitude
-C     location to a corrected geomagnetic latitude.
-C
-C     INPUT: 
-C       geographic latitude   -90. to +90.
-C       geographic longitude  0. to 360. positive east from Greenwich.
-C
-C     OUTPUT:
-C       corrected geomagnetic latitude	-90. to +90.
+!     This subroutine converts a geographic latitude and longitude
+!     location to a corrected geomagnetic latitude.
+!
+!     INPUT: 
+!       geographic latitude   -90. to +90.
+!       geographic longitude  0. to 360. positive east from Greenwich.
+!
+!     OUTPUT:
+!       corrected geomagnetic latitude	-90. to +90.
 
 
       DIMENSION CORMAG(20,91)      
@@ -8937,95 +8937,95 @@ C       corrected geomagnetic latitude	-90. to +90.
      +008.15,008.15,008.15,008.15,008.15,008.15,008.15,008.15,
      +008.15,008.15,008.15,008.15,008.15,008.15/
 
-C     Data Input      
+!     Data Input      
       rlan = rga
       rlo = rgo      
       
-C     From "normal" geographic latitude 
-C     to angle from South Pole.       
+!     From "normal" geographic latitude 
+!     to angle from South Pole.       
       rla = rlan + 90
 
       IF (rlo .EQ. 360) THEN
       	rlo = 0
         END IF
 
-C     PROXIMITY
+!     PROXIMITY
 
-C     coefficients of the latitudinal points		
+!     coefficients of the latitudinal points		
       LA1 = (INT(rla/2)+1)
       LA2 = LA1 + 1
       if(la2.gt.91) la2=91
 
-C     coefficients of the longitudinal points		
+!     coefficients of the longitudinal points		
       LO1 = (INT(rlo/18)+1)
-corr      LO2 = LO1 + 1
+!orr      LO2 = LO1 + 1
       LO2 = MOD(LO1,20) + 1 
 
-C     Four points of Geomagnetic Coordinates
+!     Four points of Geomagnetic Coordinates
       gm1 = CORMAG(LO1,LA1)
       gm2 = CORMAG(LO1,LA2) 
       gm3 = CORMAG(LO2,LA1)
       gm4 = CORMAG(LO2,LA2)
 
-C     latitudinal points		
-C      X1 = ABS(rla - (INT(rla)))                        
-C      X2 = 2. - X1
+!     latitudinal points		
+!      X1 = ABS(rla - (INT(rla)))                        
+!      X2 = 2. - X1
 	  x = (rla/2.0 - (INT(rla/2.0)))
 
-C     longitudinal points		
-C      Y1 = ABS(rlo - (INT(rlo)))                        
-C      Y2 = 18. - Y1
+!     longitudinal points		
+!      Y1 = ABS(rlo - (INT(rlo)))                        
+!      Y2 = 18. - Y1
       y =(rlo/18.0 - (INT(rlo/18.0))) 
 
-C     X AND Y VALUES
-C      x = X1 / (X1 + X2)
-C      y = Y1 / (Y1 + Y2)
+!     X AND Y VALUES
+!      x = X1 / (X1 + X2)
+!      y = Y1 / (Y1 + Y2)
 
-C     INTERPOLATION
+!     INTERPOLATION
       gmla = gm1 * (1 - x) * (1 - y) + gm2 * (1 - y) * (x) + gm3 * (y)
      1 * (1 - x) + gm4 * (x) * (y)
 
-C     OUTPUT OF THE PROGRAM
-C     From corrected geomagnetic latitude from North Pole
-C     to "normal"  geomagnetic latitude.       
+!     OUTPUT OF THE PROGRAM
+!     From corrected geomagnetic latitude from North Pole
+!     to "normal"  geomagnetic latitude.       
       rgma = 90. - gmla
 
       END
-c
-c
+!
+!
       SUBROUTINE STORM(ap,rga,rgo,coor,rgma,ut,doy,cf)
-C----------------------------------------------------------------------
-C      Fortran code to obtain the foF2 storm-time correction factor at 
-C      a given location and time, using the current and the 12 previous
-C      ap values as input.
-C
-C      ap ---> (13 elements integer array). Array with the preceeding
-C              13 value of the 3-hourly ap index. The 13th value
-C              in the array will contain the ap at the UT of interest,
-C              the 12th value will contain the 1st three hourly interval
-C              preceeding the time of interest, and so on to the 1st
-C              ap value at the earliest time.
-C     coor --> (integer). If coor = 2, rga should contain the 
-C                         geomagnetic latitude.
-C                         If coor = 1, rga should contain the 
-C                         geographic latitude.
-C     rga ---> (real, -90 to 90) geographic or geomagnetic latitude.
-C     rgo ---> (real, 0 to 360, positive east from Greenwich.)
-C                           geographic longitude, only used if coor=1.
-C     ut  ---> (integer, hours 00 to 23) Universal Time of interest.
-C     doy ---> (integer, 1 to 366)Day of the year.
-C     cf  ---> (real) The output; the storm-time correction factor used
-C              to scale foF2, foF2 * cf.
-C     rgma --> corrected magnetic latitude calculated from rga and rgo
-C
-C     This model and computer code was developed by E. Araujo-Pradere,
-C     T. Fuller-Rowell and M. Condrescu, SEC, NOAA, Boulder, USA
-C     Ref: 
-C     T. Fuller-Rowell, E. Araujo-Pradere, and M. Condrescu, An 
-C       Empirical Ionospheric Storm-Time Ionospheric Correction Model,
-C       Adv. Space Res. 8, 8, 15-24, 2000.
-C----------------------------------------------------------------------
-C     DIMENSIONS AND COEFFICIENTS VALUES
+!----------------------------------------------------------------------
+!      Fortran code to obtain the foF2 storm-time correction factor at 
+!      a given location and time, using the current and the 12 previous
+!      ap values as input.
+!
+!      ap ---> (13 elements integer array). Array with the preceeding
+!              13 value of the 3-hourly ap index. The 13th value
+!              in the array will contain the ap at the UT of interest,
+!              the 12th value will contain the 1st three hourly interval
+!              preceeding the time of interest, and so on to the 1st
+!              ap value at the earliest time.
+!     coor --> (integer). If coor = 2, rga should contain the 
+!                         geomagnetic latitude.
+!                         If coor = 1, rga should contain the 
+!                         geographic latitude.
+!     rga ---> (real, -90 to 90) geographic or geomagnetic latitude.
+!     rgo ---> (real, 0 to 360, positive east from Greenwich.)
+!                           geographic longitude, only used if coor=1.
+!     ut  ---> (integer, hours 00 to 23) Universal Time of interest.
+!     doy ---> (integer, 1 to 366)Day of the year.
+!     cf  ---> (real) The output; the storm-time correction factor used
+!              to scale foF2, foF2 * cf.
+!     rgma --> corrected magnetic latitude calculated from rga and rgo
+!
+!     This model and computer code was developed by E. Araujo-Pradere,
+!     T. Fuller-Rowell and M. Condrescu, SEC, NOAA, Boulder, USA
+!     Ref: 
+!     T. Fuller-Rowell, E. Araujo-Pradere, and M. Condrescu, An 
+!       Empirical Ionospheric Storm-Time Ionospheric Correction Model,
+!       Adv. Space Res. 8, 8, 15-24, 2000.
+!----------------------------------------------------------------------
+!     DIMENSIONS AND COEFFICIENTS VALUES
 
       DIMENSION c4(20)
       DATA c4/0.00E+00,0.00E+00,0.00E+00,0.00E+00,0.00E+00,0.00E+00,
@@ -9073,7 +9073,7 @@ C     DIMENSIONS AND COEFFICIENTS VALUES
       INTEGER ut,doy,dayno,coor,s1,s2,l1,l2
       REAL rgma, rap, rga, rgo, rs, rl
 
-C      CALLING THE PROGRAM TO CONVERT TO GEOMAGNETIC COORDINATES
+!      CALLING THE PROGRAM TO CONVERT TO GEOMAGNETIC COORDINATES
 
        IF (coor .EQ. 1) THEN
 
@@ -9091,7 +9091,7 @@ C      CALLING THE PROGRAM TO CONVERT TO GEOMAGNETIC COORDINATES
           GOTO 100
        ENDIF
 
-C FROM 3-HOURLY TO HOURLY ap (New, interpolates between the three hourly ap values)
+! FROM 3-HOURLY TO HOURLY ap (New, interpolates between the three hourly ap values)
 
        ape(1)=ap(1)
        ape(2)=ap(1)
@@ -9113,17 +9113,17 @@ C FROM 3-HOURLY TO HOURLY ap (New, interpolates between the three hourly ap valu
           ape(i) = (ap(k-1) + ap(k)*2)/3.0
           END DO
 
-C     FROM 3-HOURLY TO HOURLY ap (old version without interpolation)
-c      i = 1
-c      DO 10 k = 1,13
-c         DO j = 1,3
-c            ape(i) = ap(k)
-c            i = i + 1
-c            END DO
-c10    CONTINUE
+!     FROM 3-HOURLY TO HOURLY ap (old version without interpolation)
+!      i = 1
+!      DO 10 k = 1,13
+!         DO j = 1,3
+!            ape(i) = ap(k)
+!            i = i + 1
+!            END DO
+!10    CONTINUE
 
-C     TO OBTAIN THE INTEGRAL OF ap.
-C     INTEGRAL OF ap
+!     TO OBTAIN THE INTEGRAL OF ap.
+!     INTEGRAL OF ap
 
       if(ut.eq.24) ut=0
       IF (ut .EQ. 0 .OR. ut .EQ. 3 .OR. ut .EQ. 6 .OR. ut .EQ. 9 .OR.
@@ -9177,7 +9177,7 @@ C     INTEGRAL OF ap
           GOTO 100
       end if
 
-c      write(6,*)rgma
+!      write(6,*)rgma
 
       dayno=doy
       if(rgma.lt.0.0)then
@@ -9191,7 +9191,7 @@ c      write(6,*)rgma
       facs=rs-s1
       s2=s1+1
       if(s2.eq.9) s2=1
-c      write(6,*)s1,s2,rs
+!      write(6,*)s1,s2,rs
 
       rgma = abs(rgma)
 
@@ -9200,9 +9200,9 @@ c      write(6,*)s1,s2,rs
       l1=rl
       facl=rl-l1
       l2=l1+1
-c      write(6,*)l1,l2,rl
+!      write(6,*)l1,l2,rl
 
-C     FACTORS CALCULATIONS
+!     FACTORS CALCULATIONS
 
       if(rap.lt.300.)then
       rapf=300.
@@ -9219,7 +9219,7 @@ C     FACTORS CALCULATIONS
       cf4=c4(n4)*(rapf**4)+c3(n4) * (rapf**3) + c2(n4) * (rapf**2) +
      1c1(n4) * rapf + c0(n4)
 
-C     INTERPOLATION
+!     INTERPOLATION
 
       cf300=cf1*(1 - facs) * (1 - facl) + cf2 * (1 - facs) * (facl) +
      *cf3 * (facs) * (1 - facl) + cf4 * (facs) * (facl)
@@ -9229,7 +9229,7 @@ C     INTERPOLATION
       end if
 
       n1=code(s1,l1)
-c      write(6,*)n1
+!      write(6,*)n1
       cf1 = c4(n1) * (rap**4) + c3(n1) * (rap**3) + c2(n1) * (rap**2) +
      1c1(n1) * rap + c0(n1)
       n2=code(s1,l2)
@@ -9242,7 +9242,7 @@ c      write(6,*)n1
       cf4 = c4(n4) * (rap**4) + c3(n4) * (rap**3) + c2(n4) * (rap**2) +
      1c1(n4) * rap + c0(n4)
 
-C     INTERPOLATION
+!     INTERPOLATION
 
       cf = cf1 * (1 - facs) * (1 - facl) + cf2 * (1 - facs) * (facl) +
      *cf3 * (facs) * (1 - facl) + cf4 * (facs) * (facl)
@@ -9252,46 +9252,46 @@ C     INTERPOLATION
       RETURN
 
       END
-C
-C
+!
+!
       FUNCTION STORME_AP(JDOY,XMLAT,AP)
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
-C
-C EMPIRICAL STORM-E MODEL: COMPUTES A STORM-TO-QUIET RATIO (SQR) FACTOR
-C TO ADJUST THE QUIESCENT E-REGION PEAK ELECTRON DENSITY TO ACCOUNT FOR
-C ENHANCEMENTS DUE TO GEOMAGNETIC ACTIVITY. THE SQR FACTORS WERE
-C COMPUTED FROM NO+ 4.3 UM VOLUME EMISSION RATES DERIVED FROM 
-C TIMED/SABER LIMB RADIANCE MEASUREMENTS. THE SABER-DERIVED SQR FACTORS
-C WERE FIT TO POWE-LAW IN THE ap INDEX.   
-C
-C INPUT PARAMETERS:
-C
-C  JDOY      --- DAY OF YEAR (1-365) 
-C  XMLAT     --- MAGNETIC LATITUDE (DEGREES)
-C  AP        --- ap INDEX
-C
-C OUTPUT PARAMETER
-C 
-C  STORME_AP --- STORM-TO-QUIET RATIO (SQR) TO ADJUST QUIESCENT E-REGION
-C                PEAK ELECTRON DENSITY TO ACCOUNT FOR GEOMAGNETIC
-C                ENHANCEMENTS. SQR COMPUTED FROM A POWER-LAW FIT
-C                IN AP-INDEX: SQR=C1*AP**C2+C3
-C
-C REFERENCES:
-C 
-C  (1) Mertens et al. [submitted to JASR, 2011]
-C  (2) Fernandez et al. [JASR, Vol. 46, 2010]
-C  (3) Mertens et al. [Proc. of SPIE, Vol. 7475, 2009]
-C  (4) Mertens et al. [Proc. of SPIE, Vol. 6745, 2007]
-C  (5) Mertens et al. [JASR, Vol. 39, 2007] 
-C 
-C SOFTWARE WRITTEN BY Christopher J. Mertens
-C                     NASA Langley Research Center
-C                     Atmospheric Sciences Competency
-C                     21 Langley Blvd., Mail Stop 401B
-C                     Hampton, VA 23681-2199
-C
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+!
+! EMPIRICAL STORM-E MODEL: COMPUTES A STORM-TO-QUIET RATIO (SQR) FACTOR
+! TO ADJUST THE QUIESCENT E-REGION PEAK ELECTRON DENSITY TO ACCOUNT FOR
+! ENHANCEMENTS DUE TO GEOMAGNETIC ACTIVITY. THE SQR FACTORS WERE
+! COMPUTED FROM NO+ 4.3 UM VOLUME EMISSION RATES DERIVED FROM 
+! TIMED/SABER LIMB RADIANCE MEASUREMENTS. THE SABER-DERIVED SQR FACTORS
+! WERE FIT TO POWE-LAW IN THE ap INDEX.   
+!
+! INPUT PARAMETERS:
+!
+!  JDOY      --- DAY OF YEAR (1-365) 
+!  XMLAT     --- MAGNETIC LATITUDE (DEGREES)
+!  AP        --- ap INDEX
+!
+! OUTPUT PARAMETER
+! 
+!  STORME_AP --- STORM-TO-QUIET RATIO (SQR) TO ADJUST QUIESCENT E-REGION
+!                PEAK ELECTRON DENSITY TO ACCOUNT FOR GEOMAGNETIC
+!                ENHANCEMENTS. SQR COMPUTED FROM A POWER-LAW FIT
+!                IN AP-INDEX: SQR=C1*AP**C2+C3
+!
+! REFERENCES:
+! 
+!  (1) Mertens et al. [submitted to JASR, 2011]
+!  (2) Fernandez et al. [JASR, Vol. 46, 2010]
+!  (3) Mertens et al. [Proc. of SPIE, Vol. 7475, 2009]
+!  (4) Mertens et al. [Proc. of SPIE, Vol. 6745, 2007]
+!  (5) Mertens et al. [JASR, Vol. 39, 2007] 
+! 
+! SOFTWARE WRITTEN BY Christopher J. Mertens
+!                     NASA Langley Research Center
+!                     Atmospheric Sciences Competency
+!                     21 Langley Blvd., Mail Stop 401B
+!                     Hampton, VA 23681-2199
+!
+!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       PARAMETER(NMLG=37,NDBD=5)
       DIMENSION C3(NMLG,NDBD)
       DIMENSION XMLG(NMLG),IDBD(NDBD),C1(NMLG,NDBD),C2(NMLG,NDBD)
@@ -9304,9 +9304,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &          0.0,5.0,10.0,15.0,20.0,25.0,30.0,35.0,40.0,45.0,50.0,
      &          55.0,60.0,65.0,70.0,75.0,80.0,85.0,90.0/
       DATA IDBD/79,171,264,354,366/
-C
-C JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
-C
+!
+! JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
+!
       DATA ((C1(IML,IDB),IDB=1,NDBD),IML=1,NMLG)
      &     / 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, !-90.0 
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000, !-85.0
@@ -9345,9 +9345,9 @@ C
      &       0.00149, 0.00000, 0.00000, 0.00073, 0.00149, ! 80.0
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000, ! 85.0
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000/ ! 90.0  
-C
-C JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
-C
+!
+! JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
+!
       DATA ((C2(IML,IDB),IDB=1,NDBD),IML=1,NMLG)
      &     / 0.00000, 0.00000, 0.00000, 0.00000, 0.00000, !-90.0
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000, !-85.0
@@ -9386,9 +9386,9 @@ C
      &       1.44025, 0.00000, 0.00000, 1.13529, 1.44025, ! 80.0
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000, ! 85.0
      &       0.00000, 0.00000, 0.00000, 0.00000, 0.00000/ ! 90.0 
-C
-C JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
-C
+!
+! JDOY        | 0-79 ||80-171||172-264||265-354||355-365|
+!
       DATA ((C3(IML,IDB),IDB=1,NDBD),IML=1,NMLG)
      &     / 1.00000, 1.00000, 1.00000, 1.00000, 1.00000, !-90.0
      &       1.00000, 1.00000, 1.00000, 1.00000, 1.00000, !-85.0
@@ -9427,9 +9427,9 @@ C
      &       0.92703, 1.00000, 1.00000, 1.00502, 0.92703, ! 80.0
      &       1.00000, 1.00000, 1.00000, 1.00000, 1.00000, ! 85.0
      &       1.00000, 1.00000, 1.00000, 1.00000, 1.00000/ ! 90.0
-C
-C ... Find Season-Averaged Coefficient Index 
-C
+!
+! ... Find Season-Averaged Coefficient Index 
+!
       IDXS=0
       IF(JDOY.LE.IDBD(1)) IDXS=1
       DO IS=2,NDBD
@@ -9442,9 +9442,9 @@ C
         STORME_AP=-5.0
         GOTO 222 
       ENDIF
-C
-C ... Find Magnetic Latitude Coefficient Index
-C 
+!
+! ... Find Magnetic Latitude Coefficient Index
+! 
       IDXL=0
       DELG=ABS(XMLG(1)-XMLG(2))
       DELD=DELG/2.0
@@ -9464,41 +9464,41 @@ C
         STORME_AP=-5.0
         GOTO 222
       ENDIF
-C
-C ... COMPUTE E-REGION ELECTRON DENSITY GEOMAGNETIC STORM ENHANCEMET
-C ... FACTOR (i.e., THE STORM-TO-QUIET RATIO (SQR)) 
-C
+!
+! ... COMPUTE E-REGION ELECTRON DENSITY GEOMAGNETIC STORM ENHANCEMET
+! ... FACTOR (i.e., THE STORM-TO-QUIET RATIO (SQR)) 
+!
       SQR=C1(IDXL,IDXS)*AP**(C2(IDXL,IDXS))+C3(IDXL,IDXS)
       IF(SQR.LT.1.0) SQR=1.0
       STORME_AP=SQR
    
 222   RETURN
       END    
-C
-C
-C****************************************************************************
-C
+!
+!
+!****************************************************************************
+!
         subroutine vdrift(xt,xl,param,y)
-C-------------------------------------------------------------------
-C       SUBROUTINE CALCULATES EQUATORIAL VERTICAL DRIFT AS DESCRIBED 
-C       IN SCHERLIESS AND FEJER, JGR, 104, 6829-6842, 1999
-C
-C       INPUT:   XT: SOLAR LOCAL TIME  [h]
-C                XL: GEOGRAPHIC LONGITUDE (+ EAST) [degrees]
-C               
-C           PARAM: 2-DIM ARRAY (DOY,F10.7CM)
-C                  DOY     :Day of Year has to run from 1 to 365(366)
-C                  F10.7cm : F10.7cm solar flux (daily value)
-C             
-C       OUTPUT:   Y: EQUATORIAL VERTICAL DRIFT [m/s]
-C
-C-------------------------------------------------------------------
-c        IMPLICIT REAL*8 (A-H,O-Z)
+!-------------------------------------------------------------------
+!       SUBROUTINE CALCULATES EQUATORIAL VERTICAL DRIFT AS DESCRIBED 
+!       IN SCHERLIESS AND FEJER, JGR, 104, 6829-6842, 1999
+!
+!       INPUT:   XT: SOLAR LOCAL TIME  [h]
+!                XL: GEOGRAPHIC LONGITUDE (+ EAST) [degrees]
+!               
+!           PARAM: 2-DIM ARRAY (DOY,F10.7CM)
+!                  DOY     :Day of Year has to run from 1 to 365(366)
+!                  F10.7cm : F10.7cm solar flux (daily value)
+!             
+!       OUTPUT:   Y: EQUATORIAL VERTICAL DRIFT [m/s]
+!
+!-------------------------------------------------------------------
+!        IMPLICIT REAL*8 (A-H,O-Z)
         IMPLICIT REAL (A-H,O-Z)
        
-c        real*8 param(2),coeff(624),coeff1(594),coeff2(30),funct(6)
-c        real*8 xt,xl,y
-c        real*8 bspl4,bspl4_time,bspl4_long
+!        real*8 param(2),coeff(624),coeff1(594),coeff2(30),funct(6)
+!        real*8 xt,xl,y
+!        real*8 bspl4,bspl4_time,bspl4_long
 
         real param(2),coeff(624),coeff1(594),coeff2(30),funct(6)
         real xt,xl,y
@@ -9640,17 +9640,17 @@ c        real*8 bspl4,bspl4_time,bspl4_long
         end do
 
        end
-C
-C
-c        real*8 function bspl4_time(i,x1)
+!
+!
+!        real*8 function bspl4_time(i,x1)
         real function bspl4_time(i,x1)
-c       *************************************************
-c        implicit REAL*8 (A-H,O-Z)
+!       *************************************************
+!        implicit REAL*8 (A-H,O-Z)
         implicit REAL (A-H,O-Z)
 		 
         integer i,order,j,k
-c        real*8 t_t(0:39)
-c        real*8 x,b(20,20),x1
+!        real*8 t_t(0:39)
+!        real*8 x,b(20,20),x1
         real t_t(0:39)
         real x,b(20,20),x1
 
@@ -9689,17 +9689,17 @@ c        real*8 x,b(20,20),x1
 
         bspl4_time=b(i,order)
         end
-C
-C
+!
+!
         real function bspl4_long(i,x1)
-c        real*8 function bspl4_long(i,x1)
-c       *************************************************
-c       implicit real*8 (A-H,O-Z) 
+!        real*8 function bspl4_long(i,x1)
+!       *************************************************
+!       implicit real*8 (A-H,O-Z) 
        implicit real (A-H,O-Z) 
 
         integer i,order,j,k
-c        real*8 t_l(0:24)
-c        real*8 x,b(20,20),x1
+!        real*8 t_l(0:24)
+!        real*8 x,b(20,20),x1
         real t_l(0:24)
         real x,b(20,20),x1
 
@@ -9733,20 +9733,20 @@ c        real*8 x,b(20,20),x1
 
         bspl4_long=b(i,order)
         end
-C
-C
+!
+!
         subroutine g(param,funct,x)
-c       *************************************************
-c        implicit real*8 (A-H,O-Z)
+!       *************************************************
+!        implicit real*8 (A-H,O-Z)
         implicit real (A-H,O-Z)
 
         integer i
-c        real*8 param(2),funct(6)
-c        real*8 x,a,sigma,gauss,flux,cflux
+!        real*8 param(2),funct(6)
+!        real*8 x,a,sigma,gauss,flux,cflux
         real param(2),funct(6)
         real x,a,sigma,gauss,flux,cflux
 
-c       *************************************************
+!       *************************************************
         flux=param(2)
         if(param(2).le.75)  flux=75.
         if(param(2).ge.230) flux=230.
@@ -9762,20 +9762,20 @@ c       *************************************************
            gauss=exp(-0.5*((x-a)**2)/sigma**2)
            cflux=gauss*95.+(1-gauss)*flux
            end if
-c       *************************************************
+!       *************************************************
 
-c       *************************************************
+!       *************************************************
         do i=1,6
          funct(i)=0.
         end do
-c       *************************************************
+!       *************************************************
 
-c       *************************************************
+!       *************************************************
         if((param(1).ge.135).and.(param(1).le.230)) funct(1)=1
         if((param(1).le.45).or.(param(1).ge.320)) funct(2)=1
         if((param(1).gt.75).and.(param(1).lt.105)) funct(3)=1
         if((param(1).gt.260).and.(param(1).lt.290)) funct(3)=1
-c       *************************************************
+!       *************************************************
 
         if((param(1).ge.45).and.(param(1).le.75)) then  ! W-E
             funct(2)=1.-(param(1)-45.)/30.
@@ -9794,32 +9794,32 @@ c       *************************************************
             funct(2)=1-funct(3)
             end if
 
-c       *************************************************
+!       *************************************************
         funct(4)=(cflux-140)*funct(1)
         funct(5)=(cflux-140)*funct(2)
         funct(6)=(flux-140)*funct(3)
-c       *************************************************
+!       *************************************************
 
         end
-c
-c
+!
+!
        SUBROUTINE StormVd(FLAG,iP,AE,SLT,PromptVd,DynamoVd,Vd)
-C *******************************************************************
-C  Empirical vertical disturbance drifts model
-C  After Fejer and Scherliess, JGR, 102, 24047-24056,1997
-C*********************************************************************
-C  INPUT:
-C    AE: AE(in nT) in 1 hour or 15 minute resolution;
-C    SLT: Local time(in hrs) for wanted Vd;
-C  OUTPUT:
-C    PromptVd: Prompt penetration vertical drifts at given conditions;
-C    DynamoVd: Disturbane dynamo vertical drifts at given conditions;
-C    Vd: PromptVd+DynamoVd;
-C*********************************************************************
+! *******************************************************************
+!  Empirical vertical disturbance drifts model
+!  After Fejer and Scherliess, JGR, 102, 24047-24056,1997
+!*********************************************************************
+!  INPUT:
+!    AE: AE(in nT) in 1 hour or 15 minute resolution;
+!    SLT: Local time(in hrs) for wanted Vd;
+!  OUTPUT:
+!    PromptVd: Prompt penetration vertical drifts at given conditions;
+!    DynamoVd: Disturbane dynamo vertical drifts at given conditions;
+!    Vd: PromptVd+DynamoVd;
+!*********************************************************************
 
-c       IMPLICIT REAL*8(A-H,O-Z)
+!       IMPLICIT REAL*8(A-H,O-Z)
        IMPLICIT REAL(A-H,O-Z)
-c       REAL*8 AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
+!       REAL*8 AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
        REAL AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
        INTEGER FLAG 
        DATA Coff1/
@@ -9844,40 +9844,40 @@ c       REAL*8 AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
      @	       -0.0326,-0.0101, 0.0076, 0.0117, 0.0099, 0.3002,
      @	       -0.0470,-0.0455,-0.0274, 0.0338, 0.0099, 0.0746/
 
-CCCCCCCCCCCCCCCCC**Define to variables**CCCCCCCCCCCCCCCCCCCCC
-C To 1 h time resolution:
-C dAEt_30=AE(t)-AE(t-1 hour);
-C dAEt_90=AE(t-1 hour)-AE(t-2 hour);
-CC
-C To 15 MIN time resolution :
-C dAEt_7P5=AE(t)-AE(t-15min);
-C dAEt_30=AE(t-15)-AE(t-45min);
-C dAEt_75=AE(t-45)-AE(t-105min);
-CC
-C  Following variables are the same to two resolution: 
-C AE1_6=average(AE(1-6hours));
-C AE7_12=average(AE(7-12hours));
-C AE1_12=average(AE(1-12hours));
-C AEd1_6=average(X(AE(1-6hours)-130 nT));
-C AEd7_12=average(X(AE(7-12hours)-130 nT));
-C AEd1_12=average(X(AE(1-12hours)-130 nT));
-C AEd22_28=average(X(AE(22-28hours)-130 nT));
-C Here X(a)=a, a>0; =0, a<=0;
-C Alfa=0,            AE1_6<200 nT;
-C      AE1_6/100-2, 200 nT<AE1_6<200 nT;
-C      1,            AE1_6>300 nT;
-C Beta=exp(-AE1_12/90),  AE1_12>=70nT;
-C      0.46,              AE1_12<70 nT;
-CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCccccccc
-C*****************************************************
-CC        FLAG>0--> 1 h time resolution
-C**************************************************** 
+!CCCCCCCCCCCCCCCC**Define to variables**CCCCCCCCCCCCCCCCCCCCC
+! To 1 h time resolution:
+! dAEt_30=AE(t)-AE(t-1 hour);
+! dAEt_90=AE(t-1 hour)-AE(t-2 hour);
+!C
+! To 15 MIN time resolution :
+! dAEt_7P5=AE(t)-AE(t-15min);
+! dAEt_30=AE(t-15)-AE(t-45min);
+! dAEt_75=AE(t-45)-AE(t-105min);
+!C
+!  Following variables are the same to two resolution: 
+! AE1_6=average(AE(1-6hours));
+! AE7_12=average(AE(7-12hours));
+! AE1_12=average(AE(1-12hours));
+! AEd1_6=average(X(AE(1-6hours)-130 nT));
+! AEd7_12=average(X(AE(7-12hours)-130 nT));
+! AEd1_12=average(X(AE(1-12hours)-130 nT));
+! AEd22_28=average(X(AE(22-28hours)-130 nT));
+! Here X(a)=a, a>0; =0, a<=0;
+! Alfa=0,            AE1_6<200 nT;
+!      AE1_6/100-2, 200 nT<AE1_6<200 nT;
+!      1,            AE1_6>300 nT;
+! Beta=exp(-AE1_12/90),  AE1_12>=70nT;
+!      0.46,              AE1_12<70 nT;
+!CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCccccccc
+!*****************************************************
+!C        FLAG>0--> 1 h time resolution
+!**************************************************** 
 
        IF (FLAG.GT.0) THEN
-C 
+! 
          dAEt_30=AE(iP)-AE(iP-1)
          dAEt_90=AE(iP-1)-AE(iP-2)
-C
+!
          AE1_6=0.0D0
          AEd1_6=0.0D0
 
@@ -9890,7 +9890,7 @@ C
 
          AE1_6=AE1_6/6.0D0
          AEd1_6=AEd1_6/6.0D0
-C
+!
          AEd7_12=0.0D0
 
          DO i=-7,-12,-1
@@ -9900,7 +9900,7 @@ C
          END DO
 
          AEd7_12=AEd7_12/6.0D0
-C
+!
          AE1_12=0.0D0
 
          DO i=-1,-12,-1
@@ -9908,7 +9908,7 @@ C
          END DO
 
          AE1_12=AE1_12/12.0D0
-C
+!
          AEd22_28=0.0D0
 
          DO i=-22,-28,-1
@@ -9920,7 +9920,7 @@ C
          AEd22_28=AEd22_28/7.0D0
          AEd22_28P=AEd22_28-200.0D0
          IF (AEd22_28P.LE.0.0D0) AEd22_28P=0.0D0
-CC
+!C
          IF (AE1_6.GT.300.0D0) THEN  
            Alfa=1.0D0
          ELSE IF (AE1_6.GT.200.0D0) THEN
@@ -9928,7 +9928,7 @@ CC
          ELSE 
            ALfa=0.0D0
          ENDIF
-CC
+!C
          IF (AE1_12.GE.70.0D0) THEN
             Beta=dexp(-AE1_12/90.0D0)
          ELSE
@@ -9948,10 +9948,10 @@ CC
          Vd=PromptVd+DynamoVd
          RETURN
 
-C 1 h time resolution end;
-C********************************************************************
-C                  15 min time resolution
-C********************************************************************
+! 1 h time resolution end;
+!********************************************************************
+!                  15 min time resolution
+!********************************************************************
 
        ELSE
          dAEt_7P5=AE(iP)-AE(iP-1)
@@ -9970,7 +9970,7 @@ C********************************************************************
 
          AE1_6=AE1_6/21.0D0
          AEd1_6=AEd1_6/21.0D0
-CC
+!C
          AEd7_12=0.0D0 
          DO i=-28,-48,-1
             AEd7_12s=AE(iP+i)-130.0
@@ -9978,13 +9978,13 @@ CC
             AEd7_12=AEd7_12+AEd7_12S
          ENDDO
          AEd7_12=AEd7_12/21.0D0
-CC
+!C
          AE1_12=0.0D0
          DO i=-4,-48,-1
             AE1_12=AE1_12+AE(iP+i)
          END DO
          AE1_12=AE1_12/45.0D0
-CC 
+!C 
 	  AEd22_28=0.0D0
           DO i=-88,-112,-1
              AEd22_28s=AE(iP+i)-130.
@@ -9995,15 +9995,15 @@ CC
 	  AEd22_28P=AEd22_28-200.0D0
 	  IF (AEd22_28P.LE.0.0D0) AEd22_28P=0.0D0
 
-c         AE1_6=0.0D0
-c         AEd1_6=0.0D0
-c         AEd7_12=0.0D0 
-c         AEd22_28P=0.0D0
-c         AE1_12=0.0D0
-c         dAEt_7P5=400.D0
-c         dAEt_30=0.D0
-c         dAEt_75=0.D0
-CC
+!         AE1_6=0.0D0
+!         AEd1_6=0.0D0
+!         AEd7_12=0.0D0 
+!         AEd22_28P=0.0D0
+!         AE1_12=0.0D0
+!         dAEt_7P5=400.D0
+!         dAEt_30=0.D0
+!         dAEt_75=0.D0
+!C
   	  IF (AE1_6.GT.300.0D0) THEN  
              Alfa=1.0D0
           ELSE IF (AE1_6.GT.200.0D0) THEN
@@ -10011,13 +10011,13 @@ CC
           ELSE 
              ALfa=0.0D0
           ENDIF
-CC
+!C
           IF (AE1_12.GE.70.0D0) THEN
              Beta=dexp(-AE1_12/90.0D0)
           ELSE
              Beta=0.46D0
           END IF
-CC
+!C
           PromptVd=0.0D0
           DO J=1,9
             PromptVd=PromptVd+(Coff15(1,J)*dAEt_7P5+Coff15(2,J)*dAEt_30
@@ -10034,25 +10034,25 @@ CC
        ENDIF
        RETURN
        END                     
-C
-C
+!
+!
        real function bspl4_ptime(i,x1)
-c       real*8 function bspl4_ptime(i,x1)
-C *************************************************
+!       real*8 function bspl4_ptime(i,x1)
+! *************************************************
 
-c       IMPLICIT REAL*8 (A-H,O-Z)
+!       IMPLICIT REAL*8 (A-H,O-Z)
        IMPLICIT REAL (A-H,O-Z)
 
        integer i,order,j,k
-c       real*8 t_t(0:27)
-c       real*8 x,b(20,20),x1
+!       real*8 t_t(0:27)
+!       real*8 x,b(20,20),x1
        real t_t(0:27)
        real x,b(20,20),x1
 
        data t_t/0.00,3.00,4.50,6.00,9.00,12.0,15.0,18.0,21.0,
      *          24.0,27.0,28.5,30.0,33.0,36.0,39.0,42.0,45.0,
      *          48.0,51.0,52.5,54.0,57.0,60.0,63.0,66.0,69.0,72.0/
-C
+!
        order=4
        x=x1
        if(i.ge.0) then
@@ -10067,7 +10067,7 @@ C
 	       b(j,1)=0
 	   end if
        end do
-c
+!
        do j=2,order
           do k=i,i+order-j
              b(k,j)=(x-t_t(k))/(t_t(k+j-1)-t_t(k))*b(k,j-1)
@@ -10078,9 +10078,9 @@ c
        return
        end
 
-C
-C***************************************************************************
-C
+!
+!***************************************************************************
+!
 
        subroutine spreadf_brazil(idoy,idiy,f107,geolat,osfbr)
 **********************************************************************       
@@ -10444,15 +10444,15 @@ C
       bspl2f=b(i,2)
       return
       end
-C
-C
+!
+!
         function ckp(ap)
-C-----------------------------------------------------------------------
-C Converts ap index (ap is integer variable varying from 0 to 400) into 
-C kp index (xkp is real variable varying from 0 to 9). Using standard
-C tables for deriving the 3-hourly ap index from the 3-hourly Kp index
-C (e.g., http://www.ngdc.noaa.gov/stp/GEOMAG/kp_ap.shtml) 
-C-----------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! Converts ap index (ap is integer variable varying from 0 to 400) into 
+! kp index (xkp is real variable varying from 0 to 9). Using standard
+! tables for deriving the 3-hourly ap index from the 3-hourly Kp index
+! (e.g., http://www.ngdc.noaa.gov/stp/GEOMAG/kp_ap.shtml) 
+!-----------------------------------------------------------------------
 
         integer		ap,ap_array
         real		kp_array,ap_log_array
@@ -10491,26 +10491,26 @@ C-----------------------------------------------------------------------
 		
 		return
 		end
-C                   
-C        
+!                   
+!        
 		subroutine auroral_boundary(xkp,xmlt,cgmlat,ab_mlat)
-C-----------------------------------------------------------------------
-C Computes equatorward auroral boundary values for givern kp value.
-C kp given in units of 0.1 (xkp) for the range from 0.0 to 9.0. Model 
-C values are only used for kp=0,1,2,3,4,5,6,7,8,9 and a linear inter-
-C polation is applied for intermediate kp values.
-C 
-C The auroral oval boundary is given as an array for corrected magnetic 
-C latitude CGM (ab_mlat). The 48 values correspond to the MLT values 
-C of 0.0,0.5,1.0,1.5,2.0 .. 23.5. If the input xmlt is greater than
-C -1, then the program determines the CGM latitude, cgmlat, that 
-C corresponds to the given MLT value (xmlt).
-C
-C Y. Zhang and L.J. Paxton, An empirical Kp-dependent global auroral 
-C model based on TIMED/GUVI FUV data, Journal of Atmospheric and 
-C Solar-Terrestrial Physics 70, 1231–1242, 2008.
-C 
-C----------------------------------------------------------------------- 
+!-----------------------------------------------------------------------
+! Computes equatorward auroral boundary values for givern kp value.
+! kp given in units of 0.1 (xkp) for the range from 0.0 to 9.0. Model 
+! values are only used for kp=0,1,2,3,4,5,6,7,8,9 and a linear inter-
+! polation is applied for intermediate kp values.
+! 
+! The auroral oval boundary is given as an array for corrected magnetic 
+! latitude CGM (ab_mlat). The 48 values correspond to the MLT values 
+! of 0.0,0.5,1.0,1.5,2.0 .. 23.5. If the input xmlt is greater than
+! -1, then the program determines the CGM latitude, cgmlat, that 
+! corresponds to the given MLT value (xmlt).
+!
+! Y. Zhang and L.J. Paxton, An empirical Kp-dependent global auroral 
+! model based on TIMED/GUVI FUV data, Journal of Atmospheric and 
+! Solar-Terrestrial Physics 70, 1231–1242, 2008.
+! 
+!----------------------------------------------------------------------- 
 
         dimension zp_mlat(48,10),ab_mlat(48),ab_mlt(48)
 
@@ -10587,5 +10587,5 @@ C-----------------------------------------------------------------------
         cgmlat=zmlkp1+(xkp-xkp1)*(zmlkp2-zmlkp1)
 		return
 		end
-C
-C
+!
+!

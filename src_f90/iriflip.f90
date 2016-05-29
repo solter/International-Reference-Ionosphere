@@ -1,39 +1,39 @@
-C flipiri.for 
-C
-C 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
-C 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
-C 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
-C 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
-C 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
-C 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
-C 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
-C 2012.01 12/12/11 Deleted ALT_RATES (not used)
-C 2012.01 01/04/12 Deleted FINDAP,READAP,CONV_DATE,GET_DATA,RATCHK (not used)
-C 2012.01 01/04/12 Deleted BRACE,ACTUAL_DAY,EPHEM SOLDEC,TFILE,RUN_ERROR (not used)
-C 2012.01 01/04/12 COP2D: 99 FOMRAT ',' missing; commented out all WRITEs
-C 2014.01 07/17/14 COP4S: NPLUS=0; PR(13)=0.0 ------------------------- A Shabanloui
-C****************************************************************************************
-C subroutines for IDC model
-C
-C includes: main subroutine CHEMION and the following subroutines and functions
-C           KEMPPRN.FOR: CN2D, CNO, CN4S, CN2PLS, CNOP, CO2P, COP4S, COP2D, COP2P,
-C                        CNPLS, CN2A, CN2P, CNOPV
-C           RATES.FOR:   RATS 
-C           PESIMP.FOR:  SECIPRD, FLXCAL, FACFLX, SIGEXS, TXSION, OXRAT, T_XS_N2, 
-C                        T_XS_OX, OXSIGS
-C           RSPRIM.FOR:  PRIMPR, SCOLUM, PARAMS, PROBS, PROBN2, YLDISS, PROBO2, 
-C                        SCHUMN, FACEUV, FACSR,  
-C  
-C turn on printout of intermediate quantities with JPRINT=1 also in PARAMS, PROBS, 
-C PROBN2, YLDISS, and PROBO2 with ISW=1.
-C 
-C Richards, P. G., D. Bilitza, and D. Voglozin (2010), Ion density calculator (IDC): 
-C 	A new efficient model of ionospheric ion densities, Radio Sci., 45, RS5007, 
-C   doi:10.1029/2009RS004332.
-C
-C****************************************************************************************
-C
-C
+! flipiri.for 
+!
+! 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
+! 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
+! 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
+! 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
+! 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
+! 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
+! 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
+! 2012.01 12/12/11 Deleted ALT_RATES (not used)
+! 2012.01 01/04/12 Deleted FINDAP,READAP,CONV_DATE,GET_DATA,RATCHK (not used)
+! 2012.01 01/04/12 Deleted BRACE,ACTUAL_DAY,EPHEM SOLDEC,TFILE,RUN_ERROR (not used)
+! 2012.01 01/04/12 COP2D: 99 FOMRAT ',' missing; commented out all WRITEs
+! 2014.01 07/17/14 COP4S: NPLUS=0; PR(13)=0.0 ------------------------- A Shabanloui
+!****************************************************************************************
+! subroutines for IDC model
+!
+! includes: main subroutine CHEMION and the following subroutines and functions
+!           KEMPPRN.FOR: CN2D, CNO, CN4S, CN2PLS, CNOP, CO2P, COP4S, COP2D, COP2P,
+!                        CNPLS, CN2A, CN2P, CNOPV
+!           RATES.FOR:   RATS 
+!           PESIMP.FOR:  SECIPRD, FLXCAL, FACFLX, SIGEXS, TXSION, OXRAT, T_XS_N2, 
+!                        T_XS_OX, OXSIGS
+!           RSPRIM.FOR:  PRIMPR, SCOLUM, PARAMS, PROBS, PROBN2, YLDISS, PROBO2, 
+!                        SCHUMN, FACEUV, FACSR,  
+!  
+! turn on printout of intermediate quantities with JPRINT=1 also in PARAMS, PROBS, 
+! PROBN2, YLDISS, and PROBO2 with ISW=1.
+! 
+! Richards, P. G., D. Bilitza, and D. Voglozin (2010), Ion density calculator (IDC): 
+! 	A new efficient model of ionospheric ion densities, Radio Sci., 45, RS5007, 
+!   doi:10.1029/2009RS004332.
+!
+!****************************************************************************************
+!
+!
       SUBROUTINE CHEMION(JPRINT,  !.. Input: Turn file output on or off
      >                      ALT,  !.. Input: Altitude(km)
      >               F107,F107A,  !.. Input: Solar activity indices
@@ -48,30 +48,30 @@ C
      >             N2PLUS,NPLUS,  !.. OUTPUT: N2+ and N+ densities (cm-3)
      >                  NNO,N2D,  !.. OUTPUT: NO and N(2D) density (cm-3)
      >                    INEWT)  !.. OUTPUT: Newton procedure fails if INEWT=0
-C-------------------------------------------------------------------------------------
-C... This routine was written by Phil Richards April 2010. 
-C... It takes the specified input electron density and returns O+, O2+, NO+,
-C... N2+, N+, NO, and N(2D) densities.These densities generally agree well
-C... with the FLIP model densities.
-C... All the densities except O+ are calculated from chemical equilibrium.
-C... O+ is calculated using a Newton iterative procedure so that the total 
-C... ion density matches the input electron density.
-C... N+ and NO densities can either be user specified or calculated by the model.
-C... N+ generally agrees well with AE-C data and the FLIP model during the day, 
-C... but is inaccurate at night due to lack of diffusion.
-C... NO will be very good except below about 130 km where it will be 
-C... underestimated due to neglect of diffusion. There is an artificial 
-C... floor on the NO density to prevent it from getting too low below 130 km.
-C... If the Newton procedure fails to converge, all ions including O+ are 
-C... calculated from chemical equilibrium and then normalized to reproduce 
-C... the input electron density. This generally works well.
-C... The Newton procedure usually works if the total calculated molecular ion 
-C... densities do not approach the input electron density. Difficulties are most   
-C... likely to happen below ~150 km and especially at night. A Newton solution is 
-C... usually found when the O+ density is not too much smaller than the modeled 
-C... molecular ion density.
-C... The EUVAC model is used for solar EUV irradiances
-C-------------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------------
+!... This routine was written by Phil Richards April 2010. 
+!... It takes the specified input electron density and returns O+, O2+, NO+,
+!... N2+, N+, NO, and N(2D) densities.These densities generally agree well
+!... with the FLIP model densities.
+!... All the densities except O+ are calculated from chemical equilibrium.
+!... O+ is calculated using a Newton iterative procedure so that the total 
+!... ion density matches the input electron density.
+!... N+ and NO densities can either be user specified or calculated by the model.
+!... N+ generally agrees well with AE-C data and the FLIP model during the day, 
+!... but is inaccurate at night due to lack of diffusion.
+!... NO will be very good except below about 130 km where it will be 
+!... underestimated due to neglect of diffusion. There is an artificial 
+!... floor on the NO density to prevent it from getting too low below 130 km.
+!... If the Newton procedure fails to converge, all ions including O+ are 
+!... calculated from chemical equilibrium and then normalized to reproduce 
+!... the input electron density. This generally works well.
+!... The Newton procedure usually works if the total calculated molecular ion 
+!... densities do not approach the input electron density. Difficulties are most   
+!... likely to happen below ~150 km and especially at night. A Newton solution is 
+!... usually found when the O+ density is not too much smaller than the modeled 
+!... molecular ion density.
+!... The EUVAC model is used for solar EUV irradiances
+!-------------------------------------------------------------------------------------
       IMPLICIT NONE
       INTEGER JPRINT        !.. Turns on printing of production and loss
       INTEGER INEWT         !.. Signifies when the Newton procedure fails
@@ -124,8 +124,8 @@ C-------------------------------------------------------------------------------
       CALL RATS(0,TE,TI,TN,RTS)  !.. Get the reaction rates
 
       !.. PRIMPR calculates solar EUV production rates. 
-c      print*,'ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S'
-c      print*,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S
+!      print*,'ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S'
+!      print*,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S
       UVDISN=OTHPR1(1)
       CALL PRIMPR(1,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S)
       UVDISN=OTHPR1(1)
@@ -312,14 +312,14 @@ c      print*,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S
       ENDIF
       RETURN
       END
-C
-C
-C.................... KEMPRN.FOR ......................................   
-C.. This file contains the chemistry routines for ions and neutrals
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!
+!
+!.................... KEMPRN.FOR ......................................   
+!.. This file contains the chemistry routines for ions and neutrals
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CN2D(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NOP,NE,P1,L1
      > ,N2PLS,DISN2D,UVDISN,NPLUS,N2P,N2D,OPLS,NNO,N2A)
-C.......n(2d)
+!.......n(2d)
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=NOP*NE*RTS(50)
@@ -338,10 +338,10 @@ C.......n(2d)
       LR(6)=RTS(41)*NNO
       P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)
       L1=LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6)
-C....... EF is used to convert production rates to volume emission rates
+!....... EF is used to convert production rates to volume emission rates
       EF=1.0
-C....... This line in for volume emission rates
-C...      EF=RTS(61)*0.76/L1
+!....... This line in for volume emission rates
+!...      EF=RTS(61)*0.76/L1
       IF(JPT.EQ.1.AND.JPR.GT.0.AND.INT(EF+0.1).NE.1) WRITE(I,189)
       IF(JPT.EQ.1.AND.JPR.GT.0.AND.INT(EF+0.1).EQ.1) WRITE(I,191)
  189  FORMAT(/2X,'N(2D)',25X,'EMISSION',28X,':',20X,'Loss rate')
@@ -355,10 +355,10 @@ C...      EF=RTS(61)*0.76/L1
       RETURN
  7    FORMAT(F6.1,1P,22E8.1)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CNO(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1
      > ,N2D,N4S,N2P,NNO,O2P,OPLS,PDNOSR,PLYNOP,N2A,NPLUS)
-C........no
+!........no
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=RTS(16)*O2N*N2D
@@ -384,10 +384,10 @@ C........no
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CN4S(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1,N4S,DISN4S
      >   ,N2D,N2P,OPLS,N2PLS,UVDISN,NOP,NPLUS,NNO,O2P,PDNOSR,VCON)
-C........N(4S)
+!........N(4S)
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=DISN4S
@@ -421,9 +421,9 @@ C........N(4S)
       RETURN
  7    FORMAT(F6.1,1P,22E8.1)
       END
-C::::::::::::::::::::::::::::::: CN2PLS :::::::::::::::::::::::::::::::
-C..... Simplified chemistry of N2+.  PUN2P* = production of N2+ by euv 
-C..... in the (X,A,B states). PEN2P* same for p.e.s (X,A,B states)
+!::::::::::::::::::::::::::::::: CN2PLS :::::::::::::::::::::::::::::::
+!..... Simplified chemistry of N2+.  PUN2P* = production of N2+ by euv 
+!..... in the (X,A,B states). PEN2P* same for p.e.s (X,A,B states)
       SUBROUTINE CN2PLS(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,N2PLS,PUN2PX,
      >  PUN2PA,PUN2PB,PEN2PX,PEN2PA,PEN2PB,OP2D,OP2P,HEPLUS,NPLUS,
      >  NNO,N4S)
@@ -461,10 +461,10 @@ C..... in the (X,A,B states). PEN2P* same for p.e.s (X,A,B states)
       RETURN
  7    FORMAT(F6.1,1P,22E8.1)
       END
-C:::::::::::::::::::::::::::::: CNOP ::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::: CNOP ::::::::::::::::::::::::::::::::::
       SUBROUTINE CNOP(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,NOP,OPLS
      >  ,N2PLS,O2P,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
-C........no+
+!........no+
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=VCON*RTS(3)*N2N*OPLS
@@ -496,13 +496,13 @@ C........no+
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CO2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1
      > ,O2P,TPROD5,OPLS,OP2D,N2PLS,NPLUS,N4S,NNO,OP2P)
-C........o2+
+!........o2+
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
-C......... TPROD5=euv @ p.e. production
+!......... TPROD5=euv @ p.e. production
       PR(1)=TPROD5
       PR(2)=RTS(4)*O2N*OPLS
       PR(3)=RTS(43)*OP2D*O2N
@@ -523,13 +523,13 @@ C......... TPROD5=euv @ p.e. production
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE COP4S(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OPLS,TPROD1,OP2D
      >  ,OP2P,PEPION,PDISOP,N2PLS,N2D,NNO,VCON,HEPLUS)
-C...........o+(4s)
+!...........o+(4s)
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
-C.........pr(1)= euv production of o+(4s)
+!.........pr(1)= euv production of o+(4s)
       PR(1)=TPROD1
       PR(2)=OP2D*NE*RTS(12)
       PR(3)=OP2P*ON*RTS(26)
@@ -542,7 +542,7 @@ C.........pr(1)= euv production of o+(4s)
       PR(10)=RTS(85)*OP2P*O2N              !.. Fox
       PR(11)=HEPLUS*O2N*(RTS(91)+RTS(93))  !..Fox
       PR(12)=RTS(95)*NNO*HEPLUS            !..Fox
-C      PR(13)=RTS(22)*NPLUS*O2N             !..Fox
+!      PR(13)=RTS(22)*NPLUS*O2N             !..Fox
       PR(13)=0.0
       LR(1)=N2N*VCON*RTS(3)
       LR(2)=O2N*RTS(4)
@@ -563,10 +563,10 @@ C      PR(13)=RTS(22)*NPLUS*O2N             !..Fox
       RETURN
  7    FORMAT(F6.1,1P,22E8.1)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE COP2D(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OP2D,TPROD2,OP2P
      > ,HEPLUS,N4S,NNO,PSEC)
-C.......o+(2d)
+!.......o+(2d)
       IMPLICIT REAL (A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=TPROD2                ! EUV  prod
@@ -594,10 +594,10 @@ C.......o+(2d)
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE COP2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OP2P,TPROD3,PSEC
      > ,HEPLUS,N4S,NNO,TE)
-C.......o+(2p)
+!.......o+(2p)
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=0.0
@@ -624,10 +624,10 @@ C.......o+(2p)
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CNPLS(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,DISNP
      > ,NPLUS,OPLS,N2D,OP2P,HEPLUS,PHOTN,O2P,N4S,OP2D,N2PLS,NNO)
-C........n+
+!........n+
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=DISNP
@@ -662,14 +662,14 @@ C........n+
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CN2A(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE
      > ,N2A,P3X1,P3X2,P3X3,P3X4)
-C........n2(a3sigma) and total LBH
+!........n2(a3sigma) and total LBH
       IMPLICIT REAL(A-H,L,N-Z)
       REAL P3X1,P3X2,P3X3,P3X4
       DIMENSION RTS(99),LR(22),PR(22)
-C....... pr(1,2,3)= electron impact excitation of n2(a,b,c) states
+!....... pr(1,2,3)= electron impact excitation of n2(a,b,c) states
       PR(1)=P3X1
       PR(2)=P3X2
       PR(3)=P3X3
@@ -687,11 +687,11 @@ C....... pr(1,2,3)= electron impact excitation of n2(a,b,c) states
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE CN2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1
      > ,N2P,P3X7,UVDISN,O2P,NNO,N2PLUS)
-C....... N(2P). the rates are from Zipf et al JGR, 1980 p687
-C.... 21-AUG-1992. Added N2+ recombination source
+!....... N(2P). the rates are from Zipf et al JGR, 1980 p687
+!.... 21-AUG-1992. Added N2+ recombination source
       IMPLICIT REAL(A-H,L,N-Z)
       DIMENSION RTS(99),LR(22),PR(22)
       PR(1)=P3X7
@@ -714,12 +714,12 @@ C.... 21-AUG-1992. Added N2+ recombination source
       RETURN
  7    FORMAT(F6.1,1P,22E9.2)
       END
-C:::::::::::::::::::::::::::::: CNOPV ::::::::::::::::::::::::::::::::::
-C...... This routine calculates the vibrational distribution of no+
-C...... Uses AFRL report by Winick et al. AFGL-TR-87-0334, Environmental
-C...... Research papers, NO. 991, "An infrared spectral radiance code 
-C...... for the auroral thermosphere (AARC)
-C...... Written by P. Richards in February 2004
+!:::::::::::::::::::::::::::::: CNOPV ::::::::::::::::::::::::::::::::::
+!...... This routine calculates the vibrational distribution of no+
+!...... Uses AFRL report by Winick et al. AFGL-TR-87-0334, Environmental
+!...... Research papers, NO. 991, "An infrared spectral radiance code 
+!...... for the auroral thermosphere (AARC)
+!...... Written by P. Richards in February 2004
       SUBROUTINE CNOPV(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,NOP,OPLS
      >  ,N2PLS,O2P,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
       IMPLICIT NONE
@@ -832,14 +832,14 @@ C...... Written by P. Richards in February 2004
 
       RETURN
       END
-C
-C
-C.................................... RATES.FOR ................. 
-C.... This is the reaction rate subroutine for the FLIP model. It takes
-C.... temperatures as input and puts the rates in array RTS. It includes
-C.... reaction rates, efficiencies for various products, and Einstein
-C.... coefficients. For a complete set of references see Fox and Sung JGR
-C.... 2001, page 21,305. Rates different from Fox and Sung indicated by PGR
+!
+!
+!.................................... RATES.FOR ................. 
+!.... This is the reaction rate subroutine for the FLIP model. It takes
+!.... temperatures as input and puts the rates in array RTS. It includes
+!.... reaction rates, efficiencies for various products, and Einstein
+!.... coefficients. For a complete set of references see Fox and Sung JGR
+!.... 2001, page 21,305. Rates different from Fox and Sung indicated by PGR
       SUBROUTINE RATS(J,TE,TI,TN,RTS)
       IMPLICIT REAL(A-H,L,N-Z)
       REAL TE,TI,TN,RTS,T13,TOT_NP_O2_RATE
@@ -1205,11 +1205,11 @@ C.... 2001, page 21,305. Rates different from Fox and Sung indicated by PGR
 
         RETURN
         END
-C
-C
-C.........................<PESIMP.FOR>......................3 APR 92
-C...... This test driver demonstrates how to call the model and 
-C...... how to calculate electron heating rate and 3371 excitation rate.
+!
+!
+!.........................<PESIMP.FOR>......................3 APR 92
+!...... This test driver demonstrates how to call the model and 
+!...... how to calculate electron heating rate and 3371 excitation rate.
       SUBROUTINE SECIPRD(ALT,SZADEG,F107,F107A,
      >    TE,TN,OXN,O2N,N2N,XNE,N2APRD)
       INTEGER I,K,IK           !-- loop control variables
@@ -1288,54 +1288,54 @@ C...... how to calculate electron heating rate and 3371 excitation rate.
 
       EP=E+17
       PEFLX=PEFLUX(I)/12.57
-c      WRITE(29,'(3F8.1,1P,22E10.2)') ALT,E,12398/EP,PEFLX,
-c     >     PEFLUX(I),(SIGIT(K),K=1,3),T_XS_OX(EP),2.2*T_XS_OX(EP),
-c     >     T_XS_N2(EP),PEPION(1,1),PEXCIT(1,1)
+!      WRITE(29,'(3F8.1,1P,22E10.2)') ALT,E,12398/EP,PEFLX,
+!     >     PEFLUX(I),(SIGIT(K),K=1,3),T_XS_OX(EP),2.2*T_XS_OX(EP),
+!     >     T_XS_N2(EP),PEPION(1,1),PEXCIT(1,1)
       ENDDO
 
       RETURN
       END
-C:::::::::::::::::::::::::: PHOTOELECTRON MODEL  ::::::::::::::::::::::::
-C....... This subroutine evaluates the photoelectron flux using the concept
-C.......  production frequencies developed by Phil Richards at Utah 
-C....... State University March 1984. It supercedes the model described in
-C....... JGR, p2155, 1983. Contact EAST::CSPARA::RICHARDS on SPAN network
-C------- Some minor updates in April 1992 indicated by C----
-C....... I would appreciate any feedback on bugs or clarity and if it 
-C....... contributes substantially to a paper, I would appreciate the 
-C....... appropriate acknowledgement.
-C......       **************** WARNING ****************
-C...... This program is constructed to produce reasonable agreement with
-C...... the Atmosphere Explorer-E PES fluxes of John Doering (Lee et al.
-C...... PSS 1980, page 947). It will NOT give good fluxes if the EUV 
-C...... attenuation is greater than about a factor of 7 (AFAC < 0.14).
-C...... The model accurately reproduces the measured fluxes very closely
-C...... for the case in the test driver at 148 km SZA=53 when AFAC=0.19.
-C...... You should compare the output against the Lee et al. 1980 fluxes
-C...... periodically as a check. It is doubtful below 140km during the
-C...... day and below 200km near sunset. Between 200km & 350km, it should
-C...... be good for solar zenith angles < 90 degrees. Above 350 km there
-C...... is considerable uncertainty due to neglect of transport but most
-C...... models have similar uncertainties at high altitudes due to the 
-C...... uncertainty in the conjugate photoelectron flux, and the pitch 
-C...... angle distribution.
-C
-C------ ALT = altitude (km)  { 120 -> 500 }
-C------ SZADEG = solar zenith angle  {0 -> 90 degrees ? }
-C------ TE, TN = electron, neutral temperatures (K)
-C------ XN, XNE = O, O2, N2, and electron densities  (cm-3)
-C------ XN2D, XOP2D = N(2D) and O+(2D) densities for electron quenching
-C------ (cm-3). You may put these to ZERO if not available.
-C------ PEFLUX = photoelectron flux to be returned (eV cm2 sec)-1
-C------ AFAC = the solar EUV attenuation warning flag
+!:::::::::::::::::::::::::: PHOTOELECTRON MODEL  ::::::::::::::::::::::::
+!....... This subroutine evaluates the photoelectron flux using the concept
+!.......  production frequencies developed by Phil Richards at Utah 
+!....... State University March 1984. It supercedes the model described in
+!....... JGR, p2155, 1983. Contact EAST::CSPARA::RICHARDS on SPAN network
+!------- Some minor updates in April 1992 indicated by C----
+!....... I would appreciate any feedback on bugs or clarity and if it 
+!....... contributes substantially to a paper, I would appreciate the 
+!....... appropriate acknowledgement.
+!......       **************** WARNING ****************
+!...... This program is constructed to produce reasonable agreement with
+!...... the Atmosphere Explorer-E PES fluxes of John Doering (Lee et al.
+!...... PSS 1980, page 947). It will NOT give good fluxes if the EUV 
+!...... attenuation is greater than about a factor of 7 (AFAC < 0.14).
+!...... The model accurately reproduces the measured fluxes very closely
+!...... for the case in the test driver at 148 km SZA=53 when AFAC=0.19.
+!...... You should compare the output against the Lee et al. 1980 fluxes
+!...... periodically as a check. It is doubtful below 140km during the
+!...... day and below 200km near sunset. Between 200km & 350km, it should
+!...... be good for solar zenith angles < 90 degrees. Above 350 km there
+!...... is considerable uncertainty due to neglect of transport but most
+!...... models have similar uncertainties at high altitudes due to the 
+!...... uncertainty in the conjugate photoelectron flux, and the pitch 
+!...... angle distribution.
+!
+!------ ALT = altitude (km)  { 120 -> 500 }
+!------ SZADEG = solar zenith angle  {0 -> 90 degrees ? }
+!------ TE, TN = electron, neutral temperatures (K)
+!------ XN, XNE = O, O2, N2, and electron densities  (cm-3)
+!------ XN2D, XOP2D = N(2D) and O+(2D) densities for electron quenching
+!------ (cm-3). You may put these to ZERO if not available.
+!------ PEFLUX = photoelectron flux to be returned (eV cm2 sec)-1
+!------ AFAC = the solar EUV attenuation warning flag
       SUBROUTINE FLXCAL(IDIM,ALT,SZADEG,
      >  TE,TN,XN,XNE,XN2D,XOP2D,PEFLUX,AFAC,IMAX,DE,EV)
       INTEGER RDIM,IMAX
       REAL EMAX             !.. maximum photoelectron energy.
       PARAMETER (RDIM=84)
-c      REAL RJOX(RDIM),RJN2(RDIM),XN(3),COLUM(3),PEFLUX(IDIM)
-c     >  ,DE(RDIM),DELTE(RDIM),EV(RDIM),EN(RDIM),UVFAC,EUV
-c      COMMON/SOL/UVFAC(59),EUV
+!      REAL RJOX(RDIM),RJN2(RDIM),XN(3),COLUM(3),PEFLUX(IDIM)
+!     >  ,DE(RDIM),DELTE(RDIM),EV(RDIM),EN(RDIM),UVFAC,EUV
+!      COMMON/SOL/UVFAC(59),EUV
       REAL RJOX(RDIM),RJN2(RDIM),XN(3),COLUM(3),PEFLUX(IDIM)
      >  ,DE(RDIM),DELTE(RDIM),EV(RDIM),EN(RDIM),UVFAC(59),EUV
       COMMON/SOL/UVFAC,EUV
@@ -1447,10 +1447,10 @@ c      COMMON/SOL/UVFAC(59),EUV
 
  55   RETURN
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE FACFLX(EE,UVFAC,FFAC)
-C....... solar UVFAC factors. Correspond to the first 9 wavelengths
-C....... TORR et al.[1979] GRL page 771 table 3. UVFAC(9) is for 304A
+!....... solar UVFAC factors. Correspond to the first 9 wavelengths
+!....... TORR et al.[1979] GRL page 771 table 3. UVFAC(9) is for 304A
       REAL UVFAC(59)
       FFAC=(7*UVFAC(9)+UVFAC(8)+0.2*UVFAC(6))/8.2
       IF(EE.GT.30.AND.EE.LE.38) FFAC=(2*UVFAC(7)+.5*UVFAC(5))/2.5
@@ -1460,46 +1460,46 @@ C....... TORR et al.[1979] GRL page 771 table 3. UVFAC(9) is for 304A
       IF(EE.GT.108) FFAC=UVFAC(1)
       RETURN
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE SIGEXS(E,TE,XNE,SIGOX,SIGN2,SIGEE)
-C..... Program for evaluating the total inelastic cross sections
-C
-C........ loss to thermal electrons ....
+!..... Program for evaluating the total inelastic cross sections
+!
+!........ loss to thermal electrons ....
       ET=8.618E-5*TE
       SIGEE=(3.37E-12/E**0.94/XNE**0.03)*((E-ET)/
      >   (E-(0.53*ET)))**2.36
-C
-C...... cross section for o(1d)
+!
+!...... cross section for o(1d)
       SIGO1D=0.0
       IF(E.GT.1.96) SIGO1D=4E-16*(1-1.96/E)**2/E
-C...... total excitation cross section for O excluding O(1D)
+!...... total excitation cross section for O excluding O(1D)
       IF(E.LT.25) SIGO=(0.4*E-5)*1.4E-17
       IF(E.GE.25) SIGO=7.0E-17
       IF(SIGO.LT.0.0) SIGO=0.0
-C
-C...... total excitation cross section for N2......
+!
+!...... total excitation cross section for N2......
       IF(E.LT.12) SIGN2=(15.5*E-104.8)*1.7E-18
       IF(E.LT.4.0) SIGN2=5.0E-9*(1-1.4/E)**9 * (1.4/E)**16
       IF(E.GT.11.5) SIGN2=1.4E-16
       IF(SIGN2.LT.0.0) SIGN2=0.0
-C
-C........ total ionization cross sections from Keiffer and Dunn ....
+!
+!........ total ionization cross sections from Keiffer and Dunn ....
       SIGION=0.0
       AL=ALOG10(E)
       IF(AL.LT.2.7.AND.AL.GE.1.2) SIGION=-3.6E-16*(AL-1.2)*(AL-3)
       IF(AL.GT.2.7) SIGION=1.2E-14*EXP(-AL*1.6)
       IF(E.LT.50) SIGION=1.0E-16*(0.068*E-1.06)
       IF(SIGION.LE.0.0) SIGION=0.0
-C
+!
       SIGOX=SIGO1D+SIGO+0.5*SIGION
       SIGN2=SIGN2+SIGION
       RETURN
       END
-C::::::::::::::::::::::: TXSION ::::::::::::::::::::::::::::::::::
-C..... total ionization cross sections for O, O2, and N2
-C..... ionization cross sections keiffer and dunn ........
-C..... The N2+ and O2+ cross sections were modified in April 99 to agree
-C..... with the Schram et al. cross sections at high energies
+!::::::::::::::::::::::: TXSION ::::::::::::::::::::::::::::::::::
+!..... total ionization cross sections for O, O2, and N2
+!..... ionization cross sections keiffer and dunn ........
+!..... The N2+ and O2+ cross sections were modified in April 99 to agree
+!..... with the Schram et al. cross sections at high energies
       SUBROUTINE TXSION(E,SIGIT)
       DIMENSION SIGIT(3)
 
@@ -1525,11 +1525,11 @@ C..... with the Schram et al. cross sections at high energies
       IF(E.GT.12.0) SIGIT(1)=7.33E-15*(1-2.0/E)**34.3*E**(-0.7)
       RETURN
       END
-C:::::::::::::::::::::::::::::::::::: OXRAT ::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::: OXRAT ::::::::::::::::::::::::::::::::
       SUBROUTINE OXRAT(E,R4S,R2D,R2P)
-C....... This subroutine returns the electron impact branching ratios
-C....... for atomic oxygen from Burnett and Rountree Phys. Rev. A. 20
-C....... 1979 page 1468
+!....... This subroutine returns the electron impact branching ratios
+!....... for atomic oxygen from Burnett and Rountree Phys. Rev. A. 20
+!....... 1979 page 1468
       R4S=1.0
       R2D=0.0
       R2P=0.0
@@ -1546,9 +1546,9 @@ C....... 1979 page 1468
          ENDIF
       RETURN
       END
-C::::::::::::::::::::: T_XS_N2 :::::::::::::::::::::::::::
-C.... This function calculates the N2 total photoionization
-C.... cross section. P. Richards 2003-10-04
+!::::::::::::::::::::: T_XS_N2 :::::::::::::::::::::::::::
+!.... This function calculates the N2 total photoionization
+!.... cross section. P. Richards 2003-10-04
       REAL FUNCTION T_XS_N2(EP)
       IMPLICIT NONE
       REAL EP   !... photon energy
@@ -1581,10 +1581,10 @@ C.... cross section. P. Richards 2003-10-04
 
       RETURN
       END
-C::::::::::::::::::::: T_XS_OX :::::::::::::::::::::::::::
-C.... This function calculates the OX total photoionization
-C.... cross section. P. Richards 2003-10-04
-C.... Samson and Pareek Phys. Rev. A, 31, 1470, 1985
+!::::::::::::::::::::: T_XS_OX :::::::::::::::::::::::::::
+!.... This function calculates the OX total photoionization
+!.... cross section. P. Richards 2003-10-04
+!.... Samson and Pareek Phys. Rev. A, 31, 1470, 1985
 
       REAL FUNCTION T_XS_OX(EP)
       IMPLICIT NONE
@@ -1616,45 +1616,45 @@ C.... Samson and Pareek Phys. Rev. A, 31, 1470, 1985
 
       RETURN
       END
-C
-C
-C:::::::::::::::::::::: OXSIGS :::::::::::::::::::::::::::::::::::::
+!
+!
+!:::::::::::::::::::::: OXSIGS :::::::::::::::::::::::::::::::::::::
       SUBROUTINE OXSIGS(E,SIGEX,SIGEXT)
-C....... Inelastic cross sections for electron impact on atomic oxygen
-C....... E=electron energy, SIGEX(22)=array of partial cross sections,
-C....... SIGEXT=total excitation cross section, and S
+!....... Inelastic cross sections for electron impact on atomic oxygen
+!....... E=electron energy, SIGEX(22)=array of partial cross sections,
+!....... SIGEXT=total excitation cross section, and S
       DIMENSION SIGEX(22),SO1D(7)
       DO 9 I=1,22
  9    SIGEX(I)=0.0
       !..- CROSS SECTION FOR O(1D) - New Doering cross section from JGR
       !..- p19531, 1992. Increases production by a factor of 1.13
       DATA SO1D/0.0,0.0,15.0,30.0,44.0,54.0,38.0/
-C..      IF(E.GT.6.5) SIGEX(1)=3.77E-15*(1-2.0/E)**4.25/E**1.7
-C..      IF(E.LE.7.3) SIGEX(1)=SO1D(NINT(E))*1.0E-18
-C
-C..... Old cross section of Henry
+!..      IF(E.GT.6.5) SIGEX(1)=3.77E-15*(1-2.0/E)**4.25/E**1.7
+!..      IF(E.LE.7.3) SIGEX(1)=SO1D(NINT(E))*1.0E-18
+!
+!..... Old cross section of Henry
       IF(E.GT.1.96) SIGEX(1)=4E-16*(1-1.96/E)**2/E
-C........ O(1S) cross section: may be double Shyn et al. JGR 1986, 13751
+!........ O(1S) cross section: may be double Shyn et al. JGR 1986, 13751
       IF(E.GT.4.17) SIGEX(2)=6.54E-17*(1-SQRT(4.17/E))/E
-C....... 1304, 1027 A, Zipf and Erdman JGR 1985, 11088 include cascade.
-C....... Direct excitation is half for  1304 (Vaughan and Doering,
-C........ JGR 1986, 13755 and 1987 in press)
+!....... 1304, 1027 A, Zipf and Erdman JGR 1985, 11088 include cascade.
+!....... Direct excitation is half for  1304 (Vaughan and Doering,
+!........ JGR 1986, 13755 and 1987 in press)
       IF(E.GE.10) SIGEX(3)=67.6E-17*(E-10)/E**2
-C....... 989 cross section from Doering 1987 (1/2 of Zipf)
+!....... 989 cross section from Doering 1987 (1/2 of Zipf)
       IF(E.GE.14) SIGEX(4)=7.0E-17*(1-14/E)/SQRT(E)
       SIGEX(5)=0.38*SIGEX(4)
-C....... O(5S) 1356 A Stone And Zipf Corrected By Zipf And Erdman 1985
+!....... O(5S) 1356 A Stone And Zipf Corrected By Zipf And Erdman 1985
       !..- reparameterized 1 May 92 using FITXS.FOR (PGR)
       IF(E.GT.10.0) SIGEX(6)=4.867E-12*(1.0-9.0/E)**2.67/ E**4.0
       SIGEXT=SIGEX(1)+(SIGEX(2)+SIGEX(3)+SIGEX(4)+SIGEX(5)+SIGEX(6))
       RETURN
       END
-C
-C
-C.................... RSPRIM.FOR ..................................
-C.... This routine evaluates the ionization rates for photon impact
-C.... It is based on a FLIP model routine that was modified in August 
-C.... 2009 for the chemical equilibrium model by P. richards. 
+!
+!
+!.................... RSPRIM.FOR ..................................
+!.... This routine evaluates the ionization rates for photon impact
+!.... It is based on a FLIP model routine that was modified in August 
+!.... 2009 for the chemical equilibrium model by P. richards. 
       SUBROUTINE PRIMPR(IJ,Z,ZOX,ZN2,ZO2,HE,SZA,TN,F107,F107A,N4S)
       IMPLICIT NONE
       INTEGER IVERT,I,IJ,IK,IPROBS,IS,K,L,LMAX,NNI,K1
@@ -1665,9 +1665,9 @@ C.... 2009 for the chemical equilibrium model by P. richards.
      >  FBSBN,DISN,TAUGAM,FLUXG,ALTG,XNSIGF,DSPECT,GL,N4S
       REAL COLUM(3),OTHPR1,OTHPR2,OTHPR3(6)
       REAL COLUMN(3),XN(3),PROB(3,6,37),XSNPLS(37),FNITE(37),CLNITE(3)
-cpgr
+!pgr
       REAL TPROB(3,6,37)
-cpgr      
+!pgr      
 
       !-- common to hold the EUV and photoelectron production rates 
       COMMON/EUVPRD/EUVION(3,12),PEXCIT(3,12),PEPION(3,12),
@@ -1723,9 +1723,9 @@ cpgr
       DO 687 I=1,6
       OTHPR2(I)=1.0E-15
  687  OTHPR1(I)=1.0E-15
-C
-C........ Nighttime He+ production is calculated and stored. Attenuated to
-C........ avoid excess production at low altitudes
+!
+!........ Nighttime He+ production is calculated and stored. Attenuated to
+!........ avoid excess production at low altitudes
       OTHPR1(2)= 8E-11* EXP(-1.0E-11*ZN2) *HE
       DO 786 I=1,3
  786  COLUM(I)=1.0E+25
@@ -1735,41 +1735,41 @@ C........ avoid excess production at low altitudes
       XN(3)=ZN2
       ZZ=Z*1.0E+5
       CHI=SZA
-C
-C*****  obtain reaction rates from subr rats to get their densities
+!
+!*****  obtain reaction rates from subr rats to get their densities
 
-C....... determine if sun is below the horizon ...
-C---- Must now do calculation for night production - Feb 93
+!....... determine if sun is below the horizon ...
+!---- Must now do calculation for night production - Feb 93
       ALTG=(6371.0+Z)*SIN(3.1416-CHI)-6371.0
-C....      IF(CHI.GT.1.57.AND.ALTG.LT.85.) RETURN
+!....      IF(CHI.GT.1.57.AND.ALTG.LT.85.) RETURN
       IF(Z.GT.1500) RETURN
-C
-C...... get column densities for scattered light at night  &&&&&&&&
+!
+!...... get column densities for scattered light at night  &&&&&&&&
       CALL SCOLUM(IJ,0.0E0,ZZ,TNJ,XN,CLNITE)
-C
-C...... evaluate the neutral column density  &&&&&&&&
+!
+!...... evaluate the neutral column density  &&&&&&&&
       CALL SCOLUM(IJ,CHI,ZZ,TNJ,XN,COLUMN)
-C........ Store the column densities for the 2-Stream program
+!........ Store the column densities for the 2-Stream program
       COLUM(1)=COLUMN(1)
       COLUM(2)=COLUMN(2)
       COLUM(3)=COLUMN(3)
-C
-C........ O2 dissociation by Schumann-Runge UV.
-C........ OTHPR1(3)= dissociation rate. OTHPR1(5)= Energy
+!
+!........ O2 dissociation by Schumann-Runge UV.
+!........ OTHPR1(3)= dissociation rate. OTHPR1(5)= Energy
       CALL SCHUMN(IJ,Z,ZO2,COLUMN,OTHPR1(3),OTHPR1(5))
-C
-C---- Calculate hv + NO ion. freq. from Lyman-a (Brasseur & Solomon)
-C---- OTHPR2(2) is photodissociation of NO in the SR bands. 
-C---- A small night production from scattered light is included. FREQLY
-C---- varies with solar activity using Richards et al. 1994 page 8981
-C---- LY_a=2.5E11 (Lean), sigi(NO)=2.0E-18 (Brasseur & Solomon page 329)
+!
+!---- Calculate hv + NO ion. freq. from Lyman-a (Brasseur & Solomon)
+!---- OTHPR2(2) is photodissociation of NO in the SR bands. 
+!---- A small night production from scattered light is included. FREQLY
+!---- varies with solar activity using Richards et al. 1994 page 8981
+!---- LY_a=2.5E11 (Lean), sigi(NO)=2.0E-18 (Brasseur & Solomon page 329)
       DATA O2LYXS,O2SRXS,FREQSR /1.0E-20,1.0E-21,5.0E-6/
        FREQLY=5.0E-7*(1+4.0E-3*(0.5*(F107+F107A)-80.0))
        OTHPR2(1)=FREQLY*(EXP(-O2LYXS*COLUMN(2))
      >    +0.001*EXP(-O2LYXS*CLNITE(2)))
        OTHPR2(2)=FREQSR*(EXP(-O2SRXS*COLUMN(2))
      >    +0.001*EXP(-O2SRXS*CLNITE(2)))
-C
+!
       !..  wavelength loop begins here  ----------
       !..  TAU, TAUN = optical depth for day, night 
       HEPLS=0.0
@@ -1830,32 +1830,32 @@ C
             !.. calculation of ion heating rate......
             EUVION(1,10)=EUVION(1,10)+DSPECT*TPOT(I,K)
 
-cp           write(6,'(3I4,1P,9E10.2)') I,K,L,PROB(I,K,L),TPROB(I,K,L)
-cp     >     ,XN(I),SIGION(I,L),FLUX,XNSIGF,EUVION(I,K),XSNPLS(1),FNITE(1)
+!p           write(6,'(3I4,1P,9E10.2)') I,K,L,PROB(I,K,L),TPROB(I,K,L)
+!p     >     ,XN(I),SIGION(I,L),FLUX,XNSIGF,EUVION(I,K),XSNPLS(1),FNITE(1)
 
  302      CONTINUE
  304    CONTINUE
  6    CONTINUE
-C
+!
       !..---   wavelength loop ends here   -----------
-C
-C.........Store UV disoc of N2 2 atoms produced for every dissociation
+!
+!.........Store UV disoc of N2 2 atoms produced for every dissociation
       OTHPR1(1)=2.0*DISN
-C........ Transfer He+ production to storage
+!........ Transfer He+ production to storage
       OTHPR1(2)=OTHPR1(2)+HEPLS
 
-cp      WRITE(6,*) 'After 6: EUVION(1,1), EUVION(2,1), EUVION(3,1)'
-cp      write(6,'(1P,9E10.2)') EUVION(1,1), EUVION(2,1), EUVION(3,1)
+!p      WRITE(6,*) 'After 6: EUVION(1,1), EUVION(2,1), EUVION(3,1)'
+!p      write(6,'(1P,9E10.2)') EUVION(1,1), EUVION(2,1), EUVION(3,1)
 
  777  RETURN
       END
 
-C:::::::::::::::::::::::::::: SCOLUM ::::::::::::::::::::::::::::::::::
-C.... this routine evaluates the neutral column density for O, O2, and N2
-C.... see Smith & Smith JGR 1972 p 3592
-C.... chi=solar zenith angle, RE & GE radius and grav constant for earth
-C.... Modified by P. Richards January 2010 to eliminate need for calling
-C.... the MSIS model at grazing incidence
+!:::::::::::::::::::::::::::: SCOLUM ::::::::::::::::::::::::::::::::::
+!.... this routine evaluates the neutral column density for O, O2, and N2
+!.... see Smith & Smith JGR 1972 p 3592
+!.... chi=solar zenith angle, RE & GE radius and grav constant for earth
+!.... Modified by P. Richards January 2010 to eliminate need for calling
+!.... the MSIS model at grazing incidence
       SUBROUTINE SCOLUM(J,CHI,Z,TN,XN,COLUMN)
       IMPLICIT NONE
       INTEGER I,J
@@ -1938,11 +1938,11 @@ C.... the MSIS model at grazing incidence
  10   CONTINUE
       RETURN
       END
-C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE PARAMS(ISW,LMAX)
-C........ this program determines the cross sections, solar fluxes, and
-C........ given in m. torr et al g.r.l 1979 p771, table 2 and 3. but
-C........ the longer wavelengths come first
+!........ this program determines the cross sections, solar fluxes, and
+!........ given in m. torr et al g.r.l 1979 p771, table 2 and 3. but
+!........ the longer wavelengths come first
       IMPLICIT NONE
       INTEGER  I,IN,IS,ISW,J,L,LAMAX,LMAX,NNI
       REAL EUV,FFAC, SIGABS,SIGION,TPOT,UVFAC,ZFLUX,ZLAM
@@ -1951,24 +1951,24 @@ C........ the longer wavelengths come first
      > TPOT(3,10),NNI(3),LAMAX
       COMMON/SOL/UVFAC(59),EUV
 
-C
-C....... ionization potentials for o,o2 and n2 see kirby et al note the
-C....... o2 2(pi)u and 2(sigma-)u , and n2 f2(sigma)u pots are guesses
-C....... the sixth n2 potential is for dissociation
+!
+!....... ionization potentials for o,o2 and n2 see kirby et al note the
+!....... o2 2(pi)u and 2(sigma-)u , and n2 f2(sigma)u pots are guesses
+!....... the sixth n2 potential is for dissociation
       DATA X3/13.6,16.9,18.6,28.5,40.,0.0,12.1,16.5,18.2,20.,
      > 25.,0.,15.6,16.7,18.8,25.,29.,37./
-C........ wavelength data. average is taken for bands
+!........ wavelength data. average is taken for bands
       DATA ZLX/1025.,1031.91,1025.72,975.,977.02,925.,875.,825.,775.,
      > 789.36,770.41,765.15,725.,703.36,675.,625.,629.73,609.76,575.,
      > 584.33,554.31,525.,475.,465.22,425.,375.,368.07,325.,303.78,
      > 303.31,275.,284.15,256.3,225.,175.,125.,75./
-C........ fluxes from table 3. these are for 74113. just replace this data
-C........ for other years in the table. note!!!! flux doubled for lambda<250
-C........ shortest wavelenghts have been tripled
+!........ fluxes from table 3. these are for 74113. just replace this data
+!........ for other years in the table. note!!!! flux doubled for lambda<250
+!........ shortest wavelenghts have been tripled
       DATA ZFX/2.4665,2.1,3.5,1.4746,4.4,3.,3.537,1.625,.758,.702,
      > .26,.17,.141,.36,.23,.342,1.59,.53,.357,1.27,.72,.452,.285,
      > .29,.383,.314,.65,.965,6.9,.8,1.679,.21,.46,3.1,4.8,.45,1.2/
-C........ absorption cross sections -- o first ,o2, then n2
+!........ absorption cross sections -- o first ,o2, then n2
       DATA X1/5*0.0,1.315,4.554,3.498,5.091,3.749,3.89,4,10.736,11.46
      > ,17.245,13.365,13.4,13.4,13.024,13.09,12.59,12.059,12.127,11.93
      > ,11.496,9.687,9.84,8.693,7.7,7.68,6.461,7.08,6.05,5.202,3.732
@@ -1980,7 +1980,7 @@ C........ absorption cross sections -- o first ,o2, then n2
      > ,14.18,120.49,24.662,26.54,31.755,23.339,23.37,22.79,22.787
      > ,22.4,24.13,24.501,23.471,23.16,21.675,16.395,16.91,13.857
      > ,11.7,11.67,10.493,10.9,10.21,8.392,4.958,2.261,0.72/
-C....... ionization cross sections 
+!....... ionization cross sections 
       DATA X2/5*0.0,1.315,4.554,3.498,5.091,3.749,3.89,4,10.736,11.46
      > ,17.245,13.365,13.4,13.4,13.024,13.09,12.59,12.059,12.127,11.93
      > ,11.496,9.687,9.84,8.693,7.7,7.68,6.461,7.08,6.05,5.202,3.732
@@ -1992,7 +1992,7 @@ C....... ionization cross sections
      > ,23.339,23.37,22.79,22.787
      > ,22.4,24.13,24.501,23.471,23.16,21.675,16.395,16.91,13.857
      > ,11.7,11.67,10.493,10.9,10.21,8.392,4.958,2.261,0.72/
-C
+!
       NNI(1)=5
       NNI(2)=5
       NNI(3)=6
@@ -2002,7 +2002,7 @@ C
      >  'Cross sections',
      > /4X,'I',5X,'lam',5X,'flux',4X,'sigaOX',3X,'sigaO2'
      > ,3X,'sigaN2',3X,'sigiOX',3X,'sigiO2',3X,'sigiN2',3X,'UVfac')
-C
+!
       DO 20 L=1,LMAX
       ZLAM(L)=ZLX(L)
       FFAC=UVFAC(LMAX+1-L)
@@ -2020,34 +2020,34 @@ C
       SIGION(IS,L)=X2(IN)*1.0E-18
       IF(SIGABS(IS,L).LT.SIGION(IS,L)) SIGABS(IS,L)=SIGION(IS,L)
  10   CONTINUE
-C
+!
       IF(ISW.EQ.0) GO TO 20
       WRITE(17,90) L,ZLAM(L),ZFLUX(L),(SIGABS(I,L),I=1,3)
      > ,(SIGION(I,L),I=1,3),FFAC
  20   CONTINUE
-C
+!
       IF(ISW.EQ.0) RETURN
       WRITE(17,94)
  94   FORMAT(/5X,' Ionization potentials for O, O2, N2'
      > ,/2X,'4S   2D   2P   4P   2P*  -   X2   a+A  b4   B2   dis  -'
      > ,'  X2   A2   B2   C2   F2   2s')
  60   WRITE(17,91) ((TPOT(I,J),J=1,6),I=1,3)
-C
+!
       RETURN
  90   FORMAT(1X,I4,F9.2,1P,22E9.2)
  91   FORMAT(22F5.1)
       END
-C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE PROBS(ISW,PROB,ZLAM,LMAX,NNI)
-C.... program for finding branching ratios (probabilities for various ion
-C.... and molecular states) of o,o2,n2
-C.... ---refs--- m. torr et al grl 1979 page 771, kirby et al atomic data
-C.... and nuclear tables 1979 23,page 63
+!.... program for finding branching ratios (probabilities for various ion
+!.... and molecular states) of o,o2,n2
+!.... ---refs--- m. torr et al grl 1979 page 771, kirby et al atomic data
+!.... and nuclear tables 1979 23,page 63
       IMPLICIT NONE
       INTEGER I,IS,ISW,J,L,LL,LMAX,NNI(3)
       REAL YO(37,5),PROB(3,6,37),ZLAM(37),SUM
-C...... coefficients of o ionization cross sections from torr et al
-C..... table 2
+!...... coefficients of o ionization cross sections from torr et al
+!..... table 2
       DATA YO/.19,.486,.952,1.311,1.539,1.77,1.628,1.92,1.925,2.259
      > ,2.559,2.523,3.073,3.34,3.394,3.421,3.65,3.92,3.62,3.61,3.88,4.25
      > ,5.128,4.89,6.739,4.0,3.89,3.749,5.091,3.498,4.554,1.315,5*0.0
@@ -2058,9 +2058,9 @@ C..... table 2
      > ,3.15,3.494,3.62,3.23,2.956,0.664,14*0.0,  .062,.163,.348,.508
      > ,.598,.71,.637,.691,.693,.815,.787,.859,.541,24*0.0, .049,.13
      > ,.278,.366,.412,.35,.383,.307,.308,28*0.0/
-C
-C....... production of o states from torr et al table 2 (yo array)
-C....... need to reverse order of yo to correspond with lambda
+!
+!....... production of o states from torr et al table 2 (yo array)
+!....... need to reverse order of yo to correspond with lambda
       DO 10 L=1,LMAX
       LL=LMAX+1-L
       SUM=YO(LL,1)+YO(LL,2)+YO(LL,3)+YO(LL,4)+YO(LL,5)
@@ -2068,13 +2068,13 @@ C....... need to reverse order of yo to correspond with lambda
       PROB(1,I,L)=0.0
  20   IF(SUM.NE.0.0) PROB(1,I,L)=YO(LL,I)/SUM
  10    CONTINUE
-C
-C....... call separate subroutines for o2 and n2 probabilities
+!
+!....... call separate subroutines for o2 and n2 probabilities
       DO 30 L=1,LMAX
       CALL PROBO2(1,L,ZLAM(L),PROB,NNI(2))
       CALL PROBN2(1,L,ZLAM(L),PROB,NNI(3))
  30   CONTINUE
-C
+!
       IF(ISW.EQ.0) RETURN
       WRITE(17,95)
  95   FORMAT(/5X,' Photoionization branching ratios for O, O2, N2'
@@ -2085,15 +2085,15 @@ C
  90   FORMAT(F8.2,22F5.2)
        RETURN
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
          SUBROUTINE PROBN2(ISW,L,ZLAM,PROB,JPTS)
-C...... the n2 probabilities are taken from kirby et al tables b and c
-C...... the yield of n+ is determined first then the remaining portion
-C...... of the cross section is distributed amongst the n2+ ion states
-C...... (x,a,b). the dissociation yield is divided between the 3 higher
-C...... energy states according to wight et al. j.phys. b, 1976
-C...... the 2 other states of kirby et al are not included
-C
+!...... the n2 probabilities are taken from kirby et al tables b and c
+!...... the yield of n+ is determined first then the remaining portion
+!...... of the cross section is distributed amongst the n2+ ion states
+!...... (x,a,b). the dissociation yield is divided between the 3 higher
+!...... energy states according to wight et al. j.phys. b, 1976
+!...... the 2 other states of kirby et al are not included
+!
       IMPLICIT NONE
       INTEGER I,IPTS,ISW,J,JPTS,L
       REAL A(6),B(6),X(14),Y(14,6),PROB(3,6,37),SUM,YIELD,YLAM,ZLAM
@@ -2104,74 +2104,74 @@ C
      > .52,.46,.506,2*.589,.692,.58,2*.0,5*.13,.12,.08,
      > .09,.103,.103,4*0.0,3*0.0,.05,.1,.15,.83,1.,6*.0,3*.0,
      > .3,.4,.79,.17,7*.0,3*1.,.65,.5,.06,8*.0/
-C
-C...... if zlam is too big set equal to x(max)
+!
+!...... if zlam is too big set equal to x(max)
       YLAM=ZLAM
       !.. Prevent divide by zero
       IF(ZLAM.GT.X(14)) YLAM=X(14)-1
       IF(ZLAM.LT.X(1)) YLAM=X(1)+1
 
        YIELD=0.0
-C...... determine yield of n+, and store in prob array
+!...... determine yield of n+, and store in prob array
        CALL YLDISS(1,YLAM,YIELD)
-C
+!
        DO 10 I=1,IPTS
-C kjh 6/22/92   NOTE:  I realize the following statement is strange
-C   looking, but its purpose is to prevent the CRAY compiler from
-C   vectorizing this loop.  (Which it does incorrectly).
+! kjh 6/22/92   NOTE:  I realize the following statement is strange
+!   looking, but its purpose is to prevent the CRAY compiler from
+!   vectorizing this loop.  (Which it does incorrectly).
       if(i.eq.25)write(6,*)' '
       IF(YLAM.GT.X(I).AND.YLAM.LE.X(I+1))  GO TO 20
  10   CONTINUE
  20   SUM=0.0
-C...... fit straight line between points
+!...... fit straight line between points
       DO 30 J=1,JPTS
       A(J)=(Y(I+1,J)-Y(I,J))/(X(I+1)-X(I))
       B(J)=Y(I,J)-A(J)*X(I)
  30   CONTINUE
-C...... determine probabilities of n2+ states
+!...... determine probabilities of n2+ states
       DO 40 J=1,JPTS
       IF(J.LE.3) PROB(3,J,L)=(A(J)*YLAM+B(J))*(1-YIELD)
       IF(J.GT.3) PROB(3,J,L)=(A(J)*YLAM+B(J))*YIELD
       SUM=SUM+PROB(3,J,L)
  40   CONTINUE
-C
+!
       IF(SUM.EQ.0.0) RETURN
-C....... normalise probabilities
+!....... normalise probabilities
       DO 50 J=1,JPTS
  50   PROB(3,J,L)=PROB(3,J,L)/SUM
       RETURN
       END
-C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
          SUBROUTINE YLDISS(ISW,ZLAM,YIELD)
-C..... determination of dissociative yield of n+, refer to kirby et al
-C..... page 66 and table b
+!..... determination of dissociative yield of n+, refer to kirby et al
+!..... page 66 and table b
       IMPLICIT NONE
       INTEGER ISW,I,IPTS
       REAL X(9),Y(9),ZLAM,YIELD
       DATA IPTS/9/
       DATA X/50.,210.,240.,302.,387.,477.,496.,509.,2000./
       DATA Y/.36,.36,.346,.202,.033,.041,.024,0.0,0.0/
-C
-C
+!
+!
        DO 10 I=1,IPTS
-C kjh 6/22/92   NOTE:  I realize the following statement is strange
-C   looking, but its purpose is to prevent the CRAY compiler from
-C   vectorizing this loop.  (Which it does incorrectly).
+! kjh 6/22/92   NOTE:  I realize the following statement is strange
+!   looking, but its purpose is to prevent the CRAY compiler from
+!   vectorizing this loop.  (Which it does incorrectly).
       if(i.eq.25)write(6,*)' '
       IF(ZLAM.GE.X(I).AND.ZLAM.LT.X(I+1))  GO TO 20
  10   CONTINUE
  20   IF(ZLAM.GT.387.AND.ZLAM.LT.477) GO TO 40
-C....... linear interpolation
+!....... linear interpolation
       YIELD=(ZLAM-X(I))/(X(I+1)-X(I))*(Y(I+1)-Y(I))+Y(I)
       GO TO 30
-C...... parabolic interpolation see formula page 66 kirby et al
+!...... parabolic interpolation see formula page 66 kirby et al
  40   YIELD=.0329+8.13E-6*(ZLAM-442)**2
  30   RETURN
       END
-C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
          SUBROUTINE PROBO2(ISW,L,ZLAM,PROB,JPTS)
-C....... o2 branching ratios are taken from kirby et al table d
-C....... columns 4 & 9 are combined. columns 5,6,7&8 are combined
+!....... o2 branching ratios are taken from kirby et al table d
+!....... columns 4 & 9 are combined. columns 5,6,7&8 are combined
       IMPLICIT NONE
       INTEGER ISW,I,IPTS,J,JPTS,L
       REAL A(5),B(5),X(20),Y(20,5),PROB(3,6,37),SUM,YLAM,ZLAM
@@ -2183,40 +2183,40 @@ C....... columns 4 & 9 are combined. columns 5,6,7&8 are combined
      > .125,.124,.12,.12,.126,.13,.225,.216,.21,.375,.305,.37,.33,.345,
      > 6*.0,.055,.167,.11,.105,.194,.234,.189,.149,.155,.103,.075,.036
      > ,.025,7*0.,.25,.125,.095,.95,.026,15*0./
-C
-C...... if zlam is too big set equal to x(max)
+!
+!...... if zlam is too big set equal to x(max)
       YLAM=ZLAM
-C...... if zlam is outside range of data values set equal to max or min
+!...... if zlam is outside range of data values set equal to max or min
       IF(ZLAM.GT.X(20)) YLAM=X(20)
       IF(ZLAM.LE.X(1)) YLAM=X(1)+1.E-3
-C
+!
        DO 10 I=1,IPTS
-C kjh 6/22/92   NOTE:  I realize the following statement is strange
-C   looking, but its purpose is to prevent the CRAY compiler from
-C   vectorizing this loop.  (Which it does incorrectly).
+! kjh 6/22/92   NOTE:  I realize the following statement is strange
+!   looking, but its purpose is to prevent the CRAY compiler from
+!   vectorizing this loop.  (Which it does incorrectly).
       if(i.eq.25)write(6,*)' '
       IF(YLAM.GT.X(I).AND.YLAM.LE.X(I+1))  GO TO 20
  10   CONTINUE
  20   SUM=0.0
-C
+!
       DO 30 J=1,JPTS
       A(J)=(Y(I+1,J)-Y(I,J))/(X(I+1)-X(I))
       B(J)=Y(I,J)-A(J)*X(I)
       SUM=SUM+A(J)*YLAM+B(J)
  30   CONTINUE
-C
+!
       DO 40 J=1,JPTS
       PROB(2,J,L)=(A(J)*YLAM+B(J))/SUM
  40   CONTINUE
-C
+!
       RETURN
       END
-C:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE SCHUMN(J,Z,ZO2,COLUMN,SCHUPR,SCHUHT)
-C......... production of o(1d) by schumann-runge bands
-C......... The fluxes are from Torr et al. GRL 1980 p6063. Scaling is
-C......... done using UVFAC which may be set according to F10.7 cm flux
-C......... may be done in FACEUV
+!......... production of o(1d) by schumann-runge bands
+!......... The fluxes are from Torr et al. GRL 1980 p6063. Scaling is
+!......... done using UVFAC which may be set according to F10.7 cm flux
+!......... may be done in FACEUV
       IMPLICIT NONE
       INTEGER J,JTI,LMAX,LSR
       REAL Z,ZO2,SCHUPR,SCHUHT,HSRX,FLD,EUV,SRXSCT,UVFAC
@@ -2225,36 +2225,36 @@ C......... may be done in FACEUV
       DATA SRFLUX/2.4,1.4,.63,.44,.33,.17,.12,.053/
       DATA SRXS/.5,1.5,3.4,6,10,13,15,12/
       DATA SRLAM/1725,1675,1625,1575,1525,1475,1425,1375/
-C
-C........ lmax=# of lambdas in sub. primpr: schuht=heating: schupr=o(1d) prod
+!
+!........ lmax=# of lambdas in sub. primpr: schuht=heating: schupr=o(1d) prod
       LMAX=37
-C
+!
       DO 505 LSR=1,8
-C......... photoabsorption cross section
+!......... photoabsorption cross section
       SRXSCT=1.0E-18*SRXS(LSR)
       HSRX=SRXSCT*COLUMN(2)
       IF(HSRX.GT.70)HSRX=70
-C........ attentuated solar flux
+!........ attentuated solar flux
       FLD=UVFAC(LMAX+LSR)*1.E+11*SRFLUX(LSR)*EXP(-HSRX)
-C............ neutral heating SCHUHT and photodissociation rate SCHUPR
+!............ neutral heating SCHUHT and photodissociation rate SCHUPR
       SCHUHT=SCHUHT+1.24E+4*(FLD*SRXSCT)*ZO2/SRLAM(LSR)
       SCHUPR=SCHUPR+FLD*SRXSCT
       !IF(JTI.EQ.0) WRITE(24,90) LSR,SRXSCT,FLD,SCHUPR,COLUMN(2),FLD,
       !>   UVFAC(LMAX+LSR)
  505  CONTINUE
-C
+!
       SCHUPR=ZO2*SCHUPR
  90   FORMAT(2X,I5,1P,9E9.1)
       JTI=1
       RETURN
       END
-C:::::::::::::::::::::::::::::::: FACEUV :::::::::::::::::::::::
+!:::::::::::::::::::::::::::::::: FACEUV :::::::::::::::::::::::
       SUBROUTINE FACEUV(UVFAC,F107,F107A)
-C----- This routine uses the EUV scaling from Richards et al.[1994]
-C----- The EUVAC flux model is based on the F74113 solar reference
-C----- spectrum and Hinteregger's scaling factors. This subroutine
-C----- just provides the scaling factors as a function of the proxy
-C----- (F107+F107A)/2
+!----- This routine uses the EUV scaling from Richards et al.[1994]
+!----- The EUVAC flux model is based on the F74113 solar reference
+!----- spectrum and Hinteregger's scaling factors. This subroutine
+!----- just provides the scaling factors as a function of the proxy
+!----- (F107+F107A)/2
       IMPLICIT NONE
       INTEGER I
       REAL UVFAC(59),HFG200(37),A,B,C,F107,F107A,F107AV
@@ -2276,10 +2276,10 @@ C----- (F107+F107A)/2
       ENDIF
       RETURN
       END
-C::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
       SUBROUTINE FACSR(UVFAC,F107,F107A)
-C........ The Schumann-Runge factors are scaled according to F10.7
-C........ from Torr et al. GRL 1980 p6063
+!........ The Schumann-Runge factors are scaled according to F10.7
+!........ from Torr et al. GRL 1980 p6063
       IMPLICIT NONE
       INTEGER I,LSR
       REAL UVFAC(59),SRFLUX(8),SRA(8),SRB(8),F107,F107A
@@ -2288,10 +2288,10 @@ C........ from Torr et al. GRL 1980 p6063
       !...... first two SRA and SRB values out of order in Marsha's paper
       DATA SRA/25.5,20.7,13.2,11.6,11.3,7.86,7.68,4.56/
       DATA SRB/222.,129.,53.4,36.0,25.0,11.3,6.35,2.05/
-C
-C----  Test to see if need to scale - see DATRD2 subroutine      
+!
+!----  Test to see if need to scale - see DATRD2 subroutine      
       !IF(NINT(UVFAC(58)).EQ.-1.OR.NINT(UVFAC(58)).EQ.-3) THEN
-C
+!
          DO 505 I=38,50
             LSR=I-37
             UVFAC(I)=1.0

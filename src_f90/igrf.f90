@@ -1,122 +1,122 @@
-c igrf.for, version number can be found at the end of this comment.
-c-----------------------------------------------------------------------        
-C
-C Subroutines to compute IGRF parameters for IRI and all functions and 
-C subroutines required for this computation, including:
-C 	IGRF_SUB, IGRF_DIP, FINDB0, SHELLG, STOER, FELDG, FELDCOF, GETSHC, 
-C 	INTERSHC, EXTRASHC, GEODIP, fmodip
-C
-C CGM coordinates : GEOCGM01, OVL_ANG, CGMGLA, CGMGLO, DFR1DR, 
-C   AZM_ANG, MLTUT, MFC, FTPRNT, GEOLOW, CORGEO, GEOCOR, SHAG, RIGHT, 
-C   IGRF, RECALC, SPHCAR, BSPCAR, GEOMAG, MAGSM, SMGSM
-C
-C MLT: CLCMLT, DPMTRX
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-c Required i/o units:  
-c  KONSOL= 6 Program messages (used when jf(12)=.true. -> konsol)
-c  KONSOL=11 Program messages (used when jf(12)=.false. -> MESSAGES.TXT)
-c
-c     COMMON/iounit/konsol,mess is used to pass the value of KONSOL from 
-c     IRISUB to IRIFUN and IGRF. If mess=false then messages are turned off.
-c     
-c  UNIT=14 IGRF/GETSHC: IGRF coeff. (DGRF%%%%.DAT or IGRF%%%%.DAT, %%%%=year)
-c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-C Corrections:
-C 11/01/91 SHELLG: lowest starting point for B0 search is 2  
-C  1/27/92 Adopted to IGRF-91 coeffcients model
-C  2/05/92 Reduce variable names: INTER(P)SHC,EXTRA(P)SHC,INITI(ALI)ZE
-C  8/08/95 Updated to IGRF-45-95; new coeff. DGRF90, IGRF95, IGRF95S
-C  5/31/00 Updated to IGRF-45-00; new coeff.: IGRF00, IGRF00s
-C-Version-mm/dd/yy-Description (Person reporting the correction)
-C 2000.01 05/07/01 initial version
-C 2000.02 07/11/01 replace feldi(xi,h) by feldi (P. Wilkinson)
-C 2000.02 07/11/01 variables EGNR, AGNR,OGNR not used (P. Wilkinson)
-c 2000.01 10/28/02 replace TAB/6 blanks, enforce 72/line (D. Simpson)
-C 2000.02 11/08/02 change unit for coefficients to 14
-C 2000.03 06/05/03 correct DIPL computation (V. Truhlik)
-C 2005.00 04/25/05 CALL FELDI and DO 1111 I=1,7 (Alexey Petrov)
-C 2005.01 11/10/05 added igrf_dip and geodip (MLAT) 
-C 2005.02 11/10/05 FELDCOF: updated to IGRF-10 version
-C 2005.03 12/21/06 GH2(120) -> GH2(144)
-C 2007.00 05/18/07 Release of IRI-2007
-C 2007.08 07/30/09 SHELLG,STOER,FELDG,FELDCOF: NMAX=13; H/G-arrays(195) 
-C 2007.10 02/26/10 FELDCOF: updated to IGRF-11; DGRF05, IGRF10, IGRF10S
-C 2007.11 04/27/10 RECALC: updated to IGRF-11
-C 2007.11 04/27/10 Make all arrays(195) to arrays(196) 
-C 2007.11 04/27/10 FELDCOF: corrected Filmod and also IGRF10.DAT
-C 2007.11 04/29/10 New files dgrf%%%%.asc; new GETSHC; char*12 to 13
-C
-C 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
-C 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
-C 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
-C 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
-C 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
-C 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
-C 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
-C 2012.02 12/17/12 igrf_dip: Add magnetic declination as output parameter
-C 2014.01 07/20/14 igrf_dip,FTPRNT,RECALC: ASIN(x): abs(x)>1.0 x=sign(1.,x)
-C 2014.02 07/24/14 COMMON/iounit: added 'mess' 
-C 2015.01 02/10/15 Updating to IGRF-12 (2015)
-C 2015.01 07/12/15 use mess,konsol in IGRF and RECALC
-C 2015.02 08/23/15 initialization of Earth constants moved to IRI_SUB
-C 2015.03 10/14/15 CLCMLT,DPMTRX <--- IRIFUN.FOR
-C 2015.03 10/14/15 RECALC: update with IGRF-12 until 2020
-C 2015.03 10/14/15 IGRF_SUB,_DIP: move CALL FELDCOF to IRISUB.FOR
-C 2015.03 10/14/15 FELDCOF,SHELLG: DIMO to COMMON/IGRF1/
-C 2016.01 02/17/16 GEODIP: add PI to CONST
-c-----------------------------------------------------------------------        
-C 
+! igrf.for, version number can be found at the end of this comment.
+!-----------------------------------------------------------------------        
+!
+! Subroutines to compute IGRF parameters for IRI and all functions and 
+! subroutines required for this computation, including:
+! 	IGRF_SUB, IGRF_DIP, FINDB0, SHELLG, STOER, FELDG, FELDCOF, GETSHC, 
+! 	INTERSHC, EXTRASHC, GEODIP, fmodip
+!
+! CGM coordinates : GEOCGM01, OVL_ANG, CGMGLA, CGMGLO, DFR1DR, 
+!   AZM_ANG, MLTUT, MFC, FTPRNT, GEOLOW, CORGEO, GEOCOR, SHAG, RIGHT, 
+!   IGRF, RECALC, SPHCAR, BSPCAR, GEOMAG, MAGSM, SMGSM
+!
+! MLT: CLCMLT, DPMTRX
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! Required i/o units:  
+!  KONSOL= 6 Program messages (used when jf(12)=.true. -> konsol)
+!  KONSOL=11 Program messages (used when jf(12)=.false. -> MESSAGES.TXT)
+!
+!     COMMON/iounit/konsol,mess is used to pass the value of KONSOL from 
+!     IRISUB to IRIFUN and IGRF. If mess=false then messages are turned off.
+!     
+!  UNIT=14 IGRF/GETSHC: IGRF coeff. (DGRF%%%%.DAT or IGRF%%%%.DAT, %%%%=year)
+!- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+! Corrections:
+! 11/01/91 SHELLG: lowest starting point for B0 search is 2  
+!  1/27/92 Adopted to IGRF-91 coeffcients model
+!  2/05/92 Reduce variable names: INTER(P)SHC,EXTRA(P)SHC,INITI(ALI)ZE
+!  8/08/95 Updated to IGRF-45-95; new coeff. DGRF90, IGRF95, IGRF95S
+!  5/31/00 Updated to IGRF-45-00; new coeff.: IGRF00, IGRF00s
+!-Version-mm/dd/yy-Description (Person reporting the correction)
+! 2000.01 05/07/01 initial version
+! 2000.02 07/11/01 replace feldi(xi,h) by feldi (P. Wilkinson)
+! 2000.02 07/11/01 variables EGNR, AGNR,OGNR not used (P. Wilkinson)
+! 2000.01 10/28/02 replace TAB/6 blanks, enforce 72/line (D. Simpson)
+! 2000.02 11/08/02 change unit for coefficients to 14
+! 2000.03 06/05/03 correct DIPL computation (V. Truhlik)
+! 2005.00 04/25/05 CALL FELDI and DO 1111 I=1,7 (Alexey Petrov)
+! 2005.01 11/10/05 added igrf_dip and geodip (MLAT) 
+! 2005.02 11/10/05 FELDCOF: updated to IGRF-10 version
+! 2005.03 12/21/06 GH2(120) -> GH2(144)
+! 2007.00 05/18/07 Release of IRI-2007
+! 2007.08 07/30/09 SHELLG,STOER,FELDG,FELDCOF: NMAX=13; H/G-arrays(195) 
+! 2007.10 02/26/10 FELDCOF: updated to IGRF-11; DGRF05, IGRF10, IGRF10S
+! 2007.11 04/27/10 RECALC: updated to IGRF-11
+! 2007.11 04/27/10 Make all arrays(195) to arrays(196) 
+! 2007.11 04/27/10 FELDCOF: corrected Filmod and also IGRF10.DAT
+! 2007.11 04/29/10 New files dgrf%%%%.asc; new GETSHC; char*12 to 13
+!
+! 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
+! 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
+! 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
+! 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for), 
+! 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
+! 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
+! 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
+! 2012.02 12/17/12 igrf_dip: Add magnetic declination as output parameter
+! 2014.01 07/20/14 igrf_dip,FTPRNT,RECALC: ASIN(x): abs(x)>1.0 x=sign(1.,x)
+! 2014.02 07/24/14 COMMON/iounit: added 'mess' 
+! 2015.01 02/10/15 Updating to IGRF-12 (2015)
+! 2015.01 07/12/15 use mess,konsol in IGRF and RECALC
+! 2015.02 08/23/15 initialization of Earth constants moved to IRI_SUB
+! 2015.03 10/14/15 CLCMLT,DPMTRX <--- IRIFUN.FOR
+! 2015.03 10/14/15 RECALC: update with IGRF-12 until 2020
+! 2015.03 10/14/15 IGRF_SUB,_DIP: move CALL FELDCOF to IRISUB.FOR
+! 2015.03 10/14/15 FELDCOF,SHELLG: DIMO to COMMON/IGRF1/
+! 2016.01 02/17/16 GEODIP: add PI to CONST
+!-----------------------------------------------------------------------        
+! 
         subroutine igrf_sub(xlat,xlong,year,height,
      &          xl,icode,dipl,babs)
-c-----------------------------------------------------------------------        
-c INPUT:
-c    xlat      geodatic latitude in degrees
-c    xlong     geodatic longitude in degrees
-c    year      decimal year (year+(month-0.5)/12.0-0.5 or 
-c                  year+day-of-year/365 or ../366 if leap year) 
-c    height    height in km
-c OUTPUT:
-c    xl        L value
-c    icode      =1  L is correct; =2  L is not correct;
-c               =3  an approximation is used
-c    dipl      dip latitude in degrees
-c    babs      magnetic field strength in Gauss
-c-----------------------------------------------------------------------        
+!-----------------------------------------------------------------------        
+! INPUT:
+!    xlat      geodatic latitude in degrees
+!    xlong     geodatic longitude in degrees
+!    year      decimal year (year+(month-0.5)/12.0-0.5 or 
+!                  year+day-of-year/365 or ../366 if leap year) 
+!    height    height in km
+! OUTPUT:
+!    xl        L value
+!    icode      =1  L is correct; =2  L is not correct;
+!               =3  an approximation is used
+!    dipl      dip latitude in degrees
+!    babs      magnetic field strength in Gauss
+!-----------------------------------------------------------------------        
 
       REAL              LATI,LONGI
       COMMON /CONST/UMR,PI
       
       lati=xlat
       longi=xlong
-c      CALL FELDCOF(YEAR,DIMO)
+!      CALL FELDCOF(YEAR,DIMO)
       CALL FELDG(LATI,LONGI,HEIGHT,BNORTH,BEAST,BDOWN,BABS)
       CALL SHELLG(LATI,LONGI,HEIGHT,XL,ICODE,BAB1)
       DIPL=ATAN(BDOWN/2.0/sqrt(BNORTH*BNORTH+BEAST*BEAST))/umr
       RETURN
       END
-c
-c
+!
+!
       subroutine igrf_dip(xlat,xlong,year,height,dec,dip,dipl,ymodip)
-c-----------------------------------------------------------------------        
-c INPUT:
-c    xlat      geodatic latitude in degrees
-c    xlong     geodatic longitude in degrees
-c    year      decimal year (year+month/12.0-0.5 or 
-c                  year+day-of-year/365 or ../366 if leap year) 
-c    height    height in km
-c OUTPUT:
-c    dec       magnetic declination in degrees
-c    dip       magnetic inclination (dip) in degrees
-c    dipl      dip latitude in degrees
-c    ymodip    modified dip latitude = asin{dip/sqrt[dip^2+cos(LATI)]} 
-c-----------------------------------------------------------------------        
+!-----------------------------------------------------------------------        
+! INPUT:
+!    xlat      geodatic latitude in degrees
+!    xlong     geodatic longitude in degrees
+!    year      decimal year (year+month/12.0-0.5 or 
+!                  year+day-of-year/365 or ../366 if leap year) 
+!    height    height in km
+! OUTPUT:
+!    dec       magnetic declination in degrees
+!    dip       magnetic inclination (dip) in degrees
+!    dipl      dip latitude in degrees
+!    ymodip    modified dip latitude = asin{dip/sqrt[dip^2+cos(LATI)]} 
+!-----------------------------------------------------------------------        
 
       COMMON /CONST/UMR,PI
 
 	  xlati = xlat
 	  xlongi = xlong
 	  h = height
-c      CALL FELDCOF(YEAR,DIMO)
+!      CALL FELDCOF(YEAR,DIMO)
       CALL FELDG(XLATI,XLONGI,H,BNORTH,BEAST,BDOWN,BABS)
           DECARG=BEAST/SQRT(BEAST*BEAST+BNORTH*BNORTH)
           IF(ABS(DECARG).GT.1.) DECARG=SIGN(1.,DECARG)
@@ -127,89 +127,89 @@ c      CALL FELDCOF(YEAR,DIMO)
           dipdiv=DIP/SQRT(DIP*DIP+cos(XLATI*UMR))
           IF(ABS(dipdiv).GT.1.) dipdiv=SIGN(1.,dipdiv)
       SMODIP=ASIN(dipdiv)        
-c       DIPL1=ATAN(0.5*TAN(DIP))/UMR
+!       DIPL1=ATAN(0.5*TAN(DIP))/UMR
       DIPL=ATAN(BDOWN/2.0/sqrt(BNORTH*BNORTH+BEAST*BEAST))/umr
       YMODIP=SMODIP/UMR                            
       DEC=DEC/UMR
       DIP=DIP/UMR
       RETURN
       END
-c
-c
-C SHELLIG.FOR
-C
-C 11/01/91 SHELLG: lowest starting point for B0 search is 2  
-C  1/27/92 Adopted to IGRF-91 coeffcients model
-C  2/05/92 Reduce variable-names: INTER(P)SHC,EXTRA(P)SHC,INITI(ALI)ZE
-C  8/08/95 Updated to IGRF-45-95; new coeff. DGRF90, IGRF95, IGRF95S
-C  5/31/00 Updated to IGRF-45-00; new coeff.: IGRF00, IGRF00s
-C  3/24/05 Updated to IGRF-45-10; new coeff.: IGRF05, IGRF05s
-C  4/25/05 ENTRY FELDI(XI,H) and  DO 1111 I=1,7 [Alexey Petrov]
-C  7/22/09 SHELLG: NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
-C  2/26/10 FELDCOF: Updated IGRF45-15; new coeff: DGRF05, IGRF10, IGRF10S
-C  4/29/10 H/H-arrays(196); FELDCOF: corrected IGRF00 and ..00S
-C  4/29/10 Change to new files dgrf%%%%.asc; new GETSHC; char*12 to 13
-C
-C*********************************************************************
-C  SUBROUTINES SHELLG, STOER, FELDG, FELDCOF, GETSHC,                *
-C       INTERSHC, EXTRASHC                                           *
-C*********************************************************************
-C*********************************************************************
-C
-C
-C
+!
+!
+! SHELLIG.FOR
+!
+! 11/01/91 SHELLG: lowest starting point for B0 search is 2  
+!  1/27/92 Adopted to IGRF-91 coeffcients model
+!  2/05/92 Reduce variable-names: INTER(P)SHC,EXTRA(P)SHC,INITI(ALI)ZE
+!  8/08/95 Updated to IGRF-45-95; new coeff. DGRF90, IGRF95, IGRF95S
+!  5/31/00 Updated to IGRF-45-00; new coeff.: IGRF00, IGRF00s
+!  3/24/05 Updated to IGRF-45-10; new coeff.: IGRF05, IGRF05s
+!  4/25/05 ENTRY FELDI(XI,H) and  DO 1111 I=1,7 [Alexey Petrov]
+!  7/22/09 SHELLG: NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
+!  2/26/10 FELDCOF: Updated IGRF45-15; new coeff: DGRF05, IGRF10, IGRF10S
+!  4/29/10 H/H-arrays(196); FELDCOF: corrected IGRF00 and ..00S
+!  4/29/10 Change to new files dgrf%%%%.asc; new GETSHC; char*12 to 13
+!
+!*********************************************************************
+!  SUBROUTINES SHELLG, STOER, FELDG, FELDCOF, GETSHC,                *
+!       INTERSHC, EXTRASHC                                           *
+!*********************************************************************
+!*********************************************************************
+!
+!
+!
       SUBROUTINE SHELLG(GLAT,GLON,ALT,FL,ICODE,B0)
-c      SUBROUTINE SHELLG(GLAT,GLON,ALT,DIMO,FL,ICODE,B0)
-c-----------------------------------------------------------------------        
-C CALCULATES L-VALUE FOR SPECIFIED GEODAETIC COORDINATES, ALTITUDE
-C AND GEMAGNETIC FIELD MODEL.
-C REF: G. KLUGE, EUROPEAN SPACE OPERATIONS CENTER, INTERNAL NOTE 
-C      NO. 67, 1970.
-C      G. KLUGE, COMPUTER PHYSICS COMMUNICATIONS 3, 31-35, 1972
-c-----------------------------------------------------------------------        
-C CHANGES (D. BILITZA, NOV 87):
-C   - USING CORRECT DIPOL MOMENT I.E.,DIFFERENT COMMON/MODEL/
-C   - USING IGRF EARTH MAGNETIC FIELD MODELS FROM 1945 TO 1990
-C 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
-c-----------------------------------------------------------------------        
-C  INPUT:  ENTRY POINT SHELLG
-C             GLAT  GEODETIC LATITUDE IN DEGREES (NORTH)
-C             GLON  GEODETIC LONGITUDE IN DEGREES (EAST)
-C             ALT   ALTITUDE IN KM ABOVE SEA LEVEL
-C
-C          ENTRY POINT SHELLC
-C             V(3)  CARTESIAN COORDINATES IN EARTH RADII (6371.2 KM)
-C                     X-AXIS POINTING TO EQUATOR AT 0 LONGITUDE
-C                     Y-AXIS POINTING TO EQUATOR AT 90 LONG.
-C                     Z-AXIS POINTING TO NORTH POLE
-C
-C          DIMO     DIPOL MOMENT IN GAUSS (NORMALIZED TO EARTH RADIUS) 
-C
-C          COMMON 
-C             X(3)    NOT USED
-C             H(144)  FIELD MODEL COEFFICIENTS ADJUSTED FOR SHELLG
-c-----------------------------------------------------------------------        
-C  OUTPUT: FL           L-VALUE
-C          ICODE        =1 NORMAL COMPLETION
-C                       =2 UNPHYSICAL CONJUGATE POINT (FL MEANINGLESS)
-C                       =3 SHELL PARAMETER GREATER THAN LIMIT UP TO
-C                          WHICH ACCURATE CALCULATION IS REQUIRED;
-C                          APPROXIMATION IS USED.
-C          B0           MAGNETIC FIELD STRENGTH IN GAUSS
-c-----------------------------------------------------------------------        
+!      SUBROUTINE SHELLG(GLAT,GLON,ALT,DIMO,FL,ICODE,B0)
+!-----------------------------------------------------------------------        
+! CALCULATES L-VALUE FOR SPECIFIED GEODAETIC COORDINATES, ALTITUDE
+! AND GEMAGNETIC FIELD MODEL.
+! REF: G. KLUGE, EUROPEAN SPACE OPERATIONS CENTER, INTERNAL NOTE 
+!      NO. 67, 1970.
+!      G. KLUGE, COMPUTER PHYSICS COMMUNICATIONS 3, 31-35, 1972
+!-----------------------------------------------------------------------        
+! CHANGES (D. BILITZA, NOV 87):
+!   - USING CORRECT DIPOL MOMENT I.E.,DIFFERENT COMMON/MODEL/
+!   - USING IGRF EARTH MAGNETIC FIELD MODELS FROM 1945 TO 1990
+! 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
+!-----------------------------------------------------------------------        
+!  INPUT:  ENTRY POINT SHELLG
+!             GLAT  GEODETIC LATITUDE IN DEGREES (NORTH)
+!             GLON  GEODETIC LONGITUDE IN DEGREES (EAST)
+!             ALT   ALTITUDE IN KM ABOVE SEA LEVEL
+!
+!          ENTRY POINT SHELLC
+!             V(3)  CARTESIAN COORDINATES IN EARTH RADII (6371.2 KM)
+!                     X-AXIS POINTING TO EQUATOR AT 0 LONGITUDE
+!                     Y-AXIS POINTING TO EQUATOR AT 90 LONG.
+!                     Z-AXIS POINTING TO NORTH POLE
+!
+!          DIMO     DIPOL MOMENT IN GAUSS (NORMALIZED TO EARTH RADIUS) 
+!
+!          COMMON 
+!             X(3)    NOT USED
+!             H(144)  FIELD MODEL COEFFICIENTS ADJUSTED FOR SHELLG
+!-----------------------------------------------------------------------        
+!  OUTPUT: FL           L-VALUE
+!          ICODE        =1 NORMAL COMPLETION
+!                       =2 UNPHYSICAL CONJUGATE POINT (FL MEANINGLESS)
+!                       =3 SHELL PARAMETER GREATER THAN LIMIT UP TO
+!                          WHICH ACCURATE CALCULATION IS REQUIRED;
+!                          APPROXIMATION IS USED.
+!          B0           MAGNETIC FIELD STRENGTH IN GAUSS
+!-----------------------------------------------------------------------        
       DIMENSION         V(3),U(3,3),P(8,100),SP(3)
       COMMON/IGRF2/     X(3),H(196)
       COMMON/FIDB0/     SP	/CONST/UMR,PI      
       COMMON/IGRF1/     ERA,AQUAD,BQUAD,DIMO
-C
-C-- RMIN, RMAX ARE BOUNDARIES FOR IDENTIFICATION OF ICODE=2 AND 3
-C-- STEP IS STEP SIZE FOR FIELD LINE TRACING
-C-- STEQ IS STEP SIZE FOR INTEGRATION
-C 
+!
+!-- RMIN, RMAX ARE BOUNDARIES FOR IDENTIFICATION OF ICODE=2 AND 3
+!-- STEP IS STEP SIZE FOR FIELD LINE TRACING
+!-- STEQ IS STEP SIZE FOR INTEGRATION
+! 
       DATA RMIN,RMAX    /0.05,1.01/
       DATA STEP,STEQ    /0.20,0.03/
         BEQU=1.E10
-C*****ENTRY POINT  SHELLG  TO BE USED WITH GEODETIC CO-ORDINATES
+!*****ENTRY POINT  SHELLG  TO BE USED WITH GEODETIC CO-ORDINATES
       RLAT=GLAT*UMR
       CT=SIN(RLAT)                                              
       ST=COS(RLAT)                                              
@@ -221,11 +221,11 @@ C*****ENTRY POINT  SHELLG  TO BE USED WITH GEODETIC CO-ORDINATES
       X(1)=X(1)*COS(RLON)                                       
       GOTO9                                                     
       ENTRY SHELLC(V,FL,B0)                                     
-C*****ENTRY POINT  SHELLC  TO BE USED WITH CARTESIAN CO-ORDINATES
+!*****ENTRY POINT  SHELLC  TO BE USED WITH CARTESIAN CO-ORDINATES
       X(1)=V(1)                                                  
       X(2)=V(2)                                                  
       X(3)=V(3)                                                  
-C*****CONVERT TO DIPOL-ORIENTED CO-ORDINATES                     
+!*****CONVERT TO DIPOL-ORIENTED CO-ORDINATES                     
       DATA U/                 +0.3511737,-0.9148385,-0.1993679,  
      A                        +0.9335804,+0.3583680,+0.0000000,  
      B                        +0.0714471,-0.1861260,+0.9799247/  
@@ -234,7 +234,7 @@ C*****CONVERT TO DIPOL-ORIENTED CO-ORDINATES
       P(1,2)=(X(1)*U(1,1)+X(2)*U(2,1)+X(3)*U(3,1))*R3H           
       P(2,2)=(X(1)*U(1,2)+X(2)*U(2,2)            )*R3H           
       P(3,2)=(X(1)*U(1,3)+X(2)*U(2,3)+X(3)*U(3,3))*RQ            
-C*****FIRST THREE POINTS OF FIELD LINE                           
+!*****FIRST THREE POINTS OF FIELD LINE                           
       STEP=-SIGN(STEP,P(3,2))                                    
       CALL STOER(P(1,2),BQ2,R2)                                  
       B0=SQRT(BQ2)                                               
@@ -250,7 +250,7 @@ C*****FIRST THREE POINTS OF FIELD LINE
       P(2,3)=P(2,2)+STEP*(20.*P(5,3)-3.*P(5,2)+P(5,1))/18.       
       P(3,3)=P(3,2)+STEP                                         
       CALL STOER(P(1,3),BQ3,R3)                                  
-C*****INVERT SENSE IF REQUIRED                                   
+!*****INVERT SENSE IF REQUIRED                                   
       IF(BQ3.LE.BQ1)GOTO2                                        
       STEP=-STEP                                                 
       R3=R1                                                      
@@ -259,7 +259,7 @@ C*****INVERT SENSE IF REQUIRED
       ZZ=P(I,1)                                                  
       P(I,1)=P(I,3)                                              
 1     P(I,3)=ZZ                                                  
-C*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
+!*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
 2     IF(BQ1.LT.BEQU) THEN
         BEQU=BQ1
         IEQU=1
@@ -272,7 +272,7 @@ C*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
         BEQU=BQ3
         IEQU=3
         ENDIF
-C*****INITIALIZATION OF INTEGRATION LOOPS                        
+!*****INITIALIZATION OF INTEGRATION LOOPS                        
       STEP12=STEP/12.
       STEP2=STEP+STEP                                            
       STEQ=SIGN(STEQ,STEP)                                       
@@ -285,13 +285,13 @@ C*****INITIALIZATION OF INTEGRATION LOOPS
       STP=STP/0.75
       P(8,1)=STEP2*(P(1,1)*P(4,1)+P(2,1)*P(5,1))                 
       P(8,2)=STEP2*(P(1,2)*P(4,2)+P(2,2)*P(5,2))
-C*****MAIN LOOP (FIELD LINE TRACING)                             
+!*****MAIN LOOP (FIELD LINE TRACING)                             
       DO 3 N=3,3333                                              
-C*****CORRECTOR (FIELD LINE TRACING)                             
+!*****CORRECTOR (FIELD LINE TRACING)                             
       P(1,N)=P(1,N-1)+STEP12*(5.*P(4,N)+8.*P(4,N-1)-P(4,N-2))    
       P(2,N)=P(2,N-1)+STEP12*(5.*P(5,N)+8.*P(5,N-1)-P(5,N-2))    
-C*****PREPARE EXPANSION COEFFICIENTS FOR INTERPOLATION           
-C*****OF SLOWLY VARYING QUANTITIES                               
+!*****PREPARE EXPANSION COEFFICIENTS FOR INTERPOLATION           
+!*****OF SLOWLY VARYING QUANTITIES                               
       P(8,N)=STEP2*(P(1,N)*P(4,N)+P(2,N)*P(5,N))                 
       C0=P(1,N-1)**2+P(2,N-1)**2                                 
       C1=P(8,N-1)                                                
@@ -303,7 +303,7 @@ C*****OF SLOWLY VARYING QUANTITIES
       E0=P(7,N-1)
       E1=(P(7,N)-P(7,N-2))*0.5                                   
       E2=(P(7,N)+P(7,N-2)-E0-E0)*0.5                             
-C*****INNER LOOP (FOR QUADRATURE)                                
+!*****INNER LOOP (FOR QUADRATURE)                                
 4     T=(Z-P(3,N-1))/STEP                                        
       IF(T.GT.1.)GOTO5                                           
       HLI=0.5*(((C3*T+C2)*T+C1)*T+C0)                            
@@ -324,12 +324,12 @@ C*****INNER LOOP (FOR QUADRATURE)
       STP=R*STEQ                                        
       Z=Z+STP                                           
       GOTO4                                             
-C*****PREDICTOR (FIELD LINE TRACING)                    
+!*****PREDICTOR (FIELD LINE TRACING)                    
 5     P(1,N+1)=P(1,N)+STEP12*(23.*P(4,N)-16.*P(4,N-1)+5.*P(4,N-2))  
       P(2,N+1)=P(2,N)+STEP12*(23.*P(5,N)-16.*P(5,N-1)+5.*P(5,N-2))  
       P(3,N+1)=P(3,N)+STEP                                          
       CALL STOER(P(1,N+1),BQ3,R3)                                   
-C*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
+!*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
       IF(BQ3.LT.BEQU) THEN
         IEQU=N+1
         BEQU=BQ3
@@ -341,22 +341,22 @@ C*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
       SP(3)=P(3,IEQU-1)
       IF(ORADIK.LT.1E-15)GOTO11                                     
       FI=FI+STP/0.75*OTERM*ORADIK/(ORADIK-RADIK)              
-C
-C-- The minimal allowable value of FI was changed from 1E-15 to 1E-12,
-C-- because 1E-38 is the minimal allowable arg. for ALOG in our envir.
-C-- D. Bilitza, Nov 87.
-C
+!
+!-- The minimal allowable value of FI was changed from 1E-15 to 1E-12,
+!-- because 1E-38 is the minimal allowable arg. for ALOG in our envir.
+!-- D. Bilitza, Nov 87.
+!
 11          FI=0.5*ABS(FI)/SQRT(B0)+1E-12                       
-C
-C*****COMPUTE L FROM B AND I.  SAME AS CARMEL IN INVAR.  
-C
-C-- Correct dipole moment is used here. D. Bilitza, Nov 87.
-C
+!
+!*****COMPUTE L FROM B AND I.  SAME AS CARMEL IN INVAR.  
+!
+!-- Correct dipole moment is used here. D. Bilitza, Nov 87.
+!
       DIMOB0=DIMO/B0
       arg1=alog(FI)
       arg2=alog(DIMOB0)
-c      arg = FI*FI*FI/DIMOB0
-c      if(abs(arg).gt.88.0) arg=88.0
+!      arg = FI*FI*FI/DIMOB0
+!      if(abs(arg).gt.88.0) arg=88.0
       XX=3*arg1-arg2
       IF(XX.GT.23.0) GOTO 776   
       IF(XX.GT.11.7) GOTO 775  
@@ -387,24 +387,24 @@ c      if(abs(arg).gt.88.0) arg=88.0
   776 GG=XX-3.0460681E0                                                 
   777 FL=EXP(ALOG((1.+EXP(GG))*DIMOB0)/3.0)
       RETURN                                                            
-C*****APPROXIMATION FOR HIGH VALUES OF L.                               
+!*****APPROXIMATION FOR HIGH VALUES OF L.                               
 30    ICODE=3                                                           
       T=-P(3,N-1)/STEP                                                  
       FL=1./(ABS(((C3*T+C2)*T+C1)*T+C0)+1E-15)                          
       RETURN                                                            
       END                                                               
-C
-C
+!
+!
       SUBROUTINE STOER(P,BQ,R)                                          
-C*******************************************************************
-C* SUBROUTINE USED FOR FIELD LINE TRACING IN SHELLG                *
-C* CALLS ENTRY POINT FELDI IN GEOMAGNETIC FIELD SUBROUTINE FELDG   *
-C
-C 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
-C*******************************************************************
+!*******************************************************************
+!* SUBROUTINE USED FOR FIELD LINE TRACING IN SHELLG                *
+!* CALLS ENTRY POINT FELDI IN GEOMAGNETIC FIELD SUBROUTINE FELDG   *
+!
+! 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
+!*******************************************************************
       DIMENSION         P(7),U(3,3)
       COMMON/IGRF2/     XI(3),H(196)
-C*****XM,YM,ZM  ARE GEOMAGNETIC CARTESIAN INVERSE CO-ORDINATES          
+!*****XM,YM,ZM  ARE GEOMAGNETIC CARTESIAN INVERSE CO-ORDINATES          
       ZM=P(3)                                                           
       FLI=P(1)*P(1)+P(2)*P(2)+1E-15
       R=0.5*(FLI+SQRT(FLI*FLI+(ZM+ZM)**2))
@@ -412,26 +412,26 @@ C*****XM,YM,ZM  ARE GEOMAGNETIC CARTESIAN INVERSE CO-ORDINATES
       WR=SQRT(R)                                                        
       XM=P(1)*WR                                                        
       YM=P(2)*WR                                                        
-C*****TRANSFORM TO GEOGRAPHIC CO-ORDINATE SYSTEM                        
+!*****TRANSFORM TO GEOGRAPHIC CO-ORDINATE SYSTEM                        
       DATA U/                 +0.3511737,-0.9148385,-0.1993679,         
      A                        +0.9335804,+0.3583680,+0.0000000,         
      B                        +0.0714471,-0.1861260,+0.9799247/         
       XI(1)=XM*U(1,1)+YM*U(1,2)+ZM*U(1,3)                               
       XI(2)=XM*U(2,1)+YM*U(2,2)+ZM*U(2,3)                               
       XI(3)=XM*U(3,1)          +ZM*U(3,3)                               
-C*****COMPUTE DERIVATIVES                                               
-c      CALL FELDI(XI,H)                                                  
+!*****COMPUTE DERIVATIVES                                               
+!      CALL FELDI(XI,H)                                                  
       CALL FELDI
       Q=H(1)/RQ                                                         
       DX=H(3)+H(3)+Q*XI(1)                                              
       DY=H(4)+H(4)+Q*XI(2)                                              
       DZ=H(2)+H(2)+Q*XI(3)                                              
-C*****TRANSFORM BACK TO GEOMAGNETIC CO-ORDINATE SYSTEM                  
+!*****TRANSFORM BACK TO GEOMAGNETIC CO-ORDINATE SYSTEM                  
       DXM=U(1,1)*DX+U(2,1)*DY+U(3,1)*DZ                                 
       DYM=U(1,2)*DX+U(2,2)*DY                                           
       DZM=U(1,3)*DX+U(2,3)*DY+U(3,3)*DZ                                 
       DR=(XM*DXM+YM*DYM+ZM*DZM)/R                                       
-C*****FORM SLOWLY VARYING EXPRESSIONS                                   
+!*****FORM SLOWLY VARYING EXPRESSIONS                                   
       P(4)=(WR*DXM-0.5*P(1)*DR)/(R*DZM)                                 
       P(5)=(WR*DYM-0.5*P(2)*DR)/(R*DZM)                                 
       DSQ=RQ*(DXM*DXM+DYM*DYM+DZM*DZM)
@@ -440,62 +440,62 @@ C*****FORM SLOWLY VARYING EXPRESSIONS
       P(7)=P(6)*(RQ+ZM*ZM)/(RQ*DZM)                                     
       RETURN                                                            
       END                                                               
-C
-C
+!
+!
       SUBROUTINE FELDG(GLAT,GLON,ALT,BNORTH,BEAST,BDOWN,BABS)           
-c-----------------------------------------------------------------------        
-C CALCULATES EARTH MAGNETIC FIELD FROM SPHERICAL HARMONICS MODEL
-C REF: G. KLUGE, EUROPEAN SPACE OPERATIONS CENTRE, INTERNAL NOTE 61, 
-C      1970.
-c-----------------------------------------------------------------------        
-C CHANGES (D. BILITZA, NOV 87):
-C   - FIELD COEFFICIENTS IN BINARY DATA FILES INSTEAD OF BLOCK DATA
-C   - CALCULATES DIPOL MOMENT
-C 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
-c-----------------------------------------------------------------------        
-C  INPUT:  ENTRY POINT FELDG
-C               GLAT  GEODETIC LATITUDE IN DEGREES (NORTH)
-C               GLON  GEODETIC LONGITUDE IN DEGREES (EAST)
-C               ALT   ALTITUDE IN KM ABOVE SEA LEVEL
-C
-C          ENTRY POINT FELDC
-C               V(3)  CARTESIAN COORDINATES IN EARTH RADII (6371.2 KM)
-C                       X-AXIS POINTING TO EQUATOR AT 0 LONGITUDE
-C                       Y-AXIS POINTING TO EQUATOR AT 90 LONG.
-C                       Z-AXIS POINTING TO NORTH POLE
-C
-C          COMMON BLANK AND ENTRY POINT FELDI ARE NEEDED WHEN USED
-C            IN CONNECTION WITH L-CALCULATION PROGRAM SHELLG.
-C       
-C          COMMON /MODEL/ AND /IGRF1/
-C               UMR     = ATAN(1.0)*4./180.   <DEGREE>*UMR=<RADIANT>
-C               ERA     EARTH RADIUS FOR NORMALIZATION OF CARTESIAN 
-C                       COORDINATES (6371.2 KM)
-C               AQUAD, BQUAD   SQUARE OF MAJOR AND MINOR HALF AXIS OF 
-C                       EARTH ELLIPSOID AS RECOMMENDED BY INTERNAT. 
-C                       ASTRONOMICAL UNION (6378.160, 6356.775 KM).
-C               NMAX    MAXIMUM ORDER OF SPHERICAL HARMONICS
-C               TIME    YEAR (DECIMAL: 1973.5) FOR WHICH MAGNETIC 
-C                       FIELD IS TO BE CALCULATED
-C               G(M)    NORMALIZED FIELD COEFFICIENTS (SEE FELDCOF)
-C                       M=NMAX*(NMAX+2)
-c-----------------------------------------------------------------------        
-C  OUTPUT: BABS   MAGNETIC FIELD STRENGTH IN GAUSS
-C          BNORTH, BEAST, BDOWN   COMPONENTS OF THE FIELD WITH RESPECT
-C                 TO THE LOCAL GEODETIC COORDINATE SYSTEM, WITH AXIS
-C                 POINTING IN THE TANGENTIAL PLANE TO THE NORTH, EAST
-C                 AND DOWNWARD.   
-C-----------------------------------------------------------------------
+!-----------------------------------------------------------------------        
+! CALCULATES EARTH MAGNETIC FIELD FROM SPHERICAL HARMONICS MODEL
+! REF: G. KLUGE, EUROPEAN SPACE OPERATIONS CENTRE, INTERNAL NOTE 61, 
+!      1970.
+!-----------------------------------------------------------------------        
+! CHANGES (D. BILITZA, NOV 87):
+!   - FIELD COEFFICIENTS IN BINARY DATA FILES INSTEAD OF BLOCK DATA
+!   - CALCULATES DIPOL MOMENT
+! 09/07/22 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
+!-----------------------------------------------------------------------        
+!  INPUT:  ENTRY POINT FELDG
+!               GLAT  GEODETIC LATITUDE IN DEGREES (NORTH)
+!               GLON  GEODETIC LONGITUDE IN DEGREES (EAST)
+!               ALT   ALTITUDE IN KM ABOVE SEA LEVEL
+!
+!          ENTRY POINT FELDC
+!               V(3)  CARTESIAN COORDINATES IN EARTH RADII (6371.2 KM)
+!                       X-AXIS POINTING TO EQUATOR AT 0 LONGITUDE
+!                       Y-AXIS POINTING TO EQUATOR AT 90 LONG.
+!                       Z-AXIS POINTING TO NORTH POLE
+!
+!          COMMON BLANK AND ENTRY POINT FELDI ARE NEEDED WHEN USED
+!            IN CONNECTION WITH L-CALCULATION PROGRAM SHELLG.
+!       
+!          COMMON /MODEL/ AND /IGRF1/
+!               UMR     = ATAN(1.0)*4./180.   <DEGREE>*UMR=<RADIANT>
+!               ERA     EARTH RADIUS FOR NORMALIZATION OF CARTESIAN 
+!                       COORDINATES (6371.2 KM)
+!               AQUAD, BQUAD   SQUARE OF MAJOR AND MINOR HALF AXIS OF 
+!                       EARTH ELLIPSOID AS RECOMMENDED BY INTERNAT. 
+!                       ASTRONOMICAL UNION (6378.160, 6356.775 KM).
+!               NMAX    MAXIMUM ORDER OF SPHERICAL HARMONICS
+!               TIME    YEAR (DECIMAL: 1973.5) FOR WHICH MAGNETIC 
+!                       FIELD IS TO BE CALCULATED
+!               G(M)    NORMALIZED FIELD COEFFICIENTS (SEE FELDCOF)
+!                       M=NMAX*(NMAX+2)
+!-----------------------------------------------------------------------        
+!  OUTPUT: BABS   MAGNETIC FIELD STRENGTH IN GAUSS
+!          BNORTH, BEAST, BDOWN   COMPONENTS OF THE FIELD WITH RESPECT
+!                 TO THE LOCAL GEODETIC COORDINATE SYSTEM, WITH AXIS
+!                 POINTING IN THE TANGENTIAL PLANE TO THE NORTH, EAST
+!                 AND DOWNWARD.   
+!-----------------------------------------------------------------------
       DIMENSION         V(3),B(3)   
       CHARACTER*13      NAME
       COMMON/IGRF2/XI(3),H(196)
       COMMON/MODEL/NMAX,TIME,G(196),NAME  
       COMMON/IGRF1/ERA,AQUAD,BQUAD,DIMO    /CONST/UMR,PI
 
-C
-C-- IS RECORDS ENTRY POINT
-C
-C*****ENTRY POINT  FELDG  TO BE USED WITH GEODETIC CO-ORDINATES         
+!
+!-- IS RECORDS ENTRY POINT
+!
+!*****ENTRY POINT  FELDG  TO BE USED WITH GEODETIC CO-ORDINATES         
       IS=1                                                              
       RLAT=GLAT*UMR
       CT=SIN(RLAT)                                                      
@@ -510,7 +510,7 @@ C*****ENTRY POINT  FELDG  TO BE USED WITH GEODETIC CO-ORDINATES
       YYY=RHO*SP                                                       
       GOTO 10                                                            
 
-C*****ENTRY POINT  FELDC  TO BE USED WITH CARTESIAN CO-ORDINATES        
+!*****ENTRY POINT  FELDC  TO BE USED WITH CARTESIAN CO-ORDINATES        
       ENTRY FELDC(V,B)                                                  
       IS=2                                                              
       XXX=V(1)                                                          
@@ -522,7 +522,7 @@ C*****ENTRY POINT  FELDC  TO BE USED WITH CARTESIAN CO-ORDINATES
       XI(3)=ZZZ*RQ                                                      
       GOTO 20                                                            
 
-C*****ENTRY POINT  FELDI  USED FOR L COMPUTATION                        
+!*****ENTRY POINT  FELDI  USED FOR L COMPUTATION                        
       ENTRY FELDI                                                       
       IS=3                                                              
 20    IHMAX=NMAX*NMAX+1                                                 
@@ -575,37 +575,37 @@ C*****ENTRY POINT  FELDI  USED FOR L COMPUTATION
       B(3)=BZZZ                                                         
       RETURN                                                            
       END                                                               
-C
-C
+!
+!
         SUBROUTINE FELDCOF(YEAR)
-c-----------------------------------------------------------------------        
-C  DETERMINES COEFFICIENTS AND DIPOL MOMENT FROM IGRF MODELS
-C
-C       INPUT:  YEAR    DECIMAL YEAR FOR WHICH GEOMAGNETIC FIELD IS TO
-C                       BE CALCULATED
-C        				COMMON/IGRF1/ERAD,AQUAD,BQUAD,DIMO /CONST/UMR,PI
-C       OUTPUT:         COMMON/MODEL/NMAX,TIME,GH1,FIL1
-C        				COMMON/DIPOL/GHI1,GHI2,GHI3
-C
-C THE GEOMAGNETIC DIPOL MOMENT (DIMO) IN GAUSS (NORMALIZED TO EARTH'S 
-C RADIUS) AT THE TIME (YEAR) IS COMPUTED BUT NOT USED.
-C
-C 05/31/2000 updated to IGRF-2000 version (###) 
-C 03/24/2000 updated to IGRF-2005 version (###) 
-C 07/22/2009 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
-C 02/26/2010 update to IGRF-11 (2010) (###)  
-C 10/05/2011 added COMMON/DIPOL/ for MLT computation in DPMTRX (IRIFUN)
-C 02/10/2015 update to IGRF-12 (2015) (###)
-c-----------------------------------------------------------------------        
+!-----------------------------------------------------------------------        
+!  DETERMINES COEFFICIENTS AND DIPOL MOMENT FROM IGRF MODELS
+!
+!       INPUT:  YEAR    DECIMAL YEAR FOR WHICH GEOMAGNETIC FIELD IS TO
+!                       BE CALCULATED
+!        				COMMON/IGRF1/ERAD,AQUAD,BQUAD,DIMO /CONST/UMR,PI
+!       OUTPUT:         COMMON/MODEL/NMAX,TIME,GH1,FIL1
+!        				COMMON/DIPOL/GHI1,GHI2,GHI3
+!
+! THE GEOMAGNETIC DIPOL MOMENT (DIMO) IN GAUSS (NORMALIZED TO EARTH'S 
+! RADIUS) AT THE TIME (YEAR) IS COMPUTED BUT NOT USED.
+!
+! 05/31/2000 updated to IGRF-2000 version (###) 
+! 03/24/2000 updated to IGRF-2005 version (###) 
+! 07/22/2009 NMAX=13 for DGRF00 and IGRF05; H/G-arrays(195)
+! 02/26/2010 update to IGRF-11 (2010) (###)  
+! 10/05/2011 added COMMON/DIPOL/ for MLT computation in DPMTRX (IRIFUN)
+! 02/10/2015 update to IGRF-12 (2015) (###)
+!-----------------------------------------------------------------------        
         CHARACTER*13    FILMOD, FIL1, FIL2           
-C ### FILMOD, DTEMOD array-size is number of IGRF maps
+! ### FILMOD, DTEMOD array-size is number of IGRF maps
         DIMENSION       GH1(196),GH2(196),GHA(196),FILMOD(16)
         DIMENSION		DTEMOD(16)
         DOUBLE PRECISION X,F0,F 
         COMMON/MODEL/   NMAX,TIME,GH1,FIL1
         COMMON/IGRF1/   ERAD,AQUAD,BQUAD,DIMO /CONST/UMR,PI
         COMMON/DIPOL/	GHI1,GHI2,GHI3
-C ### updated coefficient file names and corresponding years
+! ### updated coefficient file names and corresponding years
         DATA  FILMOD   / 'dgrf1945.dat','dgrf1950.dat','dgrf1955.dat',           
      1    'dgrf1960.dat','dgrf1965.dat','dgrf1970.dat','dgrf1975.dat',
      2    'dgrf1980.dat','dgrf1985.dat','dgrf1990.dat','dgrf1995.dat',
@@ -614,17 +614,17 @@ C ### updated coefficient file names and corresponding years
         DATA  DTEMOD / 1945., 1950., 1955., 1960., 1965.,           
      1   1970., 1975., 1980., 1985., 1990., 1995., 2000.,2005.,
      2   2010., 2015., 2020./      
-C
-C ### numye is number of IGRF coefficient files minus 1
-C
+!
+! ### numye is number of IGRF coefficient files minus 1
+!
         NUMYE=15
-C
-C  IS=0 FOR SCHMIDT NORMALIZATION   IS=1 GAUSS NORMALIZATION
-C  IU  IS INPUT UNIT NUMBER FOR IGRF COEFFICIENT SETS
-C
+!
+!  IS=0 FOR SCHMIDT NORMALIZATION   IS=1 GAUSS NORMALIZATION
+!  IU  IS INPUT UNIT NUMBER FOR IGRF COEFFICIENT SETS
+!
         IU = 14
         IS = 0
-C-- DETERMINE IGRF-YEARS FOR INPUT-YEAR
+!-- DETERMINE IGRF-YEARS FOR INPUT-YEAR
         TIME = YEAR
         IYEA = INT(YEAR/5.)*5
         L = (IYEA - 1945)/5 + 1
@@ -634,12 +634,12 @@ C-- DETERMINE IGRF-YEARS FOR INPUT-YEAR
         FIL1 = FILMOD(L)   
         DTE2 = DTEMOD(L+1) 
         FIL2 = FILMOD(L+1) 
-C-- GET IGRF COEFFICIENTS FOR THE BOUNDARY YEARS
+!-- GET IGRF COEFFICIENTS FOR THE BOUNDARY YEARS
         CALL GETSHC (IU, FIL1, NMAX1, ERAD, GH1, IER)  
             IF (IER .NE. 0) STOP                           
         CALL GETSHC (IU, FIL2, NMAX2, ERAD, GH2, IER)  
             IF (IER .NE. 0) STOP
-C-- DETERMINE IGRF COEFFICIENTS FOR YEAR
+!-- DETERMINE IGRF COEFFICIENTS FOR YEAR
         IF (L .LE. NUMYE-1) THEN                        
           CALL INTERSHC (YEAR, DTE1, NMAX1, GH1, DTE2, 
      1          NMAX2, GH2, NMAX, GHA)                        
@@ -647,7 +647,7 @@ C-- DETERMINE IGRF COEFFICIENTS FOR YEAR
           CALL EXTRASHC (YEAR, DTE1, NMAX1, GH1, NMAX2,     
      1          GH2, NMAX, GHA)                                    
         ENDIF 
-C-- DETERMINE MAGNETIC DIPOL MOMENT AND COEFFIECIENTS G
+!-- DETERMINE MAGNETIC DIPOL MOMENT AND COEFFIECIENTS G
         F0=0.D0
         DO 1234 J=1,3
            F = GHA(J) * 1.D-5
@@ -681,26 +681,26 @@ C-- DETERMINE MAGNETIC DIPOL MOMENT AND COEFFIECIENTS G
 9     CONTINUE 
         RETURN
         END
-C
-C
+!
+!
         SUBROUTINE GETSHC (IU, FSPEC, NMAX, ERAD, GH, IER)                                                                                           
-C ===============================================================               
-C       Reads spherical harmonic coefficients from the specified     
-C       file into an array.                                          
-C       Input:                                                       
-C           IU    - Logical unit number                              
-C           FSPEC - File specification                               
-C       Output:                                                      
-C           NMAX  - Maximum degree and order of model                
-C           ERAD  - Earth's radius associated with the spherical     
-C                   harmonic coefficients, in the same units as      
-C                   elevation                                        
-C           GH    - Schmidt quasi-normal internal spherical          
-C                   harmonic coefficients                            
-C           IER   - Error number: =  0, no error                     
-C                                 = -2, records out of order         
-C                                 = FORTRAN run-time error number    
-C ===============================================================               
+! ===============================================================               
+!       Reads spherical harmonic coefficients from the specified     
+!       file into an array.                                          
+!       Input:                                                       
+!           IU    - Logical unit number                              
+!           FSPEC - File specification                               
+!       Output:                                                      
+!           NMAX  - Maximum degree and order of model                
+!           ERAD  - Earth's radius associated with the spherical     
+!                   harmonic coefficients, in the same units as      
+!                   elevation                                        
+!           GH    - Schmidt quasi-normal internal spherical          
+!                   harmonic coefficients                            
+!           IER   - Error number: =  0, no error                     
+!                                 = -2, records out of order         
+!                                 = FORTRAN run-time error number    
+! ===============================================================               
                                                                                 
         CHARACTER  FSPEC*(*), FOUT*80                                    
         DIMENSION       GH(196)
@@ -709,14 +709,14 @@ C ===============================================================
         do 1 j=1,196  
 1          GH(j)=0.0
 
-C ---------------------------------------------------------------               
-C       Open coefficient file. Read past first header record.        
-C       Read degree and order of model and Earth's radius.           
-C ---------------------------------------------------------------               
+! ---------------------------------------------------------------               
+!       Open coefficient file. Read past first header record.        
+!       Read degree and order of model and Earth's radius.           
+! ---------------------------------------------------------------               
         WRITE(FOUT,667) FSPEC
  667    FORMAT(A13)
-c-web-for webversion
-c 667    FORMAT('/var/www/omniweb/cgi/vitmo/IRI/',A13)
+!-web-for webversion
+! 667    FORMAT('/var/www/omniweb/cgi/vitmo/IRI/',A13)
         OPEN (IU, FILE=FOUT, STATUS='OLD', IOSTAT=IER, ERR=999)     
         READ (IU, *, IOSTAT=IER, ERR=999)                            
         READ (IU, *, IOSTAT=IER, ERR=999) NMAX, ERAD, XMYEAR 
@@ -730,48 +730,48 @@ c 667    FORMAT('/var/www/omniweb/cgi/vitmo/IRI/',A13)
 888     CLOSE (IU)                                                                                                                                   
         RETURN                                                       
         END                                                          
-C
-C
+!
+!
         SUBROUTINE INTERSHC (DATE, DTE1, NMAX1, GH1, DTE2,          
      1                        NMAX2, GH2, NMAX, GH)                  
                                                                                 
-C ===============================================================               
-C                                                                               
-C       Version 1.01                                                 
-C                                                                               
-C       Interpolates linearly, in time, between two spherical        
-C       harmonic models.                                             
-C                                                                               
-C       Input:                                                       
-C           DATE  - Date of resulting model (in decimal year)        
-C           DTE1  - Date of earlier model                            
-C           NMAX1 - Maximum degree and order of earlier model        
-C           GH1   - Schmidt quasi-normal internal spherical          
-C                   harmonic coefficients of earlier model           
-C           DTE2  - Date of later model                              
-C           NMAX2 - Maximum degree and order of later model          
-C           GH2   - Schmidt quasi-normal internal spherical          
-C                   harmonic coefficients of later model             
-C                                                                               
-C       Output:                                                      
-C           GH    - Coefficients of resulting model                  
-C           NMAX  - Maximum degree and order of resulting model      
-C                                                                               
-C       A. Zunde                                                     
-C       USGS, MS 964, Box 25046 Federal Center, Denver, CO  80225    
-C                                                                               
-C ===============================================================               
+! ===============================================================               
+!                                                                               
+!       Version 1.01                                                 
+!                                                                               
+!       Interpolates linearly, in time, between two spherical        
+!       harmonic models.                                             
+!                                                                               
+!       Input:                                                       
+!           DATE  - Date of resulting model (in decimal year)        
+!           DTE1  - Date of earlier model                            
+!           NMAX1 - Maximum degree and order of earlier model        
+!           GH1   - Schmidt quasi-normal internal spherical          
+!                   harmonic coefficients of earlier model           
+!           DTE2  - Date of later model                              
+!           NMAX2 - Maximum degree and order of later model          
+!           GH2   - Schmidt quasi-normal internal spherical          
+!                   harmonic coefficients of later model             
+!                                                                               
+!       Output:                                                      
+!           GH    - Coefficients of resulting model                  
+!           NMAX  - Maximum degree and order of resulting model      
+!                                                                               
+!       A. Zunde                                                     
+!       USGS, MS 964, Box 25046 Federal Center, Denver, CO  80225    
+!                                                                               
+! ===============================================================               
                                                                                 
         DIMENSION       GH1(*), GH2(*), GH(*)                        
                                                                                 
-C ---------------------------------------------------------------               
-C       The coefficients (GH) of the resulting model, at date        
-C       DATE, are computed by linearly interpolating between the     
-C       coefficients of the earlier model (GH1), at date DTE1,       
-C       and those of the later model (GH2), at date DTE2. If one     
-C       model is smaller than the other, the interpolation is        
-C       performed with the missing coefficients assumed to be 0.     
-C ---------------------------------------------------------------               
+! ---------------------------------------------------------------               
+!       The coefficients (GH) of the resulting model, at date        
+!       DATE, are computed by linearly interpolating between the     
+!       coefficients of the earlier model (GH1), at date DTE1,       
+!       and those of the later model (GH2), at date DTE2. If one     
+!       model is smaller than the other, the interpolation is        
+!       performed with the missing coefficients assumed to be 0.     
+! ---------------------------------------------------------------               
                                                                                 
         FACTOR = (DATE - DTE1) / (DTE2 - DTE1)                       
                                                                                 
@@ -797,48 +797,48 @@ C ---------------------------------------------------------------
                                                                                 
         RETURN                                                       
         END                                                          
-C
-C
+!
+!
         SUBROUTINE EXTRASHC (DATE, DTE1, NMAX1, GH1, NMAX2,           
      1                        GH2, NMAX, GH)                           
                                                                                 
-C ===============================================================               
-C                                                                               
-C       Version 1.01                                                   
-C                                                                               
-C       Extrapolates linearly a spherical harmonic model with a        
-C       rate-of-change model.                                          
-C                                                                               
-C       Input:                                                         
-C           DATE  - Date of resulting model (in decimal year)          
-C           DTE1  - Date of base model                                 
-C           NMAX1 - Maximum degree and order of base model             
-C           GH1   - Schmidt quasi-normal internal spherical            
-C                   harmonic coefficients of base model                
-C           NMAX2 - Maximum degree and order of rate-of-change         
-C                   model                                              
-C           GH2   - Schmidt quasi-normal internal spherical            
-C                   harmonic coefficients of rate-of-change model      
-C                                                                               
-C       Output:                                                        
-C           GH    - Coefficients of resulting model                    
-C           NMAX  - Maximum degree and order of resulting model        
-C                                                                               
-C       A. Zunde                                                       
-C       USGS, MS 964, Box 25046 Federal Center, Denver, CO  80225      
-C                                                                               
-C ===============================================================               
+! ===============================================================               
+!                                                                               
+!       Version 1.01                                                   
+!                                                                               
+!       Extrapolates linearly a spherical harmonic model with a        
+!       rate-of-change model.                                          
+!                                                                               
+!       Input:                                                         
+!           DATE  - Date of resulting model (in decimal year)          
+!           DTE1  - Date of base model                                 
+!           NMAX1 - Maximum degree and order of base model             
+!           GH1   - Schmidt quasi-normal internal spherical            
+!                   harmonic coefficients of base model                
+!           NMAX2 - Maximum degree and order of rate-of-change         
+!                   model                                              
+!           GH2   - Schmidt quasi-normal internal spherical            
+!                   harmonic coefficients of rate-of-change model      
+!                                                                               
+!       Output:                                                        
+!           GH    - Coefficients of resulting model                    
+!           NMAX  - Maximum degree and order of resulting model        
+!                                                                               
+!       A. Zunde                                                       
+!       USGS, MS 964, Box 25046 Federal Center, Denver, CO  80225      
+!                                                                               
+! ===============================================================               
                                                                                 
         DIMENSION       GH1(*), GH2(*), GH(*)                        
                                                                                 
-C ---------------------------------------------------------------               
-C       The coefficients (GH) of the resulting model, at date          
-C       DATE, are computed by linearly extrapolating the coef-         
-C       ficients of the base model (GH1), at date DTE1, using          
-C       those of the rate-of-change model (GH2), at date DTE2. If      
-C       one model is smaller than the other, the extrapolation is      
-C       performed with the missing coefficients assumed to be 0.       
-C ---------------------------------------------------------------               
+! ---------------------------------------------------------------               
+!       The coefficients (GH) of the resulting model, at date          
+!       DATE, are computed by linearly extrapolating the coef-         
+!       ficients of the base model (GH1), at date DTE1, using          
+!       those of the rate-of-change model (GH2), at date DTE2. If      
+!       one model is smaller than the other, the extrapolation is      
+!       performed with the missing coefficients assumed to be 0.       
+! ---------------------------------------------------------------               
                                                                                 
         FACTOR = (DATE - DTE1)                                         
                                                                                 
@@ -864,27 +864,27 @@ C ---------------------------------------------------------------
                                                                                 
         RETURN                                                         
         END                                                            
-C
-C
+!
+!
       SUBROUTINE GEODIP(IYR,SLA,SLO,DLA,DLO,J)
 
-C  Calculates dipole geomagnetic coordinates from geocentric coordinates
-C  or vice versa.
+!  Calculates dipole geomagnetic coordinates from geocentric coordinates
+!  or vice versa.
 
-C                     J=0           J=1
-C		INPUT:     J,SLA,SLO     J,DLA,DLO
-C		OUTPUT:     DLA,DLO       SLA,SLO
+!                     J=0           J=1
+!		INPUT:     J,SLA,SLO     J,DLA,DLO
+!		OUTPUT:     DLA,DLO       SLA,SLO
 
-C  Last revision: November 2005 (Vladimir Papitashvili)
-C  The code is modifed from GEOCOR written by V.Popov and V.Papitashvili
-C  in mid-1980s. 
+!  Last revision: November 2005 (Vladimir Papitashvili)
+!  The code is modifed from GEOCOR written by V.Popov and V.Papitashvili
+!  in mid-1980s. 
 
          COMMON /CONST/UMR,PI 
 
-C  Earth's radius (km) RE = 6371.2
+!  Earth's radius (km) RE = 6371.2
 
-C  The radius of the sphere to compute the coordinates (in Re)
-C        RH = (RE + HI)/RE
+!  The radius of the sphere to compute the coordinates (in Re)
+!        RH = (RE + HI)/RE
          R = 1.
 
          if(j.gt.0) goto 1234
@@ -914,8 +914,8 @@ C        RH = (RE + HI)/RE
       RETURN
       END
 
-C 
-C 
+! 
+! 
 		function fmodip(xlat)
 		
 		common/findRLAT/xlong,year
@@ -925,110 +925,110 @@ C
 
       	return
       	end
-C
-C
+!
+!
       SUBROUTINE GEOCGM01(ICOR,IYEAR,HI,DAT,PLA,PLO)
-C  *********************************************************************
-C  Version 2011 for GEO-CGM.FOR    (good through 2015)      January 2011
-C  Version 2005 for GEO-CGM.FOR    (good through 2010)     November 2005
-C  Nov 11, 2005  IGRF and RECALC are is modified to the IGRF-10 model 
-C                and extended back to 1900 using the DGRF coeffcients
-C  Apr 11, 2001  GEOLOW is modified to account for interpolation of
-C                CGM meridians near equator across the 360/0 boundary
-C  AUTHORS:
-C  Natalia E. Papitashvili (WDC-B2, Moscow, Russia, now at NSSDC,
-C    NASA/Goddard Space Flight Center, Greenbelt, Maryland)
-C  Vladimir O. Papitashvili (IZMIRAN, Moscow, Russia, now at SPRL,
-C    University of Michigan, Ann Arbor)
-C  Conributions from Boris A. Belov and Vladimir A. Popov (both at
-C    IZMIRAN), Therese Moretto (DMI, DSRI, now at NSF), Freddy 
-C    Christiansen (DMI, DSRI), and Scott Boardsen (NASA/GSFC).
+!  *********************************************************************
+!  Version 2011 for GEO-CGM.FOR    (good through 2015)      January 2011
+!  Version 2005 for GEO-CGM.FOR    (good through 2010)     November 2005
+!  Nov 11, 2005  IGRF and RECALC are is modified to the IGRF-10 model 
+!                and extended back to 1900 using the DGRF coeffcients
+!  Apr 11, 2001  GEOLOW is modified to account for interpolation of
+!                CGM meridians near equator across the 360/0 boundary
+!  AUTHORS:
+!  Natalia E. Papitashvili (WDC-B2, Moscow, Russia, now at NSSDC,
+!    NASA/Goddard Space Flight Center, Greenbelt, Maryland)
+!  Vladimir O. Papitashvili (IZMIRAN, Moscow, Russia, now at SPRL,
+!    University of Michigan, Ann Arbor)
+!  Conributions from Boris A. Belov and Vladimir A. Popov (both at
+!    IZMIRAN), Therese Moretto (DMI, DSRI, now at NSF), Freddy 
+!    Christiansen (DMI, DSRI), and Scott Boardsen (NASA/GSFC).
 
-C  The original version of this code is described in the brochure by
-C  N.A. Tsyganenko, A.V. Usmanov, V.O. Papitashvili, N.E. Papitashvili,
-C  and V.A. Popov, Software for computations of geomagnetic field and
-C  related coordinate systems, Soviet Geophys. Committ., Moscow, 58 pp.,
-C  1987. A number of subroutines from the revised GEOPACK-96 software
-C  package developed by Nikolai A. Tsyganenko and Mauricio Peredo are
-C  utilized in this code with some modifications (see full versions of
-C  GEOPACK packages on http://www-spof.gsfc.nasa.gov/Modeling/geopack.html).
+!  The original version of this code is described in the brochure by
+!  N.A. Tsyganenko, A.V. Usmanov, V.O. Papitashvili, N.E. Papitashvili,
+!  and V.A. Popov, Software for computations of geomagnetic field and
+!  related coordinate systems, Soviet Geophys. Committ., Moscow, 58 pp.,
+!  1987. A number of subroutines from the revised GEOPACK-96 software
+!  package developed by Nikolai A. Tsyganenko and Mauricio Peredo are
+!  utilized in this code with some modifications (see full versions of
+!  GEOPACK packages on http://www-spof.gsfc.nasa.gov/Modeling/geopack.html).
 
-C  This code consists of the main subroutine GEOCGM01, five functions
-C  (OVL_ANG, CGMGLA, CGMGLO, DFRIDR, and AZM_ANG), eigth new and revised
-C  subroutines from the above-mentioned brochure (MLTUT, MFC, FTPRNT,
-C  GEOLOW, CORGEO, GEOCOR, SHAG, and RIGHT), and 9 subroutines from
-C  GEOPACK-96 (IGRF, SPHCAR, BSPCAR, GEOMAG, MAGSM, SMGSM, RECALC, SUN)
+!  This code consists of the main subroutine GEOCGM01, five functions
+!  (OVL_ANG, CGMGLA, CGMGLO, DFRIDR, and AZM_ANG), eigth new and revised
+!  subroutines from the above-mentioned brochure (MLTUT, MFC, FTPRNT,
+!  GEOLOW, CORGEO, GEOCOR, SHAG, and RIGHT), and 9 subroutines from
+!  GEOPACK-96 (IGRF, SPHCAR, BSPCAR, GEOMAG, MAGSM, SMGSM, RECALC, SUN)
 
-C  =====================================================================
+!  =====================================================================
 
-C  Input parameters:
-C     ICOR = +1    geo to cgm
-C            -1    cgm to geo
-C     IYEAR= year
-C     HI   = altitude in km
-C  Input/Output parameters:
-C     DAT(1,i)=slar geocentric latitude (input/output if icor=+1/-1)
-C     DAT(2,i)=slor geocentric longitude (input/output if icor=+1/-1)
-C     DAT(3,i)=clar CGM latitude (input/output if icor=-1/+1)
-C     DAT(4,i)=clor CGM longitude (input/output if icor=-1/+1)
-C  Output parameters:
-C     DAT(5,i)=rbm apex of the magnetic field line in Re (Re=6371.2 km)
-C            (this parameter approximately equals the McIlwain L-value)
-C     DAT(6,i)=btr IGRF Magnetic field H (nT)
-C     DAT(7,i)=brr IGRF Magnetic field D (deg)
-C     DAT(8,i)=ovl oval_angle as the azimuth to "magnetic north":
-C                + east in Northern Hemisphere
-C                + west in Southern Hemisphere
-C     DAT(9,i)=azm meridian_angle as the azimuth to the CGM pole:
-C                + east in Northern Hemisphere
-C                + west in Southern Hemisphere
-C     DAT(10,i)=utm magnetic local time (MLT) midnight in UT hours
-C     		 i=1	for the start point
-C     		 i=2	for the conjugate point of the start point (slac, sloc)
-C			 i=3    for the footprint at 1-Re of the start point (slaf,slof)
-C			 i=4    for the conjugate footprint at 1-Re of the start point
-C     PLA(1)	geocentric latitude of the CGM pole in the Northern hemisphere
-C     PLO(1)	geocentric longitude of the CGM pole in the Northern hemisphere
-C     PLA(2)	geocentric latitude of the CGM pole in the Southern hemisphere
-C     PLO(2)	geocentric longitude of the CGM pole in the Southern hemisphere
-C     PLA(3)	geoce lati CGM North pole at the Earth's surface 1-Re or zero alt.
-C     PLO(3)	geoce long CGM North pole at the Earth's surface 1-Re or zero alt.
-C     PLA(4)	geoce lati CGM South pole at the Earth's surface 1-Re or zero alt.
-C     PLO(4)	geoce long CGM South pole at the Earth's surface 1-Re or zero alt.
-C
-C In program:
-C     dla  = dipole latitude
-C     dlo  = dipole longitude
+!  Input parameters:
+!     ICOR = +1    geo to cgm
+!            -1    cgm to geo
+!     IYEAR= year
+!     HI   = altitude in km
+!  Input/Output parameters:
+!     DAT(1,i)=slar geocentric latitude (input/output if icor=+1/-1)
+!     DAT(2,i)=slor geocentric longitude (input/output if icor=+1/-1)
+!     DAT(3,i)=clar CGM latitude (input/output if icor=-1/+1)
+!     DAT(4,i)=clor CGM longitude (input/output if icor=-1/+1)
+!  Output parameters:
+!     DAT(5,i)=rbm apex of the magnetic field line in Re (Re=6371.2 km)
+!            (this parameter approximately equals the McIlwain L-value)
+!     DAT(6,i)=btr IGRF Magnetic field H (nT)
+!     DAT(7,i)=brr IGRF Magnetic field D (deg)
+!     DAT(8,i)=ovl oval_angle as the azimuth to "magnetic north":
+!                + east in Northern Hemisphere
+!                + west in Southern Hemisphere
+!     DAT(9,i)=azm meridian_angle as the azimuth to the CGM pole:
+!                + east in Northern Hemisphere
+!                + west in Southern Hemisphere
+!     DAT(10,i)=utm magnetic local time (MLT) midnight in UT hours
+!     		 i=1	for the start point
+!     		 i=2	for the conjugate point of the start point (slac, sloc)
+!			 i=3    for the footprint at 1-Re of the start point (slaf,slof)
+!			 i=4    for the conjugate footprint at 1-Re of the start point
+!     PLA(1)	geocentric latitude of the CGM pole in the Northern hemisphere
+!     PLO(1)	geocentric longitude of the CGM pole in the Northern hemisphere
+!     PLA(2)	geocentric latitude of the CGM pole in the Southern hemisphere
+!     PLO(2)	geocentric longitude of the CGM pole in the Southern hemisphere
+!     PLA(3)	geoce lati CGM North pole at the Earth's surface 1-Re or zero alt.
+!     PLO(3)	geoce long CGM North pole at the Earth's surface 1-Re or zero alt.
+!     PLA(4)	geoce lati CGM South pole at the Earth's surface 1-Re or zero alt.
+!     PLO(4)	geoce long CGM South pole at the Earth's surface 1-Re or zero alt.
+!
+! In program:
+!     dla  = dipole latitude
+!     dlo  = dipole longitude
 
-C  =====================================================================
+!  =====================================================================
 
-c      COMMON /C1/ AA(27),II(2),BB(8)
+!      COMMON /C1/ AA(27),II(2),BB(8)
       COMMON /IYR/ IYR
       COMMON /NM/ NM
-c      COMMON /RZ/ RH
+!      COMMON /RZ/ RH
 
       DIMENSION DAT(11,4),PLA(4),PLO(4)
       CHARACTER STR*12
 
-C  Year (for example, as for Epoch 1995.0 - no fraction of the year)
+!  Year (for example, as for Epoch 1995.0 - no fraction of the year)
 
        IYR = iyear
 
-C  Earth's radius (km)
+!  Earth's radius (km)
 
         RE = 6371.2
 
-C  NM is the number of harmonics
+!  NM is the number of harmonics
 
         NM = 10
 
-C  The radius of the sphere to compute the coordinates (in Re)
+!  The radius of the sphere to compute the coordinates (in Re)
 
         RH = (RE + HI)/RE
 
-C  Correction of latitudes and longitudes if they are entered beyond of
-C  the limits (this actually does not affect coordinate calculations
-C  but the oval/meridian angles and MLT midnight cannot be computed)
+!  Correction of latitudes and longitudes if they are entered beyond of
+!  the limits (this actually does not affect coordinate calculations
+!  but the oval/meridian angles and MLT midnight cannot be computed)
 
           IF (DAT(1,1).GT. 90.) DAT(1,1) =  180. - DAT(1,1)
           IF (DAT(1,1).LT.-90.) DAT(1,1) = -180. - DAT(1,1)
@@ -1040,8 +1040,8 @@ C  but the oval/meridian angles and MLT midnight cannot be computed)
           IF (DAT(4,1).GT. 360.) DAT(4,1) = DAT(4,1) - 360.
           IF (DAT(4,1).LT.-360.) DAT(4,1) = DAT(4,1) + 360.
 
-C  Computation of CGM coordinates from geocentric ones at high- and
-C  middle latitudes
+!  Computation of CGM coordinates from geocentric ones at high- and
+!  middle latitudes
 
       IF (ICOR.EQ. 1) THEN
 
@@ -1054,8 +1054,8 @@ C  middle latitudes
 
 	                ELSE
 
-C  Computation of geocentric coordinates from CGM ones at high- and
-C  middle latitudes
+!  Computation of geocentric coordinates from CGM ones at high- and
+!  middle latitudes
 
                 CLAR = DAT(3,1)
                 CLOR = DAT(4,1)
@@ -1066,18 +1066,18 @@ C  middle latitudes
 
 	ENDIF
 
-C  PMI is L-shell parameter for the magnetic field line; limit to 16 Re
+!  PMI is L-shell parameter for the magnetic field line; limit to 16 Re
 
         IF(PMR.GE.16.) PMR = 999.99
             DAT(5,1) = PMR
 
-C  Check if CGM_Lat has been calculated, then go for the conjugate point
+!  Check if CGM_Lat has been calculated, then go for the conjugate point
 
         IF(CLAR.GT.999.) THEN
 
-C  CGM_Lat has NOT been calculated, call GEOLOW for computation of the
-C  CGM coordinates at low latitudes using the CBM approach (see the
-C  reference in GEOLOW)
+!  CGM_Lat has NOT been calculated, call GEOLOW for computation of the
+!  CGM coordinates at low latitudes using the CBM approach (see the
+!  reference in GEOLOW)
 
         CALL GEOLOW(SLAR,SLOR,RH,CLAR,CLOR,RBM,SLAC,SLOC)
             DAT(3,1) = CLAR
@@ -1085,7 +1085,7 @@ C  reference in GEOLOW)
         IF(RBM.GE.16.) RBM = 999.99
             DAT(5,1) = RBM
 
-C  Conjugate point coordinates at low latitudes
+!  Conjugate point coordinates at low latitudes
 
           WRITE(STR,'(2F6.2)') SLAC,SLOC
           READ (STR,'(2F6.2)') SLAC,SLOC
@@ -1100,8 +1100,8 @@ C  Conjugate point coordinates at low latitudes
 
                          ELSE
 
-C  Computation of the magnetically conjugated point at high- and
-C  middle latitudes
+!  Computation of the magnetically conjugated point at high- and
+!  middle latitudes
 
                 CLAC = -CLAR
                 CLOC =  CLOR
@@ -1115,13 +1115,13 @@ C  middle latitudes
 
       ENDIF
 
-C  Same RBM for footprints as for the starting and conjugate points
+!  Same RBM for footprints as for the starting and conjugate points
 
             DAT(5,3) = DAT(5,1)
             DAT(5,4) = DAT(5,2)
 
-C  Calculation of the magnetic field line footprint at the
-C  Earth's surface for the starting point
+!  Calculation of the magnetic field line footprint at the
+!  Earth's surface for the starting point
 
       IF(RH.GT.1..and.CLAR.LT.999..and.CLAR.LT.999.) THEN
         CALL FTPRNT(RH,SLAR,SLOR,CLAR,CLOR,ACLAR,ACLOR,SLARF,SLORF,1.)
@@ -1129,7 +1129,7 @@ C  Earth's surface for the starting point
             DAT(2,3) = SLORF
             DAT(3,3) = ACLAR
             DAT(4,3) = ACLOR
-C  and for the conjugate point
+!  and for the conjugate point
         CALL FTPRNT(RH,SLAC,SLOC,CLAC,CLOC,ACLAC,ACLOC,SLACF,SLOCF,1.)
             DAT(1,4) = SLACF
             DAT(2,4) = SLOCF
@@ -1144,8 +1144,8 @@ C  and for the conjugate point
 
       ENDIF
 
-C  Computation of geocentric coordinates of the North or South CGM
-C  poles for a given year at the altitude RH and Earth's surface (1-Re)
+!  Computation of geocentric coordinates of the North or South CGM
+!  poles for a given year at the altitude RH and Earth's surface (1-Re)
 
         CALL CORGEO(PLAN,PLON,RH,DAA,DOO, 90.,360.,PMP)
             PLAN1 = PLAN
@@ -1212,55 +1212,55 @@ C  poles for a given year at the altitude RH and Earth's surface (1-Re)
         CLAJ = DAT(3,j)
         CLOJ = DAT(4,j)
 
-C  Computation of the IGRF components
+!  Computation of the IGRF components
         CALL MFC(SLAJ,SLOJ,RJ,BTR,BFR,BRR)
           DAT(6,j) = BTR
           DAT(7,j) = BFR
           DAT(8,j) = BRR
 
-C  Computation of the oval_angle (OVL) between the tangents to
-C  geographic and CGM latitudes at a given point (the code is slightly
-C  modified from the source provided by Therese Morreto in 1994). Note
-C  that rotation of OVL on 90 deg anticlockwise provides the azimuth
-C  to the local "magnetic" north (south) measured from the local
-C  geographic meridian. The OVL_ANG can be calculated only at middle
-C  and high latitudes where CGM --> GEO is permitted.
+!  Computation of the oval_angle (OVL) between the tangents to
+!  geographic and CGM latitudes at a given point (the code is slightly
+!  modified from the source provided by Therese Morreto in 1994). Note
+!  that rotation of OVL on 90 deg anticlockwise provides the azimuth
+!  to the local "magnetic" north (south) measured from the local
+!  geographic meridian. The OVL_ANG can be calculated only at middle
+!  and high latitudes where CGM --> GEO is permitted.
 
         OVL = OVL_ANG(SLAJ,SLOJ,CLAJ,CLOJ,RJ)
           DAT(9,j) = OVL
 
-C  Computation of the meridian_angle (AZM) between the geographic
-C  meridian and direction (azimuth along the great-circle arc) to
-C  the North (South) CGM pole
+!  Computation of the meridian_angle (AZM) between the geographic
+!  meridian and direction (azimuth along the great-circle arc) to
+!  the North (South) CGM pole
 
         AZM = AZM_ANG(SLAJ,SLOJ,CLAJ,PLAJ,PLOJ)
           DAT(10,j) = AZM
 
-C  Computation of the MLT midnight (in UT)
+!  Computation of the MLT midnight (in UT)
         CALL MLTUT(SLAJ,SLOJ,CLAJ,PLAJ,PLOJ,UT)
           DAT(11,j) = UT
 
-C  End of loop j = 1,icount
+!  End of loop j = 1,icount
       enddo
 
       RETURN
       END
-C
-C
+!
+!
       real function OVL_ANG(sla,slo,cla,clo,rr)
-C  *********************************************************************
-C  This function returns an estimate at the given location of the angle
-C  (oval_angle) between the directions (tangents) along the constant
-C  CGM and geographic latitudes by utilizing the function DFRIDR from
-C  Numerical Recipes for FORTRAN.
+!  *********************************************************************
+!  This function returns an estimate at the given location of the angle
+!  (oval_angle) between the directions (tangents) along the constant
+!  CGM and geographic latitudes by utilizing the function DFRIDR from
+!  Numerical Recipes for FORTRAN.
 
-C  This angle can be taken as the azimuth to the local "magnetic" north
-C  (south) if the eastward (westward) tangent to the local CGM latitude
-C  points south (north) from the local geographic latitude.
+!  This angle can be taken as the azimuth to the local "magnetic" north
+!  (south) if the eastward (westward) tangent to the local CGM latitude
+!  points south (north) from the local geographic latitude.
 
-C  Written by Therese Moretto in August 1994 (revised by V. Papitashvili
-C  in January 1999).
-C  *********************************************************************
+!  Written by Therese Moretto in August 1994 (revised by V. Papitashvili
+!  in January 1999).
+!  *********************************************************************
 
       real cgmgla,cgmglo,dfridr
       logical cr360,cr0
@@ -1269,9 +1269,9 @@ C  *********************************************************************
 
       common/cgmgeo/clat,cr360,cr0,rh
 
-C  Ignore points which nearly coincide with the geographic or CGM poles
-C  within 0.01 degree in latitudes; this also takes care if SLA or CLA
-C  are dummy values (e.g., 999.99)
+!  Ignore points which nearly coincide with the geographic or CGM poles
+!  within 0.01 degree in latitudes; this also takes care if SLA or CLA
+!  are dummy values (e.g., 999.99)
 
       if(abs(sla).ge.89.99.or.abs(cla).ge.89.99.or.
      +   abs(sla).lt.30.) then
@@ -1279,32 +1279,32 @@ C  are dummy values (e.g., 999.99)
         return
       endif
 
-C  Initialize values for the cgmglo and cgmgla functions
+!  Initialize values for the cgmglo and cgmgla functions
 
 	    rh = rr
         clat = cla
        cr360 = .false.
          cr0 = .false.
 
-C  Judge if SLO may be crossing the 360-0 limit. If geocentric
-C  longitude of the location is larger than 270 deg, then cr360 is
-C  set "true"; if it is less than 90 deg, then cr0 is set "true".
+!  Judge if SLO may be crossing the 360-0 limit. If geocentric
+!  longitude of the location is larger than 270 deg, then cr360 is
+!  set "true"; if it is less than 90 deg, then cr0 is set "true".
 
        if(slo.ge.270.) cr360 = .true.
        if(slo.le. 90.)   cr0 = .true.
 
-C  An initial stepsize (in degrees)
+!  An initial stepsize (in degrees)
 
        step = 10.
 
-C  Note that in the near-pole region the functions CGMGLA and CGMGLO
-C  could be called from DFRIDR with the CGM latitudes exceeded 90 or
-C  -90 degrees (e.g., 98 or -98) when STEP is added or subtracted to a
-C  given CGM latitude (CLA). This does not produce discontinuities in
-C  the functions because GEOCOR calculates GEOLAT smoothly for the
-C  points lying behind the pole (e.g., as for 82 or - 82 deg. in the
-C  above-mentioned example). However, it could be discontinuity in
-C  GEOLON if |GEOLAT| = 90 deg. - see CGMGLO for details.
+!  Note that in the near-pole region the functions CGMGLA and CGMGLO
+!  could be called from DFRIDR with the CGM latitudes exceeded 90 or
+!  -90 degrees (e.g., 98 or -98) when STEP is added or subtracted to a
+!  given CGM latitude (CLA). This does not produce discontinuities in
+!  the functions because GEOCOR calculates GEOLAT smoothly for the
+!  points lying behind the pole (e.g., as for 82 or - 82 deg. in the
+!  above-mentioned example). However, it could be discontinuity in
+!  GEOLON if |GEOLAT| = 90 deg. - see CGMGLO for details.
 
            hom = dfridr(cgmgla,clo,step,err1)
 
@@ -1318,14 +1318,14 @@ C  GEOLON if |GEOLAT| = 90 deg. - see CGMGLO for details.
 
       return
       end
-C
-C
+!
+!
       real function cgmgla(clon)
-C  *********************************************************************
-C  This function returns the geocentric latitude as a function of CGM
-C  longitude with the CGM latitude held in common block CGMGEO.
-C  Essentially this function just calls the subroutine CORGEO.
-C  *********************************************************************
+!  *********************************************************************
+!  This function returns the geocentric latitude as a function of CGM
+!  longitude with the CGM latitude held in common block CGMGEO.
+!  Essentially this function just calls the subroutine CORGEO.
+!  *********************************************************************
 
       logical cr360,cr0
       common/cgmgeo/cclat,cr360,cr0,rh
@@ -1338,15 +1338,15 @@ C  *********************************************************************
 
       return
       end
-C
-C
+!
+!
       real function cgmglo(clon)
-C *********************************************************************
-C  Same as the function CGMGLA but this returns the geocentric
-C  longitude. If cr360 is true, geolon+360 deg is returned when geolon
-C  is less than 90 deg. If cr0 is true, geolon-360 deg is returned
-C  when geolon is larger than 270 degrees.
-C *********************************************************************
+! *********************************************************************
+!  Same as the function CGMGLA but this returns the geocentric
+!  longitude. If cr360 is true, geolon+360 deg is returned when geolon
+!  is less than 90 deg. If cr0 is true, geolon-360 deg is returned
+!  when geolon is larger than 270 degrees.
+! *********************************************************************
 
       logical cr360,cr0
 
@@ -1358,8 +1358,8 @@ C *********************************************************************
    1   continue
        call CORGEO(geolat,geolon,rr,dla,dlo,cclat,clon,pmi)
 
-C  Geographic longitude geolon could be any number (e.g., discontinued)
-C  when geolat is the geographic pole
+!  Geographic longitude geolon could be any number (e.g., discontinued)
+!  when geolat is the geographic pole
 
 	 if(abs(geolat).ge.89.99) then
 	       clon = clon - 0.01
@@ -1378,13 +1378,13 @@ C  when geolat is the geographic pole
 
       return
       end
-C
-C
+!
+!
       FUNCTION DFRIDR(func,x,h,err)
-C **********************************************************************
-C  Numerical Recipes Fortran 77 Version 2.07
-C  Copyright (c) 1986-1995 by Numerical Recipes Software
-C **********************************************************************
+! **********************************************************************
+!  Numerical Recipes Fortran 77 Version 2.07
+!  Copyright (c) 1986-1995 by Numerical Recipes Software
+! **********************************************************************
 
       INTEGER NTAB
       REAL dfridr,err,h,x,func,CON,CON2,BIG,SAFE
@@ -1422,26 +1422,26 @@ C **********************************************************************
 
       return
       END
-C
-C
+!
+!
       real function AZM_ANG(sla,slo,cla,pla,plo)
-C  *********************************************************************
-C  Computation of an angle between the north geographic meridian and
-C  direction to the North (South) CGM pole: positive azimuth is
-C  measured East (West) from geographic meridian, i.e., the angle is
-C  measured between the great-circle arc directions to the geographic
-C  and CGM poles. In this case the geomagnetic field components in
-C  XYZ (NEV) system can be converted into the CGM system in both
-C  hemispheres as:
-C                           XM = X cos(alf) + Y sin(alf)
-C                           YM =-X sin(alf) + Y cos(alf)
+!  *********************************************************************
+!  Computation of an angle between the north geographic meridian and
+!  direction to the North (South) CGM pole: positive azimuth is
+!  measured East (West) from geographic meridian, i.e., the angle is
+!  measured between the great-circle arc directions to the geographic
+!  and CGM poles. In this case the geomagnetic field components in
+!  XYZ (NEV) system can be converted into the CGM system in both
+!  hemispheres as:
+!                           XM = X cos(alf) + Y sin(alf)
+!                           YM =-X sin(alf) + Y cos(alf)
 
-C  Written by V. O. Papitashvili in mid-1980s; revised in February 1999
+!  Written by V. O. Papitashvili in mid-1980s; revised in February 1999
 
-C  Ignore points which nearly coincide with the geographic or CGM poles
-C  within 0.01 degree in latitudes; this also takes care if SLA or CLA
-C  are dummy values (e.g., 999.99)
-C  *********************************************************************
+!  Ignore points which nearly coincide with the geographic or CGM poles
+!  within 0.01 degree in latitudes; this also takes care if SLA or CLA
+!  are dummy values (e.g., 999.99)
+!  *********************************************************************
 
       if(abs(sla).ge.89.99.or.abs(cla).ge.89.99) then
         AZM_ANG = 999.99
@@ -1476,30 +1476,30 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE MLTUT(SLA,SLO,CLA,PLA,PLO,UT)
-C  *********************************************************************
-C  Calculates the MLT midnight in UT hours
-C  Definition of the MLT midnight (MLTMN) here is different from the
-C  approach described elsewhere. This definition does not take into
-C  account the geomagnetic meridian of the subsolar point which causes
-C  seasonal variations of the MLTMN in UT time. The latter approach is
-C  perfectly applicable to the dipole or eccentric dipole magnetic
-C  coordinates but it fails with the CGM coordinates because there are
-C  forbidden areas near the geomagnetic equator where CGM coordinates
-C  cannot be calculated by definition [e.g., Gustafsson et al., JATP,
-C  54, 1609, 1992].
-C  In this code the MLT midnight is defined as location of a given point
-C  on (or above) the Earth's surface strictly behind the North (South)
-C  CGM pole in such the Sun, the pole, and the point are lined up.
-C  This approach was originally proposed and coded by Boris Belov
-C  sometime in the beginning of 1980s; here it is slightly edited by
-C  Vladimir Papitashvili in February 1999.
-C  Ignore points which nearly coincide with the geographic or CGM poles
-C  within 0.01 degree in latitudes; this also takes care if SLA or CLA
-C  are dummy values (e.g., 999.99)
-C  *********************************************************************
+!  *********************************************************************
+!  Calculates the MLT midnight in UT hours
+!  Definition of the MLT midnight (MLTMN) here is different from the
+!  approach described elsewhere. This definition does not take into
+!  account the geomagnetic meridian of the subsolar point which causes
+!  seasonal variations of the MLTMN in UT time. The latter approach is
+!  perfectly applicable to the dipole or eccentric dipole magnetic
+!  coordinates but it fails with the CGM coordinates because there are
+!  forbidden areas near the geomagnetic equator where CGM coordinates
+!  cannot be calculated by definition [e.g., Gustafsson et al., JATP,
+!  54, 1609, 1992].
+!  In this code the MLT midnight is defined as location of a given point
+!  on (or above) the Earth's surface strictly behind the North (South)
+!  CGM pole in such the Sun, the pole, and the point are lined up.
+!  This approach was originally proposed and coded by Boris Belov
+!  sometime in the beginning of 1980s; here it is slightly edited by
+!  Vladimir Papitashvili in February 1999.
+!  Ignore points which nearly coincide with the geographic or CGM poles
+!  within 0.01 degree in latitudes; this also takes care if SLA or CLA
+!  are dummy values (e.g., 999.99)
+!  *********************************************************************
 
       if(abs(sla).ge.89.99.or.abs(cla).ge.89.99) then
         UT = 99.99
@@ -1517,7 +1517,7 @@ C  *********************************************************************
      +  f6.2,' are not in the same hemisphere: MLTMN is incorrect!')
       endif
 
-C  Solve the spherical triangle
+!  Solve the spherical triangle
 
          QQ = PLO*RAD
         CFF = 90. - abs(PLA)
@@ -1555,19 +1555,19 @@ C  Solve the spherical triangle
 
       RETURN
       END
-C
-C
+!
+!
         SUBROUTINE MFC(SLA,SLO,R,H,D,Z)
-C  *********************************************************************
-C  Computation of the IGRF magnetic field components
-C  Extracted as a subroutine from the earlier version of GEO-CGM.FOR
-C  V. Papitashvili, February 1999
-C  *********************************************************************
+!  *********************************************************************
+!  Computation of the IGRF magnetic field components
+!  Extracted as a subroutine from the earlier version of GEO-CGM.FOR
+!  V. Papitashvili, February 1999
+!  *********************************************************************
 
       COMMON /NM/NM
       COMMON /IYR/IYR
 
-C  This takes care if SLA or CLA are dummy values (e.g., 999.99)
+!  This takes care if SLA or CLA are dummy values (e.g., 999.99)
 
       if(sla.ge.999.) then
           X = 99999.
@@ -1580,7 +1580,7 @@ C  This takes care if SLA or CLA are dummy values (e.g., 999.99)
         return
       endif
 
-C  Computation of all geomagnetic field components
+!  Computation of all geomagnetic field components
         RLA = (90.-SLA)*0.017453293
         RLO = SLO*0.017453293
        CALL IGRF(IYR,NM,R,RLA,RLO,BR,BT,BF)
@@ -1593,30 +1593,30 @@ C  Computation of all geomagnetic field components
           F = SQRT(H**2+Z**2)
         RETURN
         END
-C
-C
+!
+!
       SUBROUTINE FTPRNT(RH,SLA,SLO,CLA,CLO,ACLA,ACLO,SLAF,SLOF,RF)
-C  *********************************************************************
-C  Calculation of the magnetic field line footprint at the Earth's
-C  (or any higher) surface.
-C  Extracted as a subroutine from the earlier version of GEO-CGM.FOR by
-C  V. Papitashvili in February 1999 but then the subroutine was revised
-C  to obtain the Altitude Adjusted CGM coordinates. The AACGM approach
-C  is proposed by Kile Baker of the JHU/APL, see their World Wide Web
-C  site http://sd-www.jhuapl.edu/RADAR/AACGM/ for details.
-C  If RF = 1-Re (i.e., at the Earth's surface), then the footprint
-C  location is defined as the Altitude Adjusted (AA) CGM coordinates
-C  for a given point (ACLA, ACLO).
-C
-C  If RF = 1.xx Re (i.e., at any altitude above or below the starting
-C  point), then the conjunction between these two points can be found
-C  along the field line.
-C  *********************************************************************
+!  *********************************************************************
+!  Calculation of the magnetic field line footprint at the Earth's
+!  (or any higher) surface.
+!  Extracted as a subroutine from the earlier version of GEO-CGM.FOR by
+!  V. Papitashvili in February 1999 but then the subroutine was revised
+!  to obtain the Altitude Adjusted CGM coordinates. The AACGM approach
+!  is proposed by Kile Baker of the JHU/APL, see their World Wide Web
+!  site http://sd-www.jhuapl.edu/RADAR/AACGM/ for details.
+!  If RF = 1-Re (i.e., at the Earth's surface), then the footprint
+!  location is defined as the Altitude Adjusted (AA) CGM coordinates
+!  for a given point (ACLA, ACLO).
+!
+!  If RF = 1.xx Re (i.e., at any altitude above or below the starting
+!  point), then the conjunction between these two points can be found
+!  along the field line.
+!  *********************************************************************
 
       COMMON /NM/NM
       COMMON /IYR/IYR
 
-C  This takes care if SLA or CLA are dummy values (e.g., 999.99)
+!  This takes care if SLA or CLA are dummy values (e.g., 999.99)
 
       if(sla.gt.999..or.cla.gt.999.or.RF.eq.RH) then
         ACLA = 999.99
@@ -1626,7 +1626,7 @@ C  This takes care if SLA or CLA are dummy values (e.g., 999.99)
         return
       endif
 
-C  Defining the Altitude Adjusted CGM coordinates for a given point
+!  Defining the Altitude Adjusted CGM coordinates for a given point
 
         COL = (90. - CLA)*0.017453293
         SN2 = (SIN(COL))**2
@@ -1641,23 +1641,23 @@ C  Defining the Altitude Adjusted CGM coordinates for a given point
 
         IF(SLAF.LT.999.) RETURN
 
-C  Tracing the magnetic field line down to the Earth's surface at low
-C  latitudes if CORGEO failed to calculate geocentric coordinates SLAF
-C  and SLOF
+!  Tracing the magnetic field line down to the Earth's surface at low
+!  latitudes if CORGEO failed to calculate geocentric coordinates SLAF
+!  and SLOF
 
         IF(SN2.LT.0.0000001) SN2 = 0.0000001
           RL = RH/SN2
         FRAC = 0.03/(1.+3./(RL-0.6))
 
-C  Checking direction of the magnetic field-line, so the step along
-C  the field-line will go down, to the Earth surface
+!  Checking direction of the magnetic field-line, so the step along
+!  the field-line will go down, to the Earth surface
 
         IF(CLA.GE.0.) FRAC = -FRAC
           DS = RH*FRAC
 
   250   CONTINUE
 
-C  Start from an initial point
+!  Start from an initial point
 
            R = RH
         RSLA = (90. - SLA)*0.0174533
@@ -1698,27 +1698,27 @@ C  Start from an initial point
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE GEOLOW(SLAR,SLOR,RH,CLAR,CLOR,RBM,SLAC,SLOC)
-C  *********************************************************************
-C  Calculates CGM coordinates from geocentric ones at low latitudes
-C  where the DGRF/IGRF magnetic field lines may never cross the dipole
-C  equatorial plane and, therefore, the definition of CGM coordinates
-C  becomes invalid.
-c
-C  The code is written by Natalia and Vladimir Papitashvili as a part
-C  of the earlier versions of GEO-CGM.FOR; extracted as a subroutine by
-C  V. Papitashvili in February 1999.
-c
-C  Apr 11, 2001  GEOLOW is modified to account for interpolation of
-C                CGM meridians near equator across the 360/0 boundary
-c
-C  See the paper by  Gustafsson, G., N. E. Papitashvili, and V. O.
-C  Papitashvili, A revised corrected geomagnetic coordinate system for
-C  Epochs 1985 and 1990 [J. Atmos. Terr. Phys., 54, 1609-1631, 1992]
-C  for detailed description of the B-min approach utilized here.
-C  *********************************************************************
+!  *********************************************************************
+!  Calculates CGM coordinates from geocentric ones at low latitudes
+!  where the DGRF/IGRF magnetic field lines may never cross the dipole
+!  equatorial plane and, therefore, the definition of CGM coordinates
+!  becomes invalid.
+!
+!  The code is written by Natalia and Vladimir Papitashvili as a part
+!  of the earlier versions of GEO-CGM.FOR; extracted as a subroutine by
+!  V. Papitashvili in February 1999.
+!
+!  Apr 11, 2001  GEOLOW is modified to account for interpolation of
+!                CGM meridians near equator across the 360/0 boundary
+!
+!  See the paper by  Gustafsson, G., N. E. Papitashvili, and V. O.
+!  Papitashvili, A revised corrected geomagnetic coordinate system for
+!  Epochs 1985 and 1990 [J. Atmos. Terr. Phys., 54, 1609-1631, 1992]
+!  for detailed description of the B-min approach utilized here.
+!  *********************************************************************
 
       COMMON /NM/NM
       COMMON /IYR/IYR
@@ -1726,7 +1726,7 @@ C  *********************************************************************
       DIMENSION BC(2),ARLAT(181),ARLON(181)
       REAL*8 BM,B2,B3
 
-C  This takes care if SLA is a dummy value (e.g., 999.99)
+!  This takes care if SLA is a dummy value (e.g., 999.99)
 
       if(slar.gt.999.) then
         CLAR = 999.99
@@ -1737,13 +1737,13 @@ C  This takes care if SLA is a dummy value (e.g., 999.99)
         return
       endif
 
-C  HH is an error (nT) to determine B-min along the magnetic field line
+!  HH is an error (nT) to determine B-min along the magnetic field line
 
        DHH = 0.5
 
-C  Filling the work arrays of CGM latitudes and longitudes with 999.99
-C  Note that at certain geocentric longitudes in the very near-equator
-C  region no "geomagnetic equator" can be defined at all.
+!  Filling the work arrays of CGM latitudes and longitudes with 999.99
+!  Note that at certain geocentric longitudes in the very near-equator
+!  region no "geomagnetic equator" can be defined at all.
 
           DO J=61,121
             ARLAT(J) = 999.99
@@ -1754,16 +1754,16 @@ C  region no "geomagnetic equator" can be defined at all.
 
            NDIR=0
 
-C  Finding the geomagnetic equator as a projection of the B-min point
-C  found for the field lines started from the last latitude in each
-C  hemisphere where the CGM coordinates were obtained from geocentric
-C  ones (GEO --> CGM). First the CGM coordinates are calculated in the
-C  Northern (NDIR=0) and then in the Southern hemispheres (NDIR=1)
+!  Finding the geomagnetic equator as a projection of the B-min point
+!  found for the field lines started from the last latitude in each
+!  hemisphere where the CGM coordinates were obtained from geocentric
+!  ones (GEO --> CGM). First the CGM coordinates are calculated in the
+!  Northern (NDIR=0) and then in the Southern hemispheres (NDIR=1)
 
   53     IF(NDIR.EQ.0) THEN
 
-C  Program works from 30 deg. latitude down to the geographic equator
-C  in the Northern Hemisphere
+!  Program works from 30 deg. latitude down to the geographic equator
+!  in the Northern Hemisphere
 
              DO JC = 61,91
                SLA = 90.-(JC-1)
@@ -1780,8 +1780,8 @@ C  in the Northern Hemisphere
 
                        ELSE
 
-C  Program works from -30 deg. latitude down to the geographic equator
-C  in the Southern Hemisphere
+!  Program works from -30 deg. latitude down to the geographic equator
+!  in the Southern Hemisphere
 
              DO JC = 121,92,-1
                SLA = 90.-(JC-1)
@@ -1798,8 +1798,8 @@ C  in the Southern Hemisphere
 
   57   CONTINUE
 
-C  Finding last geographic latitudes along SLO where CGM coordinates
-C  can be calculated
+!  Finding last geographic latitudes along SLO where CGM coordinates
+!  can be calculated
 
          n999=0
          ndir=0
@@ -1825,8 +1825,8 @@ C  can be calculated
          enddo
  59     continue
 
-C  If there is no points with 999.99 found along the SLO meridian,
-C  then the IHEM loop will start from 3; otherwise it starts from 1
+!  If there is no points with 999.99 found along the SLO meridian,
+!  then the IHEM loop will start from 3; otherwise it starts from 1
 
             if(n999.eq.0) then
               ih = 3
@@ -1835,10 +1835,10 @@ C  then the IHEM loop will start from 3; otherwise it starts from 1
               ih = 1
             endif
 
-C  Interpolation of the appropriate CGM longitudes between last
-C  geocentric latitudes along SLO where CGM coordinates were defined
-C (modified by Freddy Christiansen of DMI to account for interpolation
-C  across the 360/0 boundary - April 11, 2001)
+!  Interpolation of the appropriate CGM longitudes between last
+!  geocentric latitudes along SLO where CGM coordinates were defined
+! (modified by Freddy Christiansen of DMI to account for interpolation
+!  across the 360/0 boundary - April 11, 2001)
 
           rdel = jcs - jcn
           if(rdel.eq.0.) then
@@ -1861,13 +1861,13 @@ C  across the 360/0 boundary - April 11, 2001)
 
    31   continue
 
-C  Finding the CGM equator at SLO on the sphere with radius RH
+!  Finding the CGM equator at SLO on the sphere with radius RH
 
             NOBM = 0
          do ihem = ih,3
               RM = RH
 
-C  Defining the real equator point from the Northern Hemisphere
+!  Defining the real equator point from the Northern Hemisphere
 
          if(ihem.eq.1) then
              CLA = rnlat
@@ -1875,7 +1875,7 @@ C  Defining the real equator point from the Northern Hemisphere
             SLAN = SLA
          endif
 
-C  Defining the real equator point from the Southern Hemisphere
+!  Defining the real equator point from the Southern Hemisphere
 
          if(ihem.eq.2) then
              CLA = rslat
@@ -1883,14 +1883,14 @@ C  Defining the real equator point from the Southern Hemisphere
             SLAS = SLA
          endif
 
-C  Defining the apex of the current magnetic field line
+!  Defining the apex of the current magnetic field line
 
          if(ihem.eq.3) then
                CLA = 0.
                SLA = SLAR
            endif
 
-C  Here CLA is used only to calculate FRAC
+!  Here CLA is used only to calculate FRAC
 
         COL = (90. - CLA)*0.017453293
         SLM = (90. - SLA)*0.017453293
@@ -1911,7 +1911,7 @@ C  Here CLA is used only to calculate FRAC
 
     5   CONTINUE
 
-C  Keep two consequently computed points to define B-min
+!  Keep two consequently computed points to define B-min
 
         DO 7 I = 1,2
             DD = DS
@@ -1926,8 +1926,8 @@ C  Keep two consequently computed points to define B-min
         CALL SPHCAR(RM,SLM,SLL,XGEO,YGEO,ZGEO,-1)
         CALL IGRF(IYR,NM,RM,SLM,SLL,BR,BT,BF)
 
-C  Go and compute the conjugate point if no B-min was found at this
-C  magnetic field line (could happen at very near geomagnetic equator)
+!  Go and compute the conjugate point if no B-min was found at this
+!  magnetic field line (could happen at very near geomagnetic equator)
 
           if(RM.LT.RH) then
             NOBM = 1
@@ -1969,7 +1969,7 @@ C  magnetic field line (could happen at very near geomagnetic equator)
         if(ihem.eq.1) rlan = rla
         if(ihem.eq.2) rlas = rla
 
-C  Computation of the magnetically conjugate point at low latitudes
+!  Computation of the magnetically conjugate point at low latitudes
 
    54  continue
         if(ihem.eq.3) then
@@ -2001,7 +2001,7 @@ C  Computation of the magnetically conjugate point at low latitudes
            ENDIF
         endif
 
-C  End of loop IHEM
+!  End of loop IHEM
    77 continue
        enddo
 
@@ -2009,8 +2009,8 @@ C  End of loop IHEM
 
            IF (NOBM.EQ.1) THEN
 
-C  Interpolation of CGM latitudes if there is no B-min at this
-C  magnetic field line
+!  Interpolation of CGM latitudes if there is no B-min at this
+!  magnetic field line
 
 	     rdel = jcs - jcn
            if(rdel.eq.0.) then
@@ -2029,11 +2029,11 @@ C  magnetic field line
 
                                         ELSE
 
-C  Geocentric latitude of the CGM equator
+!  Geocentric latitude of the CGM equator
 
 	     rla = (rlan + rlas)/2.
 
-C  Interpolation of the CGM latitudes in the Northern hemisphere
+!  Interpolation of the CGM latitudes in the Northern hemisphere
 
 	    rdel = SLAN - rla
            if(rdel.eq.0.) then
@@ -2048,7 +2048,7 @@ C  Interpolation of the CGM latitudes in the Northern hemisphere
                    arlat(jc) = rnlat - delat*jdel
              enddo
 
-C  Interpolation of the CGM latitudes in the Southern hemisphere
+!  Interpolation of the CGM latitudes in the Southern hemisphere
 
 	    rdel = SLAS - rla
            if(rdel.eq.0.) then
@@ -2066,8 +2066,8 @@ C  Interpolation of the CGM latitudes in the Southern hemisphere
 
    91 continue
 
-C  Defining by interpolation the exact values of the CGM latitude
-C  and longitude between two adjacent values
+!  Defining by interpolation the exact values of the CGM latitude
+!  and longitude between two adjacent values
 
 	         L1 = 90. - SLAR + 1.
          IF(SLAR.LT.0.) THEN
@@ -2083,19 +2083,19 @@ C  and longitude between two adjacent values
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE CORGEO(SLA,SLO,RH,DLA,DLO,CLA,CLO,PMI)
-C  *********************************************************************
-C  Calculates geocentric coordinates from corrected geomagnetic ones.
-C  The code is written by Vladimir Popov and Vladimir Papitashvili
-C  in mid-1980s; revised by V. Papitashvili in February 1999
-C  *********************************************************************
+!  *********************************************************************
+!  Calculates geocentric coordinates from corrected geomagnetic ones.
+!  The code is written by Vladimir Popov and Vladimir Papitashvili
+!  in mid-1980s; revised by V. Papitashvili in February 1999
+!  *********************************************************************
 
       COMMON /NM/NM
       COMMON /IYR/IYR
 
-C  This takes care if CLA is a dummy value (e.g., 999.99)
+!  This takes care if CLA is a dummy value (e.g., 999.99)
 
 	    jc = 0
       if(abs(cla).lt.0.1) then
@@ -2124,16 +2124,16 @@ C  This takes care if CLA is a dummy value (e.g., 999.99)
         SN = SIN(COL)
        SN2 = SN*SN
 
-C  The CGM latitude should be at least 0.01 deg. away of the CGM pole
+!  The CGM latitude should be at least 0.01 deg. away of the CGM pole
 
       IF(SN2.LT.0.000000003) SN2 = 0.000000003
-C      RFI = 1./SN2
+!      RFI = 1./SN2
        RFI = RH/SN2
        PMI = RFI
       IF(PMI.GT.99.999) PMI = 999.99
          AA10 = R/RFI
 
-C  RFI = R if COL = 90 deg.
+!  RFI = R if COL = 90 deg.
 
         IF(RFI.LE.R) GOTO 1
         SAA = AA10/(1.-AA10)
@@ -2164,7 +2164,7 @@ C  RFI = R if COL = 90 deg.
          Z1 = Z
          GOTO 5
 
-C  Define intersection with the start surface
+!  Define intersection with the start surface
 
     7   DR1 = ABS(RH - R1)
         DR0 = ABS(RH - R)
@@ -2185,11 +2185,11 @@ C  Define intersection with the start surface
 
         NM = NG
 
-C  Because CORGEO cannot check if the CGM --> GEO transformation is
-C  performed correctly in the equatorial area (that is, where the IGRF
-C  field line may never cross the dipole equatorial plane). Therefore,
-C  the backward check is required for geocentric latitudes lower than
-C  30 degrees (see the paper referenced in GEOLOW)
+!  Because CORGEO cannot check if the CGM --> GEO transformation is
+!  performed correctly in the equatorial area (that is, where the IGRF
+!  field line may never cross the dipole equatorial plane). Therefore,
+!  the backward check is required for geocentric latitudes lower than
+!  30 degrees (see the paper referenced in GEOLOW)
 
       IF(ABS(SLA).LT.30..OR.ABS(CLA).LT.30.) THEN
           CALL GEOCOR(SLA,SLO,RH,DLS,DLS,CLAS,CLOS,PMS)
@@ -2208,19 +2208,19 @@ C  30 degrees (see the paper referenced in GEOLOW)
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE GEOCOR(SLA,SLO,RH,DLA,DLO,CLA,CLO,PMI)
-C  *********************************************************************
-C  Calculates corrected geomagnetic coordinates from geocentric ones
-C  The code is written by Vladimir Popov and Vladimir Papitashvili
-C  in mid-1980s; revised by V. Papitashvili in February 1999
-C  *********************************************************************
+!  *********************************************************************
+!  Calculates corrected geomagnetic coordinates from geocentric ones
+!  The code is written by Vladimir Popov and Vladimir Papitashvili
+!  in mid-1980s; revised by V. Papitashvili in February 1999
+!  *********************************************************************
 
       COMMON /NM/NM
       COMMON /IYR/IYR
 
-C  This takes care if SLA is a dummy value (e.g., 999.99)
+!  This takes care if SLA is a dummy value (e.g., 999.99)
 
       if(sla.gt.999.) then
         CLA = 999.99
@@ -2250,11 +2250,11 @@ C  This takes care if SLA is a dummy value (e.g., 999.99)
 
       IF(SZM.LT.0.) FRAC = -FRAC
 
-C  Error to determine the dipole equtorial plane: aprox. 0.5 arc min
+!  Error to determine the dipole equtorial plane: aprox. 0.5 arc min
 
         HHH = 0.0001571
 
-C  Trace the IGRF magnetic field line to the dipole equatorial plane
+!  Trace the IGRF magnetic field line to the dipole equatorial plane
 
    1     DS = R*FRAC
    3     NM = (1. + 9./R) + 0.5
@@ -2266,12 +2266,12 @@ C  Trace the IGRF magnetic field line to the dipole equatorial plane
       CALL GEOMAG(X,Y,Z,XM,YM,ZM,1,IYR)
       CALL SPHCAR(R,C,S,XM,YM,ZM,-1)
 
-C  As tracing goes above (RH+10_Re), use the dipole field line
+!  As tracing goes above (RH+10_Re), use the dipole field line
 
         IF(R.GT.10.+RH) GOTO 9
 
-C  If the field line returns to the start surface without crossing the
-C  dipole equatorial plane, no CGM coordinates can be calculated
+!  If the field line returns to the start surface without crossing the
+!  dipole equatorial plane, no CGM coordinates can be calculated
 
         IF(R.LE.RH) GOTO 11
 
@@ -2298,7 +2298,7 @@ C  dipole equatorial plane, no CGM coordinates can be calculated
        SSLA = 90. - CLA
        SSLA = SSLA*0.017453293
          SN = SIN(SSLA)
-C       PMI = 1/(SN*SN)
+!       PMI = 1/(SN*SN)
         PMI = RH/(SN*SN)
         GOTO 13
 
@@ -2310,15 +2310,15 @@ C       PMI = 1/(SN*SN)
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE SHAG(X,Y,Z,DS)
-C  *********************************************************************
-C  Similar to SUBR STEP from GEOPACK-1996 but SHAG takes into account
-C  only internal sources
-C  The code is re-written from Tsyganenko's subroutine STEP by
-C  Natalia and Vladimir Papitashvili in mid-1980s
-C  *********************************************************************
+!  *********************************************************************
+!  Similar to SUBR STEP from GEOPACK-1996 but SHAG takes into account
+!  only internal sources
+!  The code is re-written from Tsyganenko's subroutine STEP by
+!  Natalia and Vladimir Papitashvili in mid-1980s
+!  *********************************************************************
 
       COMMON/A5/DS3
 
@@ -2338,15 +2338,15 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE RIGHT(X,Y,Z,R1,R2,R3)
-C  *********************************************************************
-C  Similar to SUBR RHAND from GEOPACK-1996 but RIGHT takes into account
-C  only internal sources
-C  The code is re-written from Tsyganenko's subroutine RHAND
-C  by Natalia and Vladimir Papitashvili in mid-1980s
-C  *********************************************************************
+!  *********************************************************************
+!  Similar to SUBR RHAND from GEOPACK-1996 but RIGHT takes into account
+!  only internal sources
+!  The code is re-written from Tsyganenko's subroutine RHAND
+!  by Natalia and Vladimir Papitashvili in mid-1980s
+!  *********************************************************************
 
       COMMON /A5/DS3
       COMMON /NM/NM
@@ -2362,44 +2362,44 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
 	SUBROUTINE IGRF(IY,NM,R,T,F,BR,BT,BF)
-C  *********************************************************************
-C     CALCULATES COMPONENTS OF THE MAIN (INTERNAL) GEOMAGNETIC FIELD IN SPHERICAL
-C     GEOGRAPHICAL COORDINATE SYSTEM, USING IAGA INTERNATIONAL GEOMAGNETIC REFERENCE
-C     MODEL COEFFICIENTS (e.g., http://www.ngdc.noaa.gov/IAGA/wg8/igrf2000.html)
-C
-C     UPDATING THE COEFFICIENTS TO A GIVEN EPOCH IS MADE AUTOMATICALLY UPON THE FIRST
-C     CALL AND AFTER EVERY CHANGE OF THE PARAMETER IY.
-C
-C-----INPUT PARAMETERS:
-C
-C     IY  -  YEAR NUMBER (FOUR-DIGIT; 1965 &LE IY &LE 2005)
-C     NM  -  HIGHEST ORDER OF SPHERICAL HARMONICS IN THE SCALAR POTENTIAL (NM &LE 10)
-C     R,T,F -  SPHERICAL COORDINATES (RADIUS R IN UNITS RE=6371.2 KM, GEOGRAPHIC
-C                COLATITUDE  T  AND LONGITUDE  F  IN RADIANS)
-C
-C-----OUTPUT PARAMETERS:
-C
-C     BR,BT,BF - SPHERICAL COMPONENTS OF THE MAIN GEOMAGNETIC FIELD IN NANOTESLA
-C
-C     LAST MODIFICATION:  JANUARY 5, 2001, BY: N. A. TSYGANENKO
-C     THE CODE WAS MODIFIED TO ACCEPT DATES THROUGH 2005.
-C     IT HAS ALSO BEEN SLIGHTLY SIMPLIFIED BY TAKING OUT SOME REDUNDANT STATEMENTS,
-C     AND A "SAVE" STATEMENT WAS ADDED, TO AVOID POTENTIAL PROBLEMS WITH SOME
-C     FORTRAN COMPILERS.
-C
-C     MODIFIED TO DGRF TO ACCEPT YEARS FROM 1900 THROUGH 2005
-C     BY SCOTT BOARDSEN, NASA GSFC, OCTOBER 2004
+!  *********************************************************************
+!     CALCULATES COMPONENTS OF THE MAIN (INTERNAL) GEOMAGNETIC FIELD IN SPHERICAL
+!     GEOGRAPHICAL COORDINATE SYSTEM, USING IAGA INTERNATIONAL GEOMAGNETIC REFERENCE
+!     MODEL COEFFICIENTS (e.g., http://www.ngdc.noaa.gov/IAGA/wg8/igrf2000.html)
+!
+!     UPDATING THE COEFFICIENTS TO A GIVEN EPOCH IS MADE AUTOMATICALLY UPON THE FIRST
+!     CALL AND AFTER EVERY CHANGE OF THE PARAMETER IY.
+!
+!-----INPUT PARAMETERS:
+!
+!     IY  -  YEAR NUMBER (FOUR-DIGIT; 1965 &LE IY &LE 2005)
+!     NM  -  HIGHEST ORDER OF SPHERICAL HARMONICS IN THE SCALAR POTENTIAL (NM &LE 10)
+!     R,T,F -  SPHERICAL COORDINATES (RADIUS R IN UNITS RE=6371.2 KM, GEOGRAPHIC
+!                COLATITUDE  T  AND LONGITUDE  F  IN RADIANS)
+!
+!-----OUTPUT PARAMETERS:
+!
+!     BR,BT,BF - SPHERICAL COMPONENTS OF THE MAIN GEOMAGNETIC FIELD IN NANOTESLA
+!
+!     LAST MODIFICATION:  JANUARY 5, 2001, BY: N. A. TSYGANENKO
+!     THE CODE WAS MODIFIED TO ACCEPT DATES THROUGH 2005.
+!     IT HAS ALSO BEEN SLIGHTLY SIMPLIFIED BY TAKING OUT SOME REDUNDANT STATEMENTS,
+!     AND A "SAVE" STATEMENT WAS ADDED, TO AVOID POTENTIAL PROBLEMS WITH SOME
+!     FORTRAN COMPILERS.
+!
+!     MODIFIED TO DGRF TO ACCEPT YEARS FROM 1900 THROUGH 2005
+!     BY SCOTT BOARDSEN, NASA GSFC, OCTOBER 2004
 
-C     MODIFIED TO IGRF-10 WITH YEARS THROUGH 2010
-C     BY V. PAPITASHVILI, NOVEMBER 2005
+!     MODIFIED TO IGRF-10 WITH YEARS THROUGH 2010
+!     BY V. PAPITASHVILI, NOVEMBER 2005
 
-C     MODIFIED TO IGRF-11 WITH YEARS THROUGH 2015
-C     BY V. PAPITASHVILI, January 2011
-C
-C  *********************************************************************
+!     MODIFIED TO IGRF-11 WITH YEARS THROUGH 2015
+!     BY V. PAPITASHVILI, January 2011
+!
+!  *********************************************************************
 
       SAVE MA,IYR,G,H,REC
 
@@ -3012,28 +3012,28 @@ C  *********************************************************************
      *      0.2,     0.0,     0.0,      0.2,     0.5,     0.4,     0.1,
      *     -0.1,     0.4,     0.4/
 
-c
-c
+!
+!
       DATA MA,IYR/0,0/
 
       IF(MA.NE.1) GOTO 10
       IF(IY.NE.IYR) GOTO 30
       GOTO 130
 10    MA=1
-C
+!
       DO 20 N=1,11
          N2=2*N-1
          N2=N2*(N2-2)
          DO 20 M=1,N
             MN=N*(N-1)/2+M
 20    REC(MN)=FLOAT((N-M)*(N+M-2))/FLOAT(N2)
-C
+!
 30    IYR=IY
       IF (IYR.LT.1900) IYR=1900
       IF (IYR.GT.2015) IYR=2015
       IF (IY.NE.IYR.AND.mess) WRITE (konsol,999)IY,IYR
 
-c	include 'igrf_goto.h'
+!	include 'igrf_goto.h'
       IF (IYR .LT. 1905) GOTO 1900      !INTERPOLATE BETWEEN 1900 - 1905
       IF (IYR .LT. 1910) GOTO 1905      !INTERPOLATE BETWEEN 1905 - 1910
       IF (IYR .LT. 1915) GOTO 1910      !INTERPOLATE BETWEEN 1910 - 1915
@@ -3056,9 +3056,9 @@ c	include 'igrf_goto.h'
       IF (IYR .LT. 2000) GOTO 1995      !INTERPOLATE BETWEEN 1995 - 2000
       IF (IYR .LT. 2005) GOTO 2000      !INTERPOLATE BETWEEN 2000 - 2005
       IF (IYR .LT. 2010) GOTO 2005      !INTERPOLATE BETWEEN 2005 - 2010
-C
-C       EXTRAPOLATE BEYOND 2010:
-C
+!
+!       EXTRAPOLATE BEYOND 2010:
+!
       DT=FLOAT(IYR)-2010.
       DO 40 N=1,66
          G(N)=G2010(N)
@@ -3069,9 +3069,9 @@ C
 40    CONTINUE
       GOTO 300
 
-C       INTERPOLATE BETWEEN YEARS 
+!       INTERPOLATE BETWEEN YEARS 
 
-C INTERPOLATE BETWEEN 1900 - 1905:
+! INTERPOLATE BETWEEN 1900 - 1905:
 1900  F2=(IYR-1900)/5.
       F1=1.-F2
       DO N=1,66
@@ -3080,7 +3080,7 @@ C INTERPOLATE BETWEEN 1900 - 1905:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1905 - 1910:
+! INTERPOLATE BETWEEN 1905 - 1910:
 1905  F2=(IYR-1905)/5.
       F1=1.-F2
       DO N=1,66
@@ -3089,7 +3089,7 @@ C INTERPOLATE BETWEEN 1905 - 1910:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1910 - 1915:
+! INTERPOLATE BETWEEN 1910 - 1915:
 1910  F2=(IYR-1910)/5.
       F1=1.-F2
       DO N=1,66
@@ -3098,7 +3098,7 @@ C INTERPOLATE BETWEEN 1910 - 1915:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1915 - 1920:
+! INTERPOLATE BETWEEN 1915 - 1920:
 1915  F2=(IYR-1915)/5.
       F1=1.-F2
       DO N=1,66
@@ -3107,7 +3107,7 @@ C INTERPOLATE BETWEEN 1915 - 1920:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1920 - 1925:
+! INTERPOLATE BETWEEN 1920 - 1925:
 1920  F2=(IYR-1920)/5.
       F1=1.-F2
       DO N=1,66
@@ -3116,7 +3116,7 @@ C INTERPOLATE BETWEEN 1920 - 1925:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1925 - 1930:
+! INTERPOLATE BETWEEN 1925 - 1930:
 1925  F2=(IYR-1925)/5.
       F1=1.-F2
       DO N=1,66
@@ -3125,7 +3125,7 @@ C INTERPOLATE BETWEEN 1925 - 1930:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1930 - 1935:
+! INTERPOLATE BETWEEN 1930 - 1935:
 1930  F2=(IYR-1930)/5.
       F1=1.-F2
       DO N=1,66
@@ -3134,7 +3134,7 @@ C INTERPOLATE BETWEEN 1930 - 1935:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1935 - 1940:
+! INTERPOLATE BETWEEN 1935 - 1940:
 1935  F2=(IYR-1935)/5.
       F1=1.-F2
       DO N=1,66
@@ -3143,7 +3143,7 @@ C INTERPOLATE BETWEEN 1935 - 1940:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1940 - 1945:
+! INTERPOLATE BETWEEN 1940 - 1945:
 1940  F2=(IYR-1940)/5.
       F1=1.-F2
       DO N=1,66
@@ -3152,7 +3152,7 @@ C INTERPOLATE BETWEEN 1940 - 1945:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1945 - 1950:
+! INTERPOLATE BETWEEN 1945 - 1950:
 1945  F2=(IYR-1945)/5.
       F1=1.-F2
       DO N=1,66
@@ -3161,7 +3161,7 @@ C INTERPOLATE BETWEEN 1945 - 1950:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1950 - 1955:
+! INTERPOLATE BETWEEN 1950 - 1955:
 1950  F2=(IYR-1950)/5.
       F1=1.-F2
       DO N=1,66
@@ -3170,7 +3170,7 @@ C INTERPOLATE BETWEEN 1950 - 1955:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1955 - 1960:
+! INTERPOLATE BETWEEN 1955 - 1960:
 1955  F2=(IYR-1955)/5.
       F1=1.-F2
       DO N=1,66
@@ -3179,7 +3179,7 @@ C INTERPOLATE BETWEEN 1955 - 1960:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1960 - 1965:
+! INTERPOLATE BETWEEN 1960 - 1965:
 1960  F2=(IYR-1960)/5.
       F1=1.-F2
       DO N=1,66
@@ -3188,7 +3188,7 @@ C INTERPOLATE BETWEEN 1960 - 1965:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1965 - 1970:
+! INTERPOLATE BETWEEN 1965 - 1970:
 1965  F2=(IYR-1965)/5.
       F1=1.-F2
       DO N=1,66
@@ -3197,7 +3197,7 @@ C INTERPOLATE BETWEEN 1965 - 1970:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1970 - 1975:
+! INTERPOLATE BETWEEN 1970 - 1975:
 1970  F2=(IYR-1970)/5.
       F1=1.-F2
       DO N=1,66
@@ -3206,7 +3206,7 @@ C INTERPOLATE BETWEEN 1970 - 1975:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1975 - 1980:
+! INTERPOLATE BETWEEN 1975 - 1980:
 1975  F2=(IYR-1975)/5.
       F1=1.-F2
       DO N=1,66
@@ -3215,7 +3215,7 @@ C INTERPOLATE BETWEEN 1975 - 1980:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1980 - 1985:
+! INTERPOLATE BETWEEN 1980 - 1985:
 1980  F2=(IYR-1980)/5.
       F1=1.-F2
       DO N=1,66
@@ -3224,7 +3224,7 @@ C INTERPOLATE BETWEEN 1980 - 1985:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1985 - 1990:
+! INTERPOLATE BETWEEN 1985 - 1990:
 1985  F2=(IYR-1985)/5.
       F1=1.-F2
       DO N=1,66
@@ -3233,7 +3233,7 @@ C INTERPOLATE BETWEEN 1985 - 1990:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1990 - 1995:
+! INTERPOLATE BETWEEN 1990 - 1995:
 1990  F2=(IYR-1990)/5.
       F1=1.-F2
       DO N=1,66
@@ -3242,7 +3242,7 @@ C INTERPOLATE BETWEEN 1990 - 1995:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 1995 - 2000:
+! INTERPOLATE BETWEEN 1995 - 2000:
 1995  F2=(IYR-1995)/5.
       F1=1.-F2
       DO N=1,66
@@ -3251,7 +3251,7 @@ C INTERPOLATE BETWEEN 1995 - 2000:
       ENDDO
       GOTO 300
  
-C INTERPOLATE BETWEEN 2000 - 2005:
+! INTERPOLATE BETWEEN 2000 - 2005:
 2000  F2=(IYR-2000)/5.
       F1=1.-F2
       DO N=1,66
@@ -3260,7 +3260,7 @@ C INTERPOLATE BETWEEN 2000 - 2005:
       ENDDO
       GOTO 300
 
-C INTERPOLATE BETWEEN 2005 - 2010:
+! INTERPOLATE BETWEEN 2005 - 2010:
 2005  F2=(IYR-2005)/5.
       F1=1.-F2
       DO N=1,66
@@ -3269,8 +3269,8 @@ C INTERPOLATE BETWEEN 2005 - 2010:
       ENDDO
       GOTO 300
 
-C   COEFFICIENTS FOR A GIVEN YEAR HAVE BEEN CALCULATED; NOW MULTIPLY
-C   THEM BY SCHMIDT NORMALIZATION FACTORS:
+!   COEFFICIENTS FOR A GIVEN YEAR HAVE BEEN CALCULATED; NOW MULTIPLY
+!   THEM BY SCHMIDT NORMALIZATION FACTORS:
 
 300   S=1.
       DO 120 N=2,11
@@ -3287,9 +3287,9 @@ C   THEM BY SCHMIDT NORMALIZATION FACTORS:
             G(MNN)=G(MNN)*P
 120         H(MNN)=H(MNN)*P
 
-C     NOW CALCULATE THE FIELD COMPONENTS
-C     (IN CASE OF MULTIPLE INVOCATIONS WITH THE SAME VALUES OF IY AND NM,
-C      CALCULATIONS START RIGHT HERE):
+!     NOW CALCULATE THE FIELD COMPONENTS
+!     (IN CASE OF MULTIPLE INVOCATIONS WITH THE SAME VALUES OF IY AND NM,
+!      CALCULATIONS START RIGHT HERE):
 
 130   PP=1./R
       P=PP
@@ -3348,7 +3348,7 @@ C      CALCULATIONS START RIGHT HERE):
          BI=BI*MM
          BBF=BBF+BI
 200   CONTINUE
-C
+!
       BR=BBR
       BT=BBT
       IF(S.LT.1.E-5) GOTO 210
@@ -3358,56 +3358,56 @@ C
       BF=BBF
 
       RETURN
-C
+!
 999   FORMAT(/
      * '   IGRF: GIVEN YEAR',I5,' IS OUT OF INTERVAL 1900-2015'/,
      * '   *** CALCULATIONS WILL BE DONE FOR YEAR =',I5,' ***'/)
       END
-C
-C
+!
+!
 
       SUBROUTINE RECALC(IYR,IDAY,IHOUR,MIN,ISEC)
-C  *********************************************************************
-C  If only IYR is given then CALL RECALC(IYR,0,25,0,0)
-C  THIS IS A MODIFIED VERSION OF THE SUBROUTINE RECOMP WRITTEN BY
-C  N. A. TSYGANENKO. SINCE I WANT TO USE IT IN PLACE OF SUBROUTINE
-C  RECALC, I HAVE RENAMED THIS ROUTINE RECALC AND ELIMINATED THE
-C  ORIGINAL RECALC FROM THIS VERSION OF THE <GEOPACK.FOR> PACKAGE.
-C  THIS WAY ALL ORIGINAL CALLS TO RECALC WILL CONTINUE TO WORK WITHOUT
-C  HAVING TO CHANGE THEM TO CALLS TO RECOMP.
-C
-C  AN ALTERNATIVE VERSION OF THE SUBROUTINE RECALC FROM THE GEOPACK
-C  PACKAGE BASED ON A DIFFERENT APPROACH TO DERIVATION OF ROTATION
-C  MATRIX ELEMENTS
-C
-C  THIS SUBROUTINE WORKS BY 20% FASTER THAN RECALC AND IS EASIER TO
-C  UNDERSTAND
-C  #####################################################
-C  #  WRITTEN BY  N.A. TSYGANENKO ON DECEMBER 1, 1991  #
-C  #####################################################
-C  Modified by Mauricio Peredo, Hughes STX at NASA/GSFC Code 695,
-C  September 1992
-C
-C  Modified to accept years up to year 2000 and updated IGRF coeficients
-C     from 1945 (updated by V. Papitashvili, February 1995)
-C
-C  Modified to accept years up to 2005 (V. Papitashvili, January 2001)
-C
-C  Modified to accept years from 1900 through 2010 using the DGRF & 
-C     IGRF-10 coeficients (updated by V. Papitashvili, November 2005)
-C
-C  Modified to accept years up to 2015 (V. Papitashvili, January 2011)
-C
-C  Modified to accept years up to 2020 (D. Bilitza, October 2015)
-C
-C   OTHER SUBROUTINES CALLED BY THIS ONE: SUN
-C
-C     IYR = YEAR NUMBER (FOUR DIGITS)
-C     IDAY = DAY OF YEAR (DAY 1 = JAN 1)
-C     IHOUR = HOUR OF DAY (00 TO 23)
-C     MIN = MINUTE OF HOUR (00 TO 59)
-C     ISEC = SECONDS OF DAY(00 TO 59)
-C  *********************************************************************
+!  *********************************************************************
+!  If only IYR is given then CALL RECALC(IYR,0,25,0,0)
+!  THIS IS A MODIFIED VERSION OF THE SUBROUTINE RECOMP WRITTEN BY
+!  N. A. TSYGANENKO. SINCE I WANT TO USE IT IN PLACE OF SUBROUTINE
+!  RECALC, I HAVE RENAMED THIS ROUTINE RECALC AND ELIMINATED THE
+!  ORIGINAL RECALC FROM THIS VERSION OF THE <GEOPACK.FOR> PACKAGE.
+!  THIS WAY ALL ORIGINAL CALLS TO RECALC WILL CONTINUE TO WORK WITHOUT
+!  HAVING TO CHANGE THEM TO CALLS TO RECOMP.
+!
+!  AN ALTERNATIVE VERSION OF THE SUBROUTINE RECALC FROM THE GEOPACK
+!  PACKAGE BASED ON A DIFFERENT APPROACH TO DERIVATION OF ROTATION
+!  MATRIX ELEMENTS
+!
+!  THIS SUBROUTINE WORKS BY 20% FASTER THAN RECALC AND IS EASIER TO
+!  UNDERSTAND
+!  #####################################################
+!  #  WRITTEN BY  N.A. TSYGANENKO ON DECEMBER 1, 1991  #
+!  #####################################################
+!  Modified by Mauricio Peredo, Hughes STX at NASA/GSFC Code 695,
+!  September 1992
+!
+!  Modified to accept years up to year 2000 and updated IGRF coeficients
+!     from 1945 (updated by V. Papitashvili, February 1995)
+!
+!  Modified to accept years up to 2005 (V. Papitashvili, January 2001)
+!
+!  Modified to accept years from 1900 through 2010 using the DGRF & 
+!     IGRF-10 coeficients (updated by V. Papitashvili, November 2005)
+!
+!  Modified to accept years up to 2015 (V. Papitashvili, January 2011)
+!
+!  Modified to accept years up to 2020 (D. Bilitza, October 2015)
+!
+!   OTHER SUBROUTINES CALLED BY THIS ONE: SUN
+!
+!     IYR = YEAR NUMBER (FOUR DIGITS)
+!     IDAY = DAY OF YEAR (DAY 1 = JAN 1)
+!     IHOUR = HOUR OF DAY (00 TO 23)
+!     MIN = MINUTE OF HOUR (00 TO 59)
+!     ISEC = SECONDS OF DAY(00 TO 59)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3430,23 +3430,23 @@ C  *********************************************************************
       DATA IYE,IDE/2*0/
       IF (IYR.EQ.IYE.AND.IDAY.EQ.IDE) GOTO 5
 
-C  IYE AND IDE ARE THE CURRENT VALUES OF YEAR AND DAY NUMBER
+!  IYE AND IDE ARE THE CURRENT VALUES OF YEAR AND DAY NUMBER
 
       IY=IYR
       IDE=IDAY
       IF(IY.LT.1900) IY=1900
-c      IF(IY.GT.2015) IY=2015
+!      IF(IY.GT.2015) IY=2015
       IF(IY.GT.2020) IY=2020
 
-C  WE ARE RESTRICTED BY THE INTERVAL 1900-2015, FOR WHICH THE DGRF & IGRF-11
-C  COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL, THE
-C  SUBROUTINE GIVES A WARNING (BUT DOES NOT REPEAT IT AT THE NEXT CALLS)
+!  WE ARE RESTRICTED BY THE INTERVAL 1900-2015, FOR WHICH THE DGRF & IGRF-11
+!  COEFFICIENTS ARE KNOWN; IF IYR IS OUTSIDE THIS INTERVAL, THE
+!  SUBROUTINE GIVES A WARNING (BUT DOES NOT REPEAT IT AT THE NEXT CALLS)
 
       IF(IY.NE.IYR.AND.mess) write(konsol,10) IYR,IY
       IYE=IY
 
-C  LINEAR INTERPOLATION OF THE GEODIPOLE MOMENT COMPONENTS BETWEEN THE
-C  VALUES FOR THE NEAREST EPOCHS:
+!  LINEAR INTERPOLATION OF THE GEODIPOLE MOMENT COMPONENTS BETWEEN THE
+!  VALUES FOR THE NEAREST EPOCHS:
 
        IF (IY.LT.1905) THEN                             !1900-1905
            F2=(FLOAT(IY)+FLOAT(IDAY)/365.-1900.)/5.
@@ -3593,10 +3593,10 @@ C  VALUES FOR THE NEAREST EPOCHS:
            H11= 4797.1-26.6*DT
         ENDIF
 
-C  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD
-C  SYSTEM:
-C  SIN(TETA0)*COS(LAMBDA0), SIN(TETA0)*SIN(LAMBDA0), AND COS(TETA0)
-C         ST0 * CL0                ST0 * SL0                CT0
+!  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EzMAG IN GEO COORD
+!  SYSTEM:
+!  SIN(TETA0)*COS(LAMBDA0), SIN(TETA0)*SIN(LAMBDA0), AND COS(TETA0)
+!         ST0 * CL0                ST0 * SL0                CT0
 
       SQ=G11**2+H11**2
       SQQ=SQRT(SQ)
@@ -3610,15 +3610,15 @@ C         ST0 * CL0                ST0 * SL0                CT0
       CTSL=CT0*SL0
       CTCL=CT0*CL0
 
-C  THE CALCULATIONS ARE TERMINATED IF ONLY GEO-MAG TRANSFORMATION
-C  IS TO BE DONE  (IHOUR>24 IS THE AGREED CONDITION FOR THIS CASE):
+!  THE CALCULATIONS ARE TERMINATED IF ONLY GEO-MAG TRANSFORMATION
+!  IS TO BE DONE  (IHOUR>24 IS THE AGREED CONDITION FOR THIS CASE):
 
    5   IF (IHOUR.GT.24) RETURN
 
       CALL SUN(IY,IDAY,IHOUR,MIN,ISEC,GST,SLONG,SRASN,SDEC)
 
-C  S1,S2, AND S3 ARE THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE
-C  IN THE SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
+!  S1,S2, AND S3 ARE THE COMPONENTS OF THE UNIT VECTOR EXGSM=EXGSE
+!  IN THE SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
 
       S1=COS(SRASN)*COS(SDEC)
       S2=SIN(SRASN)*COS(SDEC)
@@ -3626,16 +3626,16 @@ C  IN THE SYSTEM GEI POINTING FROM THE EARTH'S CENTER TO THE SUN:
       CGST=COS(GST)
       SGST=SIN(GST)
 
-C  DIP1, DIP2, AND DIP3 ARE THE COMPONENTS OF THE UNIT VECTOR
-C  EZSM=EZMAG IN THE SYSTEM GEI:
+!  DIP1, DIP2, AND DIP3 ARE THE COMPONENTS OF THE UNIT VECTOR
+!  EZSM=EZMAG IN THE SYSTEM GEI:
 
       DIP1=STCL*CGST-STSL*SGST
       DIP2=STCL*SGST+STSL*CGST
       DIP3=CT0
 
-C  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EYGSM IN THE SYSTEM
-C  GEI BY TAKING THE VECTOR PRODUCT D x S AND NORMALIZING IT TO UNIT
-C  LENGTH:
+!  NOW CALCULATE THE COMPONENTS OF THE UNIT VECTOR EYGSM IN THE SYSTEM
+!  GEI BY TAKING THE VECTOR PRODUCT D x S AND NORMALIZING IT TO UNIT
+!  LENGTH:
 
       Y1=DIP2*S3-DIP3*S2
       Y2=DIP3*S1-DIP1*S3
@@ -3645,17 +3645,17 @@ C  LENGTH:
       Y2=Y2/Y
       Y3=Y3/Y
 
-C  THEN IN THE GEI SYSTEM THE UNIT VECTOR Z=EZGSM=EXGSM x EYGSM=S x Y
-C  HAS THE COMPONENTS:
+!  THEN IN THE GEI SYSTEM THE UNIT VECTOR Z=EZGSM=EXGSM x EYGSM=S x Y
+!  HAS THE COMPONENTS:
 
       Z1=S2*Y3-S3*Y2
       Z2=S3*Y1-S1*Y3
       Z3=S1*Y2-S2*Y1
 
-C  THE VECTOR EZGSE (HERE DZ) IN GEI HAS THE COMPONENTS (0,-SIN(DELTA),
-C  COS(DELTA)) = (0.,-0.397823,0.917462); HERE DELTA = 23.44214 DEG FOR
-C  THE EPOCH 1978 (SEE THE BOOK BY GUREVICH OR OTHER ASTRONOMICAL
-C  HANDBOOKS). HERE THE MOST ACCURATE TIME-DEPENDENT FORMULA IS USED:
+!  THE VECTOR EZGSE (HERE DZ) IN GEI HAS THE COMPONENTS (0,-SIN(DELTA),
+!  COS(DELTA)) = (0.,-0.397823,0.917462); HERE DELTA = 23.44214 DEG FOR
+!  THE EPOCH 1978 (SEE THE BOOK BY GUREVICH OR OTHER ASTRONOMICAL
+!  HANDBOOKS). HERE THE MOST ACCURATE TIME-DEPENDENT FORMULA IS USED:
 
       DJ=FLOAT(365*(IY-1900)+(IY-1901)/4 +IDAY)-0.5+FLOAT(ISEC)/86400.
       T=DJ/36525.
@@ -3664,15 +3664,15 @@ C  HANDBOOKS). HERE THE MOST ACCURATE TIME-DEPENDENT FORMULA IS USED:
       DZ2=-SIN(OBLIQ)
       DZ3=COS(OBLIQ)
 
-C  THEN THE UNIT VECTOR EYGSE IN GEI SYSTEM IS THE VECTOR PRODUCT DZ x S
+!  THEN THE UNIT VECTOR EYGSE IN GEI SYSTEM IS THE VECTOR PRODUCT DZ x S
 
       DY1=DZ2*S3-DZ3*S2
       DY2=DZ3*S1-DZ1*S3
       DY3=DZ1*S2-DZ2*S1
 
-C  THE ELEMENTS OF THE MATRIX GSE TO GSM ARE THE SCALAR PRODUCTS:
-C  CHI=EM22=(EYGSM,EYGSE), SHI=EM23=(EYGSM,EZGSE),
-C  EM32=(EZGSM,EYGSE)=-EM23, AND EM33=(EZGSM,EZGSE)=EM22
+!  THE ELEMENTS OF THE MATRIX GSE TO GSM ARE THE SCALAR PRODUCTS:
+!  CHI=EM22=(EYGSM,EYGSE), SHI=EM23=(EYGSM,EZGSE),
+!  EM32=(EZGSM,EYGSE)=-EM23, AND EM33=(EZGSM,EZGSE)=EM22
 
       CHI=Y1*DY1+Y2*DY2+Y3*DY3
       SHI=Y1*DZ1+Y2*DZ2+Y3*DZ3
@@ -3680,7 +3680,7 @@ C  EM32=(EZGSM,EYGSE)=-EM23, AND EM33=(EZGSM,EZGSE)=EM22
           IF(ABS(DECARG).GT.1.) DECARG=SIGN(1.,DECARG)
       HI=ASIN(DECARG)
 
-C  TILT ANGLE: PSI=ARCSIN(DIP,EXGSM)
+!  TILT ANGLE: PSI=ARCSIN(DIP,EXGSM)
 
       SPS=DIP1*S1+DIP2*S2+DIP3*S3
       CPS=SQRT(1.-SPS**2)
@@ -3688,21 +3688,21 @@ C  TILT ANGLE: PSI=ARCSIN(DIP,EXGSM)
           IF(ABS(DECARG).GT.1.) DECARG=SIGN(1.,DECARG)
       PSI=ASIN(DECARG)
 
-C  THE ELEMENTS OF THE MATRIX MAG TO SM ARE THE SCALAR PRODUCTS:
-C  CFI=GM22=(EYSM,EYMAG), SFI=GM23=(EYSM,EXMAG); THEY CAN BE DERIVED
-C  AS FOLLOWS:
+!  THE ELEMENTS OF THE MATRIX MAG TO SM ARE THE SCALAR PRODUCTS:
+!  CFI=GM22=(EYSM,EYMAG), SFI=GM23=(EYSM,EXMAG); THEY CAN BE DERIVED
+!  AS FOLLOWS:
 
-C  IN GEO THE VECTORS EXMAG AND EYMAG HAVE THE COMPONENTS
-C  (CT0*CL0,CT0*SL0,-ST0) AND (-SL0,CL0,0), RESPECTIVELY. HENCE, IN
-C  GEI SYSTEM THE COMPONENTS ARE:
-C  EXMAG:    CT0*CL0*COS(GST)-CT0*SL0*SIN(GST)
-C            CT0*CL0*SIN(GST)+CT0*SL0*COS(GST)
-C            -ST0
-C  EYMAG:    -SL0*COS(GST)-CL0*SIN(GST)
-C            -SL0*SIN(GST)+CL0*COS(GST)
-C             0
-C  THE COMPONENTS OF EYSM IN GEI WERE FOUND ABOVE AS Y1, Y2, AND Y3;
-C  NOW WE ONLY HAVE TO COMBINE THE QUANTITIES INTO SCALAR PRODUCTS:
+!  IN GEO THE VECTORS EXMAG AND EYMAG HAVE THE COMPONENTS
+!  (CT0*CL0,CT0*SL0,-ST0) AND (-SL0,CL0,0), RESPECTIVELY. HENCE, IN
+!  GEI SYSTEM THE COMPONENTS ARE:
+!  EXMAG:    CT0*CL0*COS(GST)-CT0*SL0*SIN(GST)
+!            CT0*CL0*SIN(GST)+CT0*SL0*COS(GST)
+!            -ST0
+!  EYMAG:    -SL0*COS(GST)-CL0*SIN(GST)
+!            -SL0*SIN(GST)+CL0*COS(GST)
+!             0
+!  THE COMPONENTS OF EYSM IN GEI WERE FOUND ABOVE AS Y1, Y2, AND Y3;
+!  NOW WE ONLY HAVE TO COMBINE THE QUANTITIES INTO SCALAR PRODUCTS:
 
       EXMAGX=CT0*(CL0*CGST-SL0*SGST)
       EXMAGY=CT0*(CL0*SGST+SL0*CGST)
@@ -3714,17 +3714,17 @@ C  NOW WE ONLY HAVE TO COMBINE THE QUANTITIES INTO SCALAR PRODUCTS:
 
       XMUT=(ATAN2(SFI,CFI)+3.1415926536)*3.8197186342
 
-C  THE ELEMENTS OF THE MATRIX GEO TO GSM ARE THE SCALAR PRODUCTS:
+!  THE ELEMENTS OF THE MATRIX GEO TO GSM ARE THE SCALAR PRODUCTS:
 
-C  A11=(EXGEO,EXGSM), A12=(EYGEO,EXGSM), A13=(EZGEO,EXGSM),
-C  A21=(EXGEO,EYGSM), A22=(EYGEO,EYGSM), A23=(EZGEO,EYGSM),
-C  A31=(EXGEO,EZGSM), A32=(EYGEO,EZGSM), A33=(EZGEO,EZGSM),
+!  A11=(EXGEO,EXGSM), A12=(EYGEO,EXGSM), A13=(EZGEO,EXGSM),
+!  A21=(EXGEO,EYGSM), A22=(EYGEO,EYGSM), A23=(EZGEO,EYGSM),
+!  A31=(EXGEO,EZGSM), A32=(EYGEO,EZGSM), A33=(EZGEO,EZGSM),
 
-C  ALL THE UNIT VECTORS IN BRACKETS ARE ALREADY DEFINED IN GEI:
+!  ALL THE UNIT VECTORS IN BRACKETS ARE ALREADY DEFINED IN GEI:
 
-C  EXGEO=(CGST,SGST,0), EYGEO=(-SGST,CGST,0), EZGEO=(0,0,1)
-C  EXGSM=(S1,S2,S3),  EYGSM=(Y1,Y2,Y3),   EZGSM=(Z1,Z2,Z3)
-C  AND  THEREFORE:
+!  EXGEO=(CGST,SGST,0), EYGEO=(-SGST,CGST,0), EZGEO=(0,0,1)
+!  EXGSM=(S1,S2,S3),  EYGSM=(Y1,Y2,Y3),   EZGSM=(Z1,Z2,Z3)
+!  AND  THEREFORE:
 
       A11=S1*CGST+S2*SGST
       A12=-S1*SGST+S2*CGST
@@ -3742,19 +3742,19 @@ C  AND  THEREFORE:
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE SPHCAR(R,TETA,PHI,X,Y,Z,J)
-C  *********************************************************************
-C   CONVERTS SPHERICAL COORDS INTO CARTESIAN ONES AND VICA VERSA
-C    (TETA AND PHI IN RADIANS).
-C                  J>0            J<0
-C-----INPUT:   J,R,TETA,PHI     J,X,Y,Z
-C----OUTPUT:      X,Y,Z        R,TETA,PHI
-C  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
-C      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
-C      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
-C  *********************************************************************
+!  *********************************************************************
+!   CONVERTS SPHERICAL COORDS INTO CARTESIAN ONES AND VICA VERSA
+!    (TETA AND PHI IN RADIANS).
+!                  J>0            J<0
+!-----INPUT:   J,R,TETA,PHI     J,X,Y,Z
+!----OUTPUT:      X,Y,Z        R,TETA,PHI
+!  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
+!      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
+!      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3784,18 +3784,18 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE BSPCAR(TETA,PHI,BR,BTET,BPHI,BX,BY,BZ)
-C  *********************************************************************
-C   CALCULATES CARTESIAN FIELD COMPONENTS FROM SPHERICAL ONES
-C-----INPUT:   TETA,PHI - SPHERICAL ANGLES OF THE POINT IN RADIANS
-C              BR,BTET,BPHI -  SPHERICAL COMPONENTS OF THE FIELD
-C-----OUTPUT:  BX,BY,BZ - CARTESIAN COMPONENTS OF THE FIELD
-C  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
-C      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
-C      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
-C  *********************************************************************
+!  *********************************************************************
+!   CALCULATES CARTESIAN FIELD COMPONENTS FROM SPHERICAL ONES
+!-----INPUT:   TETA,PHI - SPHERICAL ANGLES OF THE POINT IN RADIANS
+!              BR,BTET,BPHI -  SPHERICAL COMPONENTS OF THE FIELD
+!-----OUTPUT:  BX,BY,BZ - CARTESIAN COMPONENTS OF THE FIELD
+!  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
+!      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
+!      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3811,21 +3811,21 @@ C  *********************************************************************
       BZ=BR*C-BTET*S
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE GEOMAG(XGEO,YGEO,ZGEO,XMAG,YMAG,ZMAG,J,IYR)
-C  *********************************************************************
-C CONVERTS GEOCENTRIC (GEO) TO DIPOLE (MAG) COORDINATES OR VICA VERSA.
-C IYR IS YEAR NUMBER (FOUR DIGITS).
+!  *********************************************************************
+! CONVERTS GEOCENTRIC (GEO) TO DIPOLE (MAG) COORDINATES OR VICA VERSA.
+! IYR IS YEAR NUMBER (FOUR DIGITS).
 
-C                           J>0                J<0
-C-----INPUT:  J,XGEO,YGEO,ZGEO,IYR   J,XMAG,YMAG,ZMAG,IYR
-C-----OUTPUT:    XMAG,YMAG,ZMAG        XGEO,YGEO,ZGEO
+!                           J>0                J<0
+!-----INPUT:  J,XGEO,YGEO,ZGEO,IYR   J,XMAG,YMAG,ZMAG,IYR
+!-----OUTPUT:    XMAG,YMAG,ZMAG        XGEO,YGEO,ZGEO
 
-C  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
-C      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
-C      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
-C  *********************************************************************
+!  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
+!      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
+!      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3851,22 +3851,22 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
       SUBROUTINE MAGSM(XMAG,YMAG,ZMAG,XSM,YSM,ZSM,J)
-C  *********************************************************************
-C CONVERTS DIPOLE (MAG) TO SOLAR MAGNETIC (SM) COORDINATES OR VICA VERSA
-C                    J>0              J<0
-C-----INPUT: J,XMAG,YMAG,ZMAG     J,XSM,YSM,ZSM
-C----OUTPUT:    XSM,YSM,ZSM       XMAG,YMAG,ZMAG
-C  ATTENTION: SUBROUTINE RECALC MUST BE CALLED BEFORE MAGSM IN TWO CASES
-C     /A/  BEFORE THE FIRST USE OF MAGSM
-C     /B/  IF THE CURRENT VALUES OF IYEAR,IDAY,IHOUR,MIN,ISEC ARE
-C          DIFFERENT FROM THOSE IN THE PRECEDING CALL OF  MAGSM
-C  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
-C      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
-C      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
-C  *********************************************************************
+!  *********************************************************************
+! CONVERTS DIPOLE (MAG) TO SOLAR MAGNETIC (SM) COORDINATES OR VICA VERSA
+!                    J>0              J<0
+!-----INPUT: J,XMAG,YMAG,ZMAG     J,XSM,YSM,ZSM
+!----OUTPUT:    XSM,YSM,ZSM       XMAG,YMAG,ZMAG
+!  ATTENTION: SUBROUTINE RECALC MUST BE CALLED BEFORE MAGSM IN TWO CASES
+!     /A/  BEFORE THE FIRST USE OF MAGSM
+!     /B/  IF THE CURRENT VALUES OF IYEAR,IDAY,IHOUR,MIN,ISEC ARE
+!          DIFFERENT FROM THOSE IN THE PRECEDING CALL OF  MAGSM
+!  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
+!      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
+!      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3887,23 +3887,23 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
        SUBROUTINE SMGSM(XSM,YSM,ZSM,XGSM,YGSM,ZGSM,J)
-C  *********************************************************************
-C CONVERTS SOLAR MAGNETIC (SM) TO SOLAR MAGNETOSPHERIC (GSM) COORDINATES
-C   OR VICA VERSA.
-C                  J>0                 J<0
-C-----INPUT: J,XSM,YSM,ZSM        J,XGSM,YGSM,ZGSM
-C----OUTPUT:  XGSM,YGSM,ZGSM       XSM,YSM,ZSM
-C  ATTENTION: SUBROUTINE RECALC MUST BE CALLED BEFORE SMGSM IN TWO CASES
-C     /A/  BEFORE THE FIRST USE OF SMGSM
-C     /B/  IF THE CURRENT VALUES OF IYEAR,IDAY,IHOUR,MIN,ISEC ARE
-C          DIFFERENT FROM THOSE IN THE PRECEDING CALL OF SMGSM
-C  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
-C      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
-C      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
-C  *********************************************************************
+!  *********************************************************************
+! CONVERTS SOLAR MAGNETIC (SM) TO SOLAR MAGNETOSPHERIC (GSM) COORDINATES
+!   OR VICA VERSA.
+!                  J>0                 J<0
+!-----INPUT: J,XSM,YSM,ZSM        J,XGSM,YGSM,ZGSM
+!----OUTPUT:  XGSM,YGSM,ZGSM       XSM,YSM,ZSM
+!  ATTENTION: SUBROUTINE RECALC MUST BE CALLED BEFORE SMGSM IN TWO CASES
+!     /A/  BEFORE THE FIRST USE OF SMGSM
+!     /B/  IF THE CURRENT VALUES OF IYEAR,IDAY,IHOUR,MIN,ISEC ARE
+!          DIFFERENT FROM THOSE IN THE PRECEDING CALL OF SMGSM
+!  AUTHOR: NIKOLAI A. TSYGANENKO, INSTITUTE OF PHYSICS, ST.-PETERSBURG
+!      STATE UNIVERSITY, STARY PETERGOF 198904, ST.-PETERSBURG, RUSSIA
+!      (now the NASA Goddard Space Fligth Center, Greenbelt, Maryland)
+!  *********************************************************************
 
         IMPLICIT NONE
 
@@ -3922,20 +3922,20 @@ C  *********************************************************************
 
       RETURN
       END
-C
-C
+!
+!
        SUBROUTINE CLCMLT(IYYYY,DDD,UTHR,GLAT,GLON,MLT)
-C--------------------------------------------------------------------
-C      calculates magnetic local time
-C      Inputs:
-C             IYYYY..Year as YYYY, e.g. 1998
-C             DDD..day of year (1.1. = 0)
-C             UTHR..universal time in decimal hours
-C             GLAT,GLON..latitude north and longitude east in degrees
-C      Output:
-C             MLT..magnetic local time in decimal hours
-C      Required subroutines: DPMTRX
-C--------------------------------------------------------------------
+!--------------------------------------------------------------------
+!      calculates magnetic local time
+!      Inputs:
+!             IYYYY..Year as YYYY, e.g. 1998
+!             DDD..day of year (1.1. = 0)
+!             UTHR..universal time in decimal hours
+!             GLAT,GLON..latitude north and longitude east in degrees
+!      Output:
+!             MLT..magnetic local time in decimal hours
+!      Required subroutines: DPMTRX
+!--------------------------------------------------------------------
        INTEGER IYYYY,DDD
        REAL UTHR,GLAT,GLON,MLT
        REAL DTOR,PI,XG,YG,ZG
@@ -3951,11 +3951,11 @@ C--------------------------------------------------------------------
        ZG=SIN(GLAT*DTOR)
        CALL DPMTRX(IYYYY,DDD,XXM,YYM,ZZM)
        
-C       transform
+!       transform
        XM=XXM(1)*XG+XXM(2)*YG+XXM(3)*ZG
        YM=YYM(1)*XG+YYM(2)*YG+YYM(3)*ZG
        ZM=ZZM(1)*XG+ZZM(2)*YG+ZZM(3)*ZG
-C       
+!       
        IHOUR=INT(UTHR)
        MIN=INT((UTHR-IHOUR)*60)
        ISEC=INT((UTHR-IHOUR-MIN/60.0)*3600)
@@ -3971,11 +3971,11 @@ C
        SG(1)=C*SA(1)+S*SA(2)
        SG(2)=C*SA(2)-S*SA(1)
        SG(3)=SA(3)       
-C       transform
+!       transform
        SM(1)=XXM(1)*SG(1)+XXM(2)*SG(2)+XXM(3)*SG(3)
        SM(2)=YYM(1)*SG(1)+YYM(2)*SG(2)+YYM(3)*SG(3)
        SM(3)=ZZM(1)*SG(1)+ZZM(2)*SG(2)+ZZM(3)*SG(3)
-C      
+!      
        LAM=ATAN2(YM,XM)
        LAMS=ATAN2(SM(2),SM(1))
        DELLAM=LAM-LAMS
@@ -3983,22 +3983,22 @@ C
        MLT=AMOD(DELLAM/PI*12.+12.,24.)
        RETURN
        END
-C
-C
+!
+!
        SUBROUTINE DPMTRX(IYYYY,DDD,XM,YM,ZM)
-C--------------------------------------------------------------------------
-C      calculates othonormal matrix (columns XM,YM,ZM) for transformation 
-C      from geographic to magnetic coordinates
-C      Inputs:
-C             IYYYY..year
-C               DDD..day of year (1.1 = 0)
-C      Outputs:
-C               XM,YM,ZM..colums of the matrix
-C      Notes:
-C      MX(N),MY(N),MZ(N)..coordinates of the B vector in geographic system 
-C                for years stored in YR(N)
-C      N..number of elements of arrays MX,MY,MZ and YR
-C--------------------------------------------------------------------------
+!--------------------------------------------------------------------------
+!      calculates othonormal matrix (columns XM,YM,ZM) for transformation 
+!      from geographic to magnetic coordinates
+!      Inputs:
+!             IYYYY..year
+!               DDD..day of year (1.1 = 0)
+!      Outputs:
+!               XM,YM,ZM..colums of the matrix
+!      Notes:
+!      MX(N),MY(N),MZ(N)..coordinates of the B vector in geographic system 
+!                for years stored in YR(N)
+!      N..number of elements of arrays MX,MY,MZ and YR
+!--------------------------------------------------------------------------
        INTEGER IYYYY,DDD
        REAL XM(3),YM(3),ZM(3)
        REAL YR(10),MX(10),MY(10),MZ(10)
@@ -4010,12 +4010,12 @@ C--------------------------------------------------------------------------
 
        DATA N/10/
 
-c IGRF coefficients (dipole) calculated in FELDCOF in IGRF.FOR
+! IGRF coefficients (dipole) calculated in FELDCOF in IGRF.FOR
        MXI = -GHI2
        MYI = -GHI3
        MZI = -GHI1
 
-C normalization of the vector of the dipole exis of the magnetic field
+! normalization of the vector of the dipole exis of the magnetic field
        M=SQRT(MXI*MXI+MYI*MYI+MZI*MZI)
        MYZ=SQRT(MYI*MYI+MZI*MZI)
        ZM(1)=MXI/M
@@ -4030,5 +4030,5 @@ C normalization of the vector of the dipole exis of the magnetic field
        XM(3)=YM(1)*ZM(2)-YM(2)*ZM(1)
        RETURN
        END
-C
-C --------------------- end IGRF.FOR ----------------------------------
+!
+! --------------------- end IGRF.FOR ----------------------------------

@@ -1,108 +1,108 @@
-c iridreg.for, version number can be found at the end of this comment.
-c-----------------------------------------------------------------------
-C
-C This file contains the D-region models of Friedrich and Torkar (2001)
-C (subroutine F00 and block data statement).
-C The subroutine DRegion of Danilov et al. (1995) was moved to IRIFUN,
-C because of consistent problems of some Fortran compilers wit the long
-C BLOCK DATA statement. 
-C
-C !!!USER NOTE!!! If your compiler has problems with this subroutine you 
-C can compile IRI without this file. But you first have to comment out  
-C the following two line in IRISUB: 
-C            call F00(HEIGHT,LATI,DAYNR,XHI,F107D,EDENS,IERROR)
-C            if(ierror.eq.0.or.ierror.eq.2) outf(1,kk)=edens
-c
-c-----------------------------------------------------------------------
-C Corrections/Version Numbers:
-C-Version-mm/dd/yy-description (person reporting correction)
-C 2001.01 05/07/01 initial version
-C 2001.02 07/11/01 new version of F00 (as provided by K. Torkar)
-C 2002.01 28/10/02 replace TAB/6 blanks, PARAMETER () (D. Simpson)
-C 2007.00 05/18/07 Release of IRI-2007
-C 2012.00 12/29/11 Release of IRI-2012; no change in iridreg.for
-C 2012.00 01/18/12 Moved subroutine DRegion (Danilov model) to IRIFUN
-c-----------------------------------------------------------------------
-C
-C
+! iridreg.for, version number can be found at the end of this comment.
+!-----------------------------------------------------------------------
+!
+! This file contains the D-region models of Friedrich and Torkar (2001)
+! (subroutine F00 and block data statement).
+! The subroutine DRegion of Danilov et al. (1995) was moved to IRIFUN,
+! because of consistent problems of some Fortran compilers wit the long
+! BLOCK DATA statement. 
+!
+! !!!USER NOTE!!! If your compiler has problems with this subroutine you 
+! can compile IRI without this file. But you first have to comment out  
+! the following two line in IRISUB: 
+!            call F00(HEIGHT,LATI,DAYNR,XHI,F107D,EDENS,IERROR)
+!            if(ierror.eq.0.or.ierror.eq.2) outf(1,kk)=edens
+!
+!-----------------------------------------------------------------------
+! Corrections/Version Numbers:
+!-Version-mm/dd/yy-description (person reporting correction)
+! 2001.01 05/07/01 initial version
+! 2001.02 07/11/01 new version of F00 (as provided by K. Torkar)
+! 2002.01 28/10/02 replace TAB/6 blanks, PARAMETER () (D. Simpson)
+! 2007.00 05/18/07 Release of IRI-2007
+! 2012.00 12/29/11 Release of IRI-2012; no change in iridreg.for
+! 2012.00 01/18/12 Moved subroutine DRegion (Danilov model) to IRIFUN
+!-----------------------------------------------------------------------
+!
+!
       SUBROUTINE F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
-C---------------------------------------------------------------------
-C     PURPOSE:
-C     THIS SUBROUTINE COMPUTES "FIRI" ELECTRON DENSITIES
-C
-C     COMMON BLOCK REQUIRED:
-C       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
-C       COMMON/FIRCOM/EDEN(81,5,12,12,3),
-C      1              TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
-C
-C       ARRAY EDEN contains LOG10(tabulated electron density,
-C       ordered in (height,latitude,month,zenithangle,f107)
-C       Quantity      Minimum  Maximum  Number of steps
-C       Height        60       140      81
-C       Latitude       0        60       5
-C       Month          1        12      12
-C       Zenith angle   0       180      12
-C       F10.7         75       200       3
-C
-C     PARAMETERS:
-C        HGT   height in km (input, REAL)
-C        GLAT1 latitude in degrees, north is positive (input, REAL)
-C        IDAY  day of the year (input, INTEGER)
-C        ZANG  solar zenith angle in degrees (input, REAL)
-C        F107T 10.7cm flux in Ja (input, REAL)
-C        EDENS model electron density in m**-3 (output, REAL)
-C        IERROR  Error code (INTEGER, output)
-C
-C       Error code
-C         0         no error
-C         1         model undefined for given combination of input
-C                   parameters, output is set to zero
-C         2         input parameters outside valid range, output is invalid
-C         3         both error conditions detected, output is zero
-C
-C     USAGE
-C        CALL F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
-C
-C     SUBROUTINES AND FUNCTION SUBPROGRAMS REQUIRED
-C        none
-C
-C     Reference: Friedrich, M., Torkar, K. FIRI: a semiempirical model of the lower
-C                ionosphere. J. Geophys. Res. 106 (A10), 21409Ð21418, 2001.
-C     WRITTEN BY K. TORKAR, IWF GRAZ
-C     Klaus.Torkar@oeaw.ac.at
-C
-C     LAST MODIFICATION:  06.07.2001
-C
-C     VERSION: 1.1
-C
-C     ------------------------------------------------------------------
-C
+!---------------------------------------------------------------------
+!     PURPOSE:
+!     THIS SUBROUTINE COMPUTES "FIRI" ELECTRON DENSITIES
+!
+!     COMMON BLOCK REQUIRED:
+!       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
+!       COMMON/FIRCOM/EDEN(81,5,12,12,3),
+!      1              TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
+!
+!       ARRAY EDEN contains LOG10(tabulated electron density,
+!       ordered in (height,latitude,month,zenithangle,f107)
+!       Quantity      Minimum  Maximum  Number of steps
+!       Height        60       140      81
+!       Latitude       0        60       5
+!       Month          1        12      12
+!       Zenith angle   0       180      12
+!       F10.7         75       200       3
+!
+!     PARAMETERS:
+!        HGT   height in km (input, REAL)
+!        GLAT1 latitude in degrees, north is positive (input, REAL)
+!        IDAY  day of the year (input, INTEGER)
+!        ZANG  solar zenith angle in degrees (input, REAL)
+!        F107T 10.7cm flux in Ja (input, REAL)
+!        EDENS model electron density in m**-3 (output, REAL)
+!        IERROR  Error code (INTEGER, output)
+!
+!       Error code
+!         0         no error
+!         1         model undefined for given combination of input
+!                   parameters, output is set to zero
+!         2         input parameters outside valid range, output is invalid
+!         3         both error conditions detected, output is zero
+!
+!     USAGE
+!        CALL F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
+!
+!     SUBROUTINES AND FUNCTION SUBPROGRAMS REQUIRED
+!        none
+!
+!     Reference: Friedrich, M., Torkar, K. FIRI: a semiempirical model of the lower
+!                ionosphere. J. Geophys. Res. 106 (A10), 21409Ð21418, 2001.
+!     WRITTEN BY K. TORKAR, IWF GRAZ
+!     Klaus.Torkar@oeaw.ac.at
+!
+!     LAST MODIFICATION:  06.07.2001
+!
+!     VERSION: 1.1
+!
+!     ------------------------------------------------------------------
+!
       REAL HGT,GLAT1,ZANG,F107T,EDENS,F107L
       INTEGER IDAY,IERROR
-C
+!
       PARAMETER (NHGT=81)
       PARAMETER (NLAT=5)
       PARAMETER (NMON=12)
       PARAMETER (NZEN=12)
       PARAMETER (NF10=3)
-C
+!
       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
       COMMON/FIRCOM/EDEN(81,5,12,12,3),
      1              TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
-C
+!
       INTEGER MON,I,J,L,M,ISTEPJ,I1,I2,J1,J2,K1,K2,L1,L2,M1,M2
       INTEGER TABM(12)
       REAL EDENI(2,2,2,2),EDENIJ(2,2,2),EDENIJK(2,2),EDENIJKL(2)
       REAL STEPJ,DAY1,H1,DEG1,XHI1,FLX1,EL
-C
+!
       DATA TABM/0,31,59,90,120,151,181,212,243,273,304,334/
       DATA STEPJ,ISTEPJ/15.0,15/
-C
-C     INDICES:
-C     I=HEIGHT, J=LATITUDE, K=MONTH, L=ZANG, M=F10.7
-C
-C     CHECK INPUT
-C
+!
+!     INDICES:
+!     I=HEIGHT, J=LATITUDE, K=MONTH, L=ZANG, M=F10.7
+!
+!     CHECK INPUT
+!
       IERROR=0
       F107L=ALOG10(MIN(1000.0,MAX(1.0,F107T)))
       IF (HGT.LT.TABHE(1).OR.HGT.GT.TABHE(NHGT).OR.
@@ -110,21 +110,21 @@ C
      2    IDAY.LT.1.OR.IDAY.GT.366.OR.
      3    ZANG.LT.TABZA(1).OR.ZANG.GT.TABZA(NZEN).OR.
      4    F107L.LT.TABFL(1).OR.F107L.GT.TABFL(NF10)) IERROR=2
-C
-C     assume height table is in 1 km steps from 60 to 140 km
+!
+!     assume height table is in 1 km steps from 60 to 140 km
       I=MIN0(NHGT-1,IFIX(HGT)-59)
       IF(I.LT.1)I=1
       H1=HGT-TABHE(I)
       I1=I
       I2=I+1
-C
-C     assume latitude table is in 15 deg steps from 0 to 60 deg
+!
+!     assume latitude table is in 15 deg steps from 0 to 60 deg
       J=MAX0(1,MIN0(NLAT-1,IFIX(ABS(GLAT1))/ISTEPJ))
       DEG1=(ABS(GLAT1)-TABLA(J))/STEPJ
       J1=J
       J2=J+1
-C
-C     assume month table is given for each month
+!
+!     assume month table is given for each month
       MON=12
       DO WHILE (TABM(MON).GT.IDAY)
         MON=MON-1
@@ -138,8 +138,8 @@ C     assume month table is given for each month
         K1=12
         K2=1
       END IF
-C
-C     assume zenith angle table has 12 entries between 0 and 180 deg
+!
+!     assume zenith angle table has 12 entries between 0 and 180 deg
       DO L=2,NZEN-1
         IF(ZANG.LT.TABZA(L))GOTO 1
       END DO
@@ -148,8 +148,8 @@ C     assume zenith angle table has 12 entries between 0 and 180 deg
       L1=L
       L2=L+1
       XHI1=(ZANG-TABZA(L1))/(TABZA(L2)-TABZA(L1))
-C
-C     assume solar activity table has 3 entries
+!
+!     assume solar activity table has 3 entries
       F107L=MIN(TABFL(3),MAX(TABFL(1),F107L))
       IF(F107L.LT.TABFL(NF10-1))THEN
         M1=1
@@ -159,23 +159,23 @@ C     assume solar activity table has 3 entries
         M2=3
       END IF
       FLX1=(F107L-TABFL(M1))/(TABFL(M2)-TABFL(M1))
-C
-C     ADJUST SOUTHERN LATITUDES TO NORTH AND MONTH+6
-C
+!
+!     ADJUST SOUTHERN LATITUDES TO NORTH AND MONTH+6
+!
       IF(GLAT1.LT.0.0)THEN
         K1=K1+6
         IF(K1.GT.12)K1=K1-12
         K2=K2+6
         IF(K2.GT.12)K2=K2-12
       END IF
-C
-C     EDEN(hgt,lat,mon,zang,f107)
-C          I   J   K   L    M
-C
+!
+!     EDEN(hgt,lat,mon,zang,f107)
+!          I   J   K   L    M
+!
       DO M=M1,M2
-C
+!
         MH=M+1-M1
-C       INTERPOLATE IN HEIGHT I
+!       INTERPOLATE IN HEIGHT I
         DO L=L1,L2
           IF(EDEN(I1,J1,K1,L,M).EQ.0.0.OR.
      1       EDEN(I2,J1,K1,L,M).EQ.0.0.OR.
@@ -210,8 +210,8 @@ C       INTERPOLATE IN HEIGHT I
      1        H1*(EDEN(I2,J2,K2,L,M)-EDEN(I1,J2,K2,L,M))
           END IF
         END DO
-C
-C       INTERPOLATE IN LATITUDE J
+!
+!       INTERPOLATE IN LATITUDE J
         DO L=1,2
           IF(ABS(GLAT1).GT.TABLA(NLAT))THEN
             EDENIJ(1,L,MH)=EDENI(2,1,L,MH)
@@ -223,59 +223,59 @@ C       INTERPOLATE IN LATITUDE J
      1        DEG1*(EDENI(2,2,L,MH)-EDENI(1,2,L,MH))
           END IF
         END DO
-C
-C       INTERPOLATE IN MONTH K
+!
+!       INTERPOLATE IN MONTH K
         EDENIJK(1,MH)=EDENIJ(1,1,MH)+
      &     DAY1*(EDENIJ(2,1,MH)-EDENIJ(1,1,MH))
         EDENIJK(2,MH)=EDENIJ(1,2,MH)+
      &     DAY1*(EDENIJ(2,2,MH)-EDENIJ(1,2,MH))
-C
-C       INTERPOLATE IN ZENITH ANGLE L
+!
+!       INTERPOLATE IN ZENITH ANGLE L
         EDENIJKL(MH)=EDENIJK(1,MH)+XHI1*(EDENIJK(2,MH)-EDENIJK(1,MH))
       END DO
-C
+!
       EL=EDENIJKL(1)+FLX1*(EDENIJKL(2)-EDENIJKL(1))
-C
+!
       EDENS=10.**EL
-C
+!
       RETURN
       END
-C
-C
+!
+!
       BLOCK DATA
-C
-C     PURPOSE:
-C     DEFINES TABLES OF FIRI(2000) IN
-C     ARRAY EDEN(height,latitude,month,zenithangle,f107)
-C     Quantity      Minimum  Maximum  Number of steps
-C     Height        60       140      81
-C     Latitude       0        60       5
-C     Month          1        12      12
-C     Zenith angle   0       180      12
-C     F10.7         75       200       3
-C
-C     WRITTEN BY K. TORKAR, IWF GRAZ
-C     Klaus.Torkar@oeaw.ac.at
-C
-C     LAST MODIFICATION:  01.09.2000
-C
-C     VERSION: 1.1
-C
-C     ------------------------------------------------------------------
-C
+!
+!     PURPOSE:
+!     DEFINES TABLES OF FIRI(2000) IN
+!     ARRAY EDEN(height,latitude,month,zenithangle,f107)
+!     Quantity      Minimum  Maximum  Number of steps
+!     Height        60       140      81
+!     Latitude       0        60       5
+!     Month          1        12      12
+!     Zenith angle   0       180      12
+!     F10.7         75       200       3
+!
+!     WRITTEN BY K. TORKAR, IWF GRAZ
+!     Klaus.Torkar@oeaw.ac.at
+!
+!     LAST MODIFICATION:  01.09.2000
+!
+!     VERSION: 1.1
+!
+!     ------------------------------------------------------------------
+!
       PARAMETER (NHGT=81)
       PARAMETER (NLAT=5)
       PARAMETER (NMON=12)
       PARAMETER (NZEN=12)
       PARAMETER (NF10=3)
-C
+!
       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
       COMMON/FIRCOM/EDEN(81,5,12,12,3),
      1              TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
-C
-C      INTEGER I,L
-C
-C     altitudes in km
+!
+!      INTEGER I,L
+!
+!     altitudes in km
       DATA (TABHE(I),I=1,81)/
      * 60.,61.,62.,63.,64.,65.,66.,67.,68.,69.,
      * 70.,71.,72.,73.,74.,75.,76.,77.,78.,79.,
@@ -285,31 +285,31 @@ C     altitudes in km
      * 110.,111.,112.,113.,114.,115.,116.,117.,118.,119.,
      * 120.,121.,122.,123.,124.,125.,126.,127.,128.,129.,
      * 130.,131.,132.,133.,134.,135.,136.,137.,138.,139.,140./
-C
-C     latitudes in degree
+!
+!     latitudes in degree
       DATA (TABLA(I),I=1,5)/
      * 0.,15.,30.,45.,60./
-C
-C     months
+!
+!     months
       DATA (TABMO(I),I=1,12)/
      * 1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,11.,12./
-C
-C     solar zenith angles in degree
+!
+!     solar zenith angles in degree
       DATA (TABZA(I),I=1,12)/
      * 0.,30.,45.,60.,75.,80.,85.,90.,95.,100.,130.,180./
-C
-C     log10(F10.7) for 75,130,200 Jy
+!
+!     log10(F10.7) for 75,130,200 Jy
       DATA (TABFL(I),I=1,3)/
      * 1.87506, 2.11394, 2.30103/
-C
-C     log10 electron densities, ordered as
-C     I,J,K,L,M = Height,Latitude,Month,Zenithangle,F10.7
-C     8 heights in each line
-C     12 zenith angles in each DATA statement
-C     innermost loop: J (5 latitudes)
-C     next loop:      K (12 months)
-C     next loop:      M (3 F10.7-fluxes)
-C     outermost loop: I (11 groups of heights)
+!
+!     log10 electron densities, ordered as
+!     I,J,K,L,M = Height,Latitude,Month,Zenithangle,F10.7
+!     8 heights in each line
+!     12 zenith angles in each DATA statement
+!     innermost loop: J (5 latitudes)
+!     next loop:      K (12 months)
+!     next loop:      M (3 F10.7-fluxes)
+!     outermost loop: I (11 groups of heights)
       DATA ((EDEN(I,1,1,L,1),I=1,8),L=1,NZEN)/
      * 0.000,0.000,0.000,8.290,8.352,8.393,8.435,8.473,
      * 0.000,0.000,0.000,8.501,8.501,8.509,8.516,8.528,
@@ -26050,5 +26050,5 @@ C     outermost loop: I (11 groups of heights)
      * 8.369,
      * 8.114,
      * 8.068/
-C
+!
       END
