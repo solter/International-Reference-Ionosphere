@@ -5333,8 +5333,8 @@ c     change to intercept form of fourier series.
   106 COLAT = 90. - FLAT
       DO 150 N=1,KMAX
       IF (N .GT. 1)  GO TO 115
-      CL = COSD(FLON)
-      SL = SIND(FLON)
+      CL = COS(FLON*UMR)
+      SL = SIN(FLON*UMR)
       CML(1) = CL
       SML(1) = SL
       GO TO 120
