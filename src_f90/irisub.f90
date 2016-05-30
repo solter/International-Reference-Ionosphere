@@ -1244,41 +1244,45 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
         if(.not. LAYVER) then
             hmf1 = 0
             if(F1REG) then
-                ! omit F1 feature if nmf1*0.9 is smaller than nme
                 bnmf1 = 0.9 * nmf1
-                if(nmes >= bnmf1) goto 9427
-         
-         9245    XE2H=XE2(HEF)
-                if (xe2h > bnmf1) then
-                    hef = hef - 1
-                    if (hef <= hme) then
-                        hef    = hme
-                        width  = 0.0
-                        hefold = hef
-                        goto 9427
+                f1GTe = nmes < bnmf1 
+                firstIter = .true.
+                do
+                    nSchalt = .true. ! this WILL be reset if it's needed
+                    if (f1GTe .or. .not. firstIter) then
+                        do
+                            xe2h = xe2(hef)
+                            xeLEf1  = xe2h <= bnmf1
+                            if (xeLEf1) exit
+                            hef  = hef - 1 
+                            if (hef <= hme) exit
+                        end do
+                        if (xeLEf1) then
+                            CALL REGFA1(HEF,HMF2,XE2H,NMF2S,0.001,NMF1,XE2,SCHALT,HMF1) 
+                            nSchalt = .not. SCHALT
+                        else
+                            hef    = hme  
+                            width  = 0.0  
+                            hefold = hef   
+                        end if
                     end if
-                    goto 9245
-                end if      
-                CALL REGFA1(HEF,HMF2,XE2H,NMF2S,0.001,NMF1,XE2,SCHALT,HMF1)
-                if(SCHALT) then
-                    ! omit F1 feature ......................
-             9427    if(mess) WRITE(KONSOL,11) 
-                    HMF1=0.
-                    F1REG=.FALSE.
-                end if 
-                ! Determine E-valley parameters if HEF was changed
-                if(hef /= hefold) then
+                    if ( (.not.f1GTe .and. firstIter) .or. &
+                        .not. (xeLEf1 .and. nSchalt) ) then
+                        if(mess) WRITE(KONSOL,11) 
+                        HMF1=0.
+                        F1REG=.FALSE.
+                    end if
+                    if (hef == hefold) exit
                     width  = hef - hme
                     if(ENIGHT) DEPTH = -DEPTH
                     CALL TAL(HDEEP,DEPTH,WIDTH,DLNDH,EXT,E)
-                    if(EXT) then
-                        if(mess) WRITE(KONSOL,650)
-                        WIDTH  = .0
-                        hef    = hme
-                        hefold = hef
-                        goto 9245
-                    end if
-                end if
+                    if (.not. EXT) exit
+                    if(mess) WRITE(KONSOL,650)
+                    WIDTH  = .0
+                    hef    = hme
+                    hefold = hef
+                    first_iter = .false.
+                end do
             end if
      
             ! SEARCH FOR HST [NE3(HST)=NMEs] ......................................
