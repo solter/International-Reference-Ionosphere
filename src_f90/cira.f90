@@ -93,7 +93,7 @@
 !        The Equation of Time departures from the above formula
 !        for apparent local time can be included if available but
 !        are of minor importance.
-c
+!
 !        F107 and F107A values used to generate the model correspond
 !        to the 10.7 cm radio flux at the actual distance of the Earth
 !        from the Sun rather than the radio flux at 1 AU. The following
@@ -189,9 +189,9 @@ c
       DATA MN3/5/,ZN3/32.5,20.,15.,10.,0./
       DATA MN2/4/,ZN2/72.5,55.,45.,32.5/
       DATA ZMIX/62.5/,ALAST/99999./,MSSL/-999/
-c      DATA SV/25*1./
+!      DATA SV/25*1./
 
-c      IF(ISW.NE.64999) CALL TSELEC(SV)
+!      IF(ISW.NE.64999) CALL TSELEC(SV)
 !      Put identification data into common/datime/
       DO 1 I=1,3
         ISDATE(I)=ISD(I)
@@ -366,7 +366,7 @@ c      IF(ISW.NE.64999) CALL TSELEC(SV)
 !        The Equation of Time departures from the above formula
 !        for apparent local time can be included if available but
 !        are of minor importance.
-c
+!
 !        F107 and F107A values used to generate the model correspond
 !        to the 10.7 cm radio flux at the actual distance of the Earth
 !        from the Sun rather than the radio flux at 1 AU.
@@ -599,7 +599,7 @@ c
 !        The Equation of Time departures from the above formula
 !        for apparent local time can be included if available but
 !        are of minor importance.
-c
+!
 !        F107 and F107A values used to generate the model correspond
 !        to the 10.7 cm radio flux at the actual distance of the Earth
 !        from the Sun rather than the radio flux at 1 AU. The following
@@ -1064,7 +1064,7 @@ c
       SG0(EX)=(G0(AP(2))+(G0(AP(3))*EX+G0(AP(4))*EX*EX+G0(AP(5))*EX**3
      $ +(G0(AP(6))*EX**4+G0(AP(7))*EX**12)*(1.-EX**8)/(1.-EX))
      $ )/SUMEX(EX)
-c      IF(ISW.NE.64999) CALL TSELEC(SV)
+!      IF(ISW.NE.64999) CALL TSELEC(SV)
       DO 10 J=1,14
        T(J)=0
    10 CONTINUE
@@ -1197,7 +1197,7 @@ c      IF(ISW.NE.64999) CALL TSELEC(SV)
       IF(P(25).LT.1.E-4) P(25)=1.E-4
       APT(1)=SG0(EXP1)
 !      APT(2)=SG2(EXP1)
-c      APT(3)=SG0(EXP2)
+!      APT(3)=SG0(EXP2)
 !      APT(4)=SG2(EXP2)
       IF(SW(9).EQ.0) GOTO 40
       T(9) = APT(1)*(P(51)+P(97)*PLG(3,1)+P(55)*PLG(5,1)+
@@ -1275,7 +1275,7 @@ c      APT(3)=SG0(EXP2)
 !
 !        To get current values of SW: CALL TRETRV(SW)
 !-----------------------------------------------------------------------
-c      DIMENSION SV(1),SAV(25),SVV(1)
+!      DIMENSION SV(1),SAV(25),SVV(1)
       DIMENSION SV(25),SAV(25),SVV(25)
       COMMON/CSW/SW(25),ISW,SWC(25)
       SAVE
