@@ -219,7 +219,7 @@
 SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
                    HEIBEG,HEIEND,HEISTP,OUTF,OARR)
 
-    logical, intent(in) :: JF(50)
+    logical   :: JF(50)
     integer   :: DAYNR,DDO,DO2,SEASON,SEADAY
     real      :: LATI,LONGI,MO2,MO,MODIP,NMF2,MAGBR,INVDIP,IAPO,&
                  NMF1,NME,NMD,MM,MLAT,MLONG,NMF2S,NMES,INVDPC
@@ -239,7 +239,8 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
         HMF1IN,FOEIN,HMEIN,RZIN,sam_doy,F1_OCPRO,F1_L_COND,NODEN,&
         NOTEM,NOION,TENEOP,OLD79,URSIFO,igin,igino,mess,&
         dnight,enight,fnight,TOPO,TOPC,fstorm_on,estorm_on,&
-        f2_in, use_ursi, spwx_in, rightTime, readSpwx, readOldSpwx
+        f2_in, use_ursi, spwx_in, rightTime, readSpwx, readOldSpwx,&
+        f1GTe, firstIter, nSchalt, xeLEf1 
 
     COMMON /CONST/UMR,PI  /const1/humr,dumr   /ARGEXP/ARGMAX &
         /IGRF1/ERA,AQUAD,BQUAD,DIMO&
@@ -1281,7 +1282,7 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
                     WIDTH  = .0
                     hef    = hme
                     hefold = hef
-                    first_iter = .false.
+                    firstIter = .false.
                 end do
             end if
      
@@ -1537,16 +1538,15 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
     do
         if (.not. NODEN .or. &
             ( HNEA <= Height .and. Height <= HNEE )) then
-                if(LAYVER) then
-                    ELEDE = -9.
-                    if(IIQU < 2) &
-                        ELEDE = XEN(HEIGHT,HMF2,NMF2S,HME,4,HXL,SCL,AMP)
-                    outf(1,kk) = elede
-                else
-                    ELEDE = XE_1(HEIGHT)
-                    ! electron density in m-3 in outf(1,*)
-                    OUTF(1,kk)=ELEDE
-                end if
+            if(LAYVER) then
+                ELEDE = -9.
+                if(IIQU < 2) &
+                    ELEDE = XEN(HEIGHT,HMF2,NMF2S,HME,4,HXL,SCL,AMP)
+                outf(1,kk) = elede
+            else
+                ELEDE = XE_1(HEIGHT)
+                ! electron density in m-3 in outf(1,*)
+                OUTF(1,kk)=ELEDE
             end if
         end if
 
@@ -1565,7 +1565,7 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
             if(HEIGHT > HEQUI) then 
                 TEH = ELTE(HEIGHT)
                 if(TEH < TIH) TEH = TIH
-            endif
+            end if
 
             OUTF(2,kk) = TNH
             OUTF(3,kk) = TIH
@@ -1573,7 +1573,7 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
         end if
 
         ! ion composition
-        if (.not.NOION &
+        if (.not.NOION .and. &
             (HNIA <= HEIGHT .and. HEIGHT <= HNIE )) then
 
             ROX    =-1.
@@ -1782,6 +1782,57 @@ SUBROUTINE IRI_SUB(JF,JMAG,ALATI,ALONG,IYYYY,MMDD,DHOUR, &
         return
     ! End File IO Error
 
+! Format statements
+11   format(1X,'*NE* HMF1 IS NOT EVALUATED BY THE FUNCTION XE2'/&
+            1X,'CORR.: NO F1 REGION, B1=3, C1=0.0')
+100  format(1X,'*NE* HST IS NOT EVALUATED BY THE FUNCTION XE3')
+104  format('ccir',I2,'.asc')
+650  format(1X,'*NE* E-REGION VALLEY CAN NOT BE MODELLED')
+656  format(1X,'*NE* ABT-B0 computed with RLAT=LATI=',F6.2)
+901  format(6X,'CORR.: LIN. APP. BETWEEN HZ=',F5.1,' AND HEF=',F5.1)
+1144 format('ursi',I2,'.asc')
+1939 format(' *Ne* User input of hmF1 is only possible for the LAY-version')
+2911 format('*** IRI parameters are being calculated ***')
+4689 format(1X,4E15.8)
+7722 format('*NE* LAY amplitudes could not be found.')
+7733 format('*NE* LAY amplitudes found with 2nd choice of HXL(1).')
+8449 format(1X////,' The file ',A30,'is not in your directory.')
+9012 format('Ne, E-F: The LAY-Version is prelimenary.', &
+            ' Erroneous profile features can occur.')
+9014 format('Ne: No upper limit for F10.7 in', &
+            ' topside formula.')
+9204 format('Ne: Corrected Topside Formula')
+9205 format('Ne: NeQuick for Topside')
+9206 format('Ne: Gul-h0.5 for Topside')
+9207 format('Ne: IRI-2001 for Topside')
+9214 format('Ne: B0,B1 Bil-2000')
+9215 format('Ne: B0 Gul-1987')
+9216 format('Ne: B0,B1-ABT-2009')
+9015 format('Ne, foF2/NmF2: provided by user.')
+9016 format('Ne, foF2: URSI model is used.')
+9017 format('Ne, foF2: CCIR model is used.')
+9018 format('Ne, hmF2/M3000F2: provided by user.')
+9019 format('Ne, foF1/NmF1: provided by user.')
+9021 format('Ne, hmF1: provided by user.')
+9022 format('Ne, foE/NmE: provided by user.')
+9023 format('Ne, hmE: provided by user.')
+9024 format('Ne, foF1: probability function used.')
+9025 format('Ne, foF1: L condition cases included.')
+9026 format('Ne, D: IRI1990')
+9027 format('Ne, D: FT2001; IRI-90, FT-01, DRS-95)')
+9028 format('Ne, foF2: Storm model turned off if foF2 or', &
+            ' NmF2 user input')
+9029 format('Ne, foF2: storm model included')
+9128 format('Ne, foE: storm model on')
+9129 format('Ne, foE: storm model off')
+9039 format('Ion Com.: DS-95 & DY-85')
+9031 format('Ion Com.: RBV-10 & TTS-03')
+9032 format('Te: Temperature-density correlation is used.')
+9033 format('Te: Aeros/AE/ISIS model')
+9034 format('Te: TBT-2012 model')
+4031 format('Auroral boundary model on')
+4032 format('Auroral boundary model off')
+
 END SUBROUTINE IRI_SUB
 
 !-----------------------------------------------------------------------        
@@ -1887,54 +1938,3 @@ subroutine iri_web(jmag,jf,alati,along,iyyyy,mmdd,iut,dhour,&
     end if
     return
 END SUBROUTINE IRI_WEB
-
-! Format statements
-11   format(1X,'*NE* HMF1 IS NOT EVALUATED BY THE FUNCTION XE2'/&
-            1X,'CORR.: NO F1 REGION, B1=3, C1=0.0')
-100  format(1X,'*NE* HST IS NOT EVALUATED BY THE FUNCTION XE3')
-104  format('ccir',I2,'.asc')
-650  format(1X,'*NE* E-REGION VALLEY CAN NOT BE MODELLED')
-656  format(1X,'*NE* ABT-B0 computed with RLAT=LATI=',F6.2)
-901  format(6X,'CORR.: LIN. APP. BETWEEN HZ=',F5.1,' AND HEF=',F5.1)
-1144 format('ursi',I2,'.asc')
-1939 format(' *Ne* User input of hmF1 is only possible for the LAY-version')
-2911 format('*** IRI parameters are being calculated ***')
-4689 format(1X,4E15.8)
-7722 format('*NE* LAY amplitudes could not be found.')
-7733 format('*NE* LAY amplitudes found with 2nd choice of HXL(1).')
-8449 format(1X////,' The file ',A30,'is not in your directory.')
-9012 format('Ne, E-F: The LAY-Version is prelimenary.', &
-            ' Erroneous profile features can occur.')
-9014 format('Ne: No upper limit for F10.7 in', &
-            ' topside formula.')
-9204 format('Ne: Corrected Topside Formula')
-9205 format('Ne: NeQuick for Topside')
-9206 format('Ne: Gul-h0.5 for Topside')
-9207 format('Ne: IRI-2001 for Topside')
-9214 format('Ne: B0,B1 Bil-2000')
-9215 format('Ne: B0 Gul-1987')
-9216 format('Ne: B0,B1-ABT-2009')
-9015 format('Ne, foF2/NmF2: provided by user.')
-9016 format('Ne, foF2: URSI model is used.')
-9017 format('Ne, foF2: CCIR model is used.')
-9018 format('Ne, hmF2/M3000F2: provided by user.')
-9019 format('Ne, foF1/NmF1: provided by user.')
-9021 format('Ne, hmF1: provided by user.')
-9022 format('Ne, foE/NmE: provided by user.')
-9023 format('Ne, hmE: provided by user.')
-9024 format('Ne, foF1: probability function used.')
-9025 format('Ne, foF1: L condition cases included.')
-9026 format('Ne, D: IRI1990')
-9027 format('Ne, D: FT2001; IRI-90, FT-01, DRS-95)')
-9028 format('Ne, foF2: Storm model turned off if foF2 or', &
-            ' NmF2 user input')
-9029 format('Ne, foF2: storm model included')
-9128 format('Ne, foE: storm model on')
-9129 format('Ne, foE: storm model off')
-9039 format('Ion Com.: DS-95 & DY-85')
-9031 format('Ion Com.: RBV-10 & TTS-03')
-9032 format('Te: Temperature-density correlation is used.')
-9033 format('Te: Aeros/AE/ISIS model')
-9034 format('Te: TBT-2012 model')
-4031 format('Auroral boundary model on')
-4032 format('Auroral boundary model off')
