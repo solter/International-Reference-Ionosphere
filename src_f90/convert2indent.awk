@@ -21,7 +21,32 @@ BEGIN{
 tolower($0)~/^[0-9]*\s*end/{il--;}
 
 #Print out the line preceded by its indent count
-{printf("%03d+++%s\n",il,$0)}
+{
+    # remove the leading whitespace
+    toprint=$0
+    sub(/^\s*/,"",toprint)
+    gsub(/\.le\./," <= ",toprint)
+    gsub(/\.LE\./," <= ",toprint)
+    gsub(/\.lt\./," < ",toprint)
+    gsub(/\.LT\./," < ",toprint)
+    gsub(/\.ge\./," >= ",toprint)
+    gsub(/\.GE\./," >= ",toprint)
+    gsub(/\.gt\./," > ",toprint)
+    gsub(/\.GT\./," > ",toprint)
+    gsub(/\.ne\./," /= ",toprint)
+    gsub(/\.NE\./," /= ",toprint)
+    gsub(/\.eq\./," == ",toprint)
+    gsub(/\.EQ\./," == ",toprint)
+    # if this is an else statement, reduce indent by 1
+    if( toprint !~ /\s*else/ ){
+        toprint="    " toprint
+    }
+    # prepend correct indent
+    for (i=1; i<il; i++){
+        toprint="    " toprint
+    }
+    printf("%s\n",toprint)
+}
 
 # Handle multiline statements
 /.*&\s*$/ && !isand{
@@ -47,6 +72,7 @@ tolower($0)~/.*then\s*$/ && isif{
 
 # Increment indent level based on subroutine, if...then, do, 
 tolower($0)~/^[0-9]*\s*subroutine/{il++} 
+tolower($0)~/^[0-9]*\s*program/{il++} 
 tolower($0)~/^[0-9]*\s*do/{il++} 
 tolower($0)~/^[0-9]*\s*if.*then\s*$/{il++;}
 
