@@ -400,7 +400,7 @@ DO I=1,KT
     ENDIF
 end do
 102 CONTINUE
-incept = 0                                                            set up
+incept = 0   !set up
 if ((ibf == 2 .or. ibf == 3) .and. incept  ==  1)  then
     !     change to intercept form of fourier series.
     do i=2,lint,4-ibf
@@ -1255,5 +1255,3 @@ REAL FUNCTION GAMMA1(SMODIP,SLAT,SLONG,HOUR,&
     GAMMA1=SUM      
     RETURN          
 END 
-!
-
