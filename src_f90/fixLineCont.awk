@@ -9,12 +9,17 @@ BEGIN{prev_line=0}
 {
     if (prev_line){
         # If old style line continuation
-        if ( $0 ~ /^\s*&/ && prev_line !~ /.*&\s*$/ ){
+        if ( $0 ~ /^     [^ ]/ ){
             prev_line = prev_line "&"
+            sub(/^     [^ ]/,"      ")
+        }else if ( $0 ~ /^\s*&/ && prev_line !~ /.*&\s*$/ ){
+            prev_line = prev_line "&"
+            sub(/&/," ")
         }
         printf("%s\n",prev_line)
     }
-    sub(/&/," ")
+    # strip off trailing characters
+    sub(/\s*$/,"",$0)
     prev_line = $0
 }
 

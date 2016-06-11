@@ -15,16 +15,27 @@ BEGIN{
     il=0;
     isif=0;
     isand=0;
+    iselse=0;
 }
 
 # If the line begins with an end statement, decrement the indent level
 tolower($0)~/^[0-9]*\s*end/{il--;}
+tolower($0)~/^[0-9]*\s*else/{il--;iselse=1;}
+
+# reset for subroutines and functions
+tolower($0)~/^[0-9]*\s*subroutine/{il=0} 
+tolower($0)~/^[0-9]*\s*program/{il=0} 
+tolower($0)~/^\s*[a-z]*\s*function/{il=0} 
 
 #Print out the line preceded by its indent count
 {
     # remove the leading whitespace
     toprint=$0
     sub(/^\s*/,"",toprint)
+    # if not a comment, make it lower case
+    if( $0 !~ /^\s*!/ ){
+        torpint = tolower(toprint)
+    }
     gsub(/\.le\./," <= ",toprint)
     gsub(/\.LE\./," <= ",toprint)
     gsub(/\.lt\./," < ",toprint)
@@ -37,15 +48,16 @@ tolower($0)~/^[0-9]*\s*end/{il--;}
     gsub(/\.NE\./," /= ",toprint)
     gsub(/\.eq\./," == ",toprint)
     gsub(/\.EQ\./," == ",toprint)
-    # if this is an else statement, reduce indent by 1
-    if( toprint !~ /\s*else/ ){
-        toprint="    " toprint
-    }
+    gsub(/\t/,"    ",toprint)
     # prepend correct indent
-    for (i=1; i<il; i++){
+    for (i=0; i<il; i++){
         toprint="    " toprint
     }
     printf("%s\n",toprint)
+    if (iselse){
+        il++;
+        iselse=0;
+    }
 }
 
 # Handle multiline statements
@@ -73,7 +85,8 @@ tolower($0)~/.*then\s*$/ && isif{
 # Increment indent level based on subroutine, if...then, do, 
 tolower($0)~/^[0-9]*\s*subroutine/{il++} 
 tolower($0)~/^[0-9]*\s*program/{il++} 
-tolower($0)~/^[0-9]*\s*do/{il++} 
+tolower($0)~/^\s*[a-z]*\s*function/{il++} 
+tolower($0)~/^[0-9]*\s*do[^a-z0-9]/{il++} 
 tolower($0)~/^[0-9]*\s*if.*then\s*$/{il++;}
 
 # At the end, make sure the indent level is 0
