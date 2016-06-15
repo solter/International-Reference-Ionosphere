@@ -1,17 +1,3 @@
-! flipiri.for
-!
-! 2012.00 10/05/11 IRI-2012: bottomside B0 B1 model (SHAMDB0D, SHAB1D),
-! 2012.00 10/05/11    bottomside Ni model (iriflip.for), auroral foE
-! 2012.00 10/05/11    storm model (storme_ap), Te with PF10.7 (elteik),
-! 2012.00 10/05/11    oval kp model (auroral_boundary), IGRF-11(igrf.for),
-! 2012.00 10/05/11    NRLMSIS00 (cira.for), CGM coordinates, F10.7 daily
-! 2012.00 10/05/11    81-day 365-day indices (apf107.dat), ap->kp (ckp),
-! 2012.00 10/05/11    array size change jf(50) outf(20,1000), oarr(100).
-! 2012.01 12/12/11 Deleted ALT_RATES (not used)
-! 2012.01 01/04/12 Deleted FINDAP,READAP,CONV_DATE,GET_DATA,RATCHK (not used)
-! 2012.01 01/04/12 Deleted BRACE,ACTUAL_DAY,EPHEM SOLDEC,TFILE,RUN_ERROR (not used)
-! 2012.01 01/04/12 COP2D: 99 FOMRAT ',' missing; commented out all WRITEs
-! 2014.01 07/17/14 COP4S: NPLUS=0; PR(13)=0.0 ------------------------- A Shabanloui
 !****************************************************************************************
 ! subroutines for IDC model
 !
@@ -32,47 +18,58 @@
 !   doi:10.1029/2009RS004332.
 !
 !****************************************************************************************
+
+!-------------------------------------------------------------------------------------
 !
+! Subroutine ChemIon
 !
-SUBROUTINE CHEMION(JPRINT,  !.. Input: Turn file output on or off&
-        ALT,  !.. Input: Altitude(km)&
-        F107,F107A,  !.. Input: Solar activity indices&
-        TE,TI,TN,  !.. Input: Electron, ion and neutral temperatures&
-        OXN,O2N,N2N,HEN,  !.. Input: O, O2, N2, and He densities (cm-3)&
-        USER_NO,  !.. Input: User specified NO density (cm-3)&
-        N4S,  !.. Input: N4S should be 0.5*MSIS N density (cm-3)&
-        NE,  !.. Input: electron density (cm-3)&
-        USER_NPLUS,  !.. Input: User specified N+ density (cm-3)&
-        SZAD,  !.. Input: solar zenith angle(D)&
-        OXPLUS,O2PLUS,NOPLUS,  !.. OUTPUT: O+, O2+, NO+ densities (cm-3)&
-        N2PLUS,NPLUS,  !.. OUTPUT: N2+ and N+ densities (cm-3)&
-        NNO,N2D,  !.. OUTPUT: NO and N(2D) density (cm-3)&
-        INEWT)  !.. OUTPUT: Newton procedure fails if INEWT=0
-    !-------------------------------------------------------------------------------------
-    !... This routine was written by Phil Richards April 2010.
-    !... It takes the specified input electron density and returns O+, O2+, NO+,
-    !... N2+, N+, NO, and N(2D) densities.These densities generally agree well
-    !... with the FLIP model densities.
-    !... All the densities except O+ are calculated from chemical equilibrium.
-    !... O+ is calculated using a Newton iterative procedure so that the total
-    !... ion density matches the input electron density.
-    !... N+ and NO densities can either be user specified or calculated by the model.
-    !... N+ generally agrees well with AE-C data and the FLIP model during the day,
-    !... but is inaccurate at night due to lack of diffusion.
-    !... NO will be very good except below about 130 km where it will be
-    !... underestimated due to neglect of diffusion. There is an artificial
-    !... floor on the NO density to prevent it from getting too low below 130 km.
-    !... If the Newton procedure fails to converge, all ions including O+ are
-    !... calculated from chemical equilibrium and then normalized to reproduce
-    !... the input electron density. This generally works well.
-    !... The Newton procedure usually works if the total calculated molecular ion
-    !... densities do not approach the input electron density. Difficulties are most
-    !... likely to happen below ~150 km and especially at night. A Newton solution is
-    !... usually found when the O+ density is not too much smaller than the modeled
-    !... molecular ion density.
-    !... The EUVAC model is used for solar EUV irradiances
-    !-------------------------------------------------------------------------------------
-    IMPLICIT NONE
+! Inputs:
+!     JPRINT             -- Turn file output on or off&
+!     ALT                --  Altitude(km)&
+!     F107, F107A        --  Solar activity indices&
+!     TE, TI, TN         --  Electron, ion and neutral temperatures&
+!     OXN, O2N, N2N, HEN --  O, O2, N2, and He densities (cm-3)&
+!     USER_NO            --  User specified NO density (cm-3)&
+!     N4S                --  N4S should be 0.5*MSIS N density (cm-3)&
+!     NE                 --  electron density (cm-3)&
+!     USER_NPLUS         --  User specified N+ density (cm-3)&
+!     SZAD               --  solar zenith angle(D)&
+! Outputs:
+!     OXPLUS, O2PLUS, NOPLUS --  O+, O2+, NO+ densities (cm-3)&
+!     N2PLUS, NPLUS          --  N2+ and N+ densities (cm-3)&
+!     NNO, N2D               --  NO and N(2D) density (cm-3)&
+!     INEWT                  --  Newton procedure fails if INEWT=0
+!
+!    This routine was written by Phil Richards April 2010.
+!    It takes the specified input electron density and returns O+, O2+, NO+,
+!    N2+, N+, NO, and N(2D) densities.These densities generally agree well
+!    with the FLIP model densities.
+!    All the densities except O+ are calculated from chemical equilibrium.
+!    O+ is calculated using a Newton iterative procedure so that the total
+!    ion density matches the input electron density.
+!    N+ and NO densities can either be user specified or calculated by the model.
+!    N+ generally agrees well with AE-C data and the FLIP model during the day,
+!    but is inaccurate at night due to lack of diffusion.
+!    NO will be very good except below about 130 km where it will be
+!    underestimated due to neglect of diffusion. There is an artificial
+!    floor on the NO density to prevent it from getting too low below 130 km.
+!    If the Newton procedure fails to converge, all ions including O+ are
+!    calculated from chemical equilibrium and then normalized to reproduce
+!    the input electron density. This generally works well.
+!    The Newton procedure usually works if the total calculated molecular ion
+!    densities do not approach the input electron density. Difficulties are most
+!    likely to happen below ~150 km and especially at night. A Newton solution is
+!    usually found when the O+ density is not too much smaller than the modeled
+!    molecular ion density.
+!    The EUVAC model is used for solar EUV irradiances
+!-------------------------------------------------------------------------------------
+subroutine ChemIon( jPrint, alt, F107, F107A, TE, TI, TN,&
+                    OXN, O2N, N2N, HEN, USER_NO, N4S, NE,&
+                    USER_NPLUS, SZAD, OXPLUS, O2PLUS,    &
+                    NOPLUS, N2PLUS, NPLUS, NNO, N2D, INEWT) 
+
+    implicit none
+
     INTEGER JPRINT        !.. Turns on printing of production and loss
     INTEGER INEWT         !.. Signifies when the Newton procedure fails
     INTEGER I,J,K,ITERS   !.. loop control variables
@@ -106,6 +103,7 @@ SUBROUTINE CHEMION(JPRINT,  !.. Input: Turn file output on or off&
     REAL N2APRD                   !.. PE production rate of N2(A)
     REAL PN4S,LN4S,DISN4S
     REAL OXPLUSAVE
+    LOGICAL :: NEWT_SUCCESS
     !.. various ionization and excitation rates by EUV and PE
     REAL EUVION,PEXCIT,PEPION,OTHPR1,OTHPR2
     COMMON/EUVPRD/EUVION(3,12),PEXCIT(3,12),PEPION(3,12),OTHPR1(6)&
@@ -115,599 +113,687 @@ SUBROUTINE CHEMION(JPRINT,  !.. Input: Turn file output on or off&
     DATA PNO,LNO,PDNOSR,PLYNOP,N2A/5*0.0/
     DATA DISN2D,UVDISN/0.0,0.0/
     DATA HEPLUS/0.0/
-    ALTCHEM=150  !.. Initial altitude for O+ for imposing chemistry
-    JITER=0      !.. Counts the number of Newton iterations
-    N2P=0.0      !.. N(2P) density
-    CALL RATS(0,TE,TI,TN,RTS)  !.. Get the reaction rates
+
+    ALTCHEM = 150  !.. Initial altitude for O+ for imposing chemistry
+    JITER   = 0    !.. Counts the number of Newton iterations
+    N2P     = 0.0  !.. N(2P) density
+    CALL RATS(0, TE, TI, TN, RTS)  !.. Get the reaction rates
     !.. PRIMPR calculates solar EUV production rates.
     !      print*,'ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S'
     !      print*,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S
-    UVDISN=OTHPR1(1)
-    CALL PRIMPR(1,ALT,OXN,N2N,O2N,HEN,SZAD*0.01745,TN,F107,F107A,N4S)
-    UVDISN=OTHPR1(1)
+    UVDISN = OTHPR1(1)
+    CALL PRIMPR(1, ALT, OXN, N2N, O2N, HEN, SZAD*0.01745, TN,&
+                F107, F107A, N4S)
+    UVDISN = OTHPR1(1)
     !.. Calculate secondary Production from photoelectrons
-    CALL SECIPRD(ALT,SZAD,F107,F107A,TE,TN,OXN,O2N,N2N,NE,N2APRD)
-    DISNP= EUVION(3,4)+EUVION(3,5)+EUVION(3,6)&
-        +0.1*(PEPION(3,1)+PEPION(3,2)+PEPION(3,3))  !.. Rydberg diss&
-        +PEPION(3,4)+PEPION(3,5)+PEPION(3,6)
-    DISN2D=2.0*PEPION(3,1)+OTHPR2(3)
-    DISN4S=2.0*PEPION(3,1)+OTHPR2(3)
-    !**********  Come back here if Newton fails
-    5    CONTINUE
-    !.. initialize variables to avoid using left over values
-    HEPLUS=0.0
-    OXPLUS=0.0
-    N2PLUS=0.0
-    NOPLUS=0.0
-    O2PLUS=0.0
-    NPLUS=0.0
-    N2P=0.0
-    N2D=0.0
-    OP2D=0.0
-    OP2P=0.0
-    N2A=0.0
-    !.. Iterate through chemistry twice in case O+ is chemical equilibrium
-    DO ITERS=1,3
-        !.. K counts number of iterations for printing headers in routines
-        K=K+1
-        !.. Set initial value for electron density
-        !.. O+(2P) Calculate and print densities, production, loss
-        PSEC=PEPION(1,3)           !.. Photoelectron production
-        TPROD3=EUVION(1,3)+PSEC    !.. Add EUV and photoelectrons
-        CALL COP2P(JPRINT,7,K,ALT,RTS,OXN,O2N,N2N,NE,OP2P,TPROD3,PSEC&
-            ,HEPLUS,N4S,NNO,TE)
-        !.. O+(2D) Calculate and print densities, production, loss
-        PSEC=PEPION(1,2)           !.. Photoelectron production
-        TPROD2=EUVION(1,2)         !.. EUV
-        CALL COP2D(JPRINT,8,K,ALT,RTS,OXN,O2N,N2N,NE,OP2D,TPROD2,OP2P&
-            ,HEPLUS,N4S,NNO,PSEC)
-        !.. O+(4S) Calculate and print densities, production, loss.
-        TPROD1=EUVION(1,1)
-        PDISOP=EUVION(2,4)+EUVION(2,5)+PEPION(2,4)+PEPION(2,5)
-        CALL COP4S(JPRINT,4,K,ALT,RTS,OXN,O2N,N2N,NE,OXPLUS,TPROD1,OP2D&
-            ,OP2P,PEPION(1,1),PDISOP,N2PLUS,N2D,NNO,1.0,HEPLUS)
-        CALL CN2A(JPRINT,27,K,ALT,RTS,OXN,O2N,N2N,NE,N2A,N2APRD,0.0,&
-            0.0,0.0)
-        !..CALL CN2P(JPRINT,0,K,ALT,RTS,OXN,O2N,N2N,NE,PN2P,LN2P
-        !..> ,N2P,P3X7,UVDISN,O2PLUS,NNO,N2PLUS)
-        !.. N(2D) Calculate and print densities, production, loss.
-        CALL CN2D(JPRINT,16,K,ALT,RTS,OXN,O2N,N2N,NOPLUS,NE,PN2D,LN2D&
-            ,N2PLUS,DISN2D,UVDISN,NPLUS,N2P,N2D,OXPLUS,NNO,N2A)
-        N2D=PN2D/LN2D
-        !.. N2+ Calculate and print densities, production, loss.
-        CALL CN2PLS(JPRINT,9,K,ALT,RTS,OXN,O2N,N2N,NE,N2PLUS,EUVION(3,1)&
-            ,EUVION(3,2),EUVION(3,3),PEPION(3,1),PEPION(3,2),PEPION(3,3)&
-            ,OP2D,OP2P,HEPLUS,NPLUS,NNO,N4S)
-        !.. N+ Calculate and print densities, production, loss.
-        !.. Note that N(2D) is turned off in N+ solution
-        PHOTN=OTHPR2(3)  !.. N+ prod
-        CALL CNPLS(JPRINT,10,K,ALT,RTS,OXN,O2N,N2N,NE,DISNP,NPLUS,&
-            OXPLUS,N2D,OP2P,HEPLUS,PHOTN,O2PLUS,N4S,OP2D,N2PLUS,NNO)
-        IF(USER_NPLUS > 0) NPLUS=USER_NPLUS  !.. User specified N+
-        CALL CN4S(JPRINT,28,K,ALT,RTS,OXN,O2N,N2N,NE,PN4S,LN4S,N4S,&
-            DISN4S,N2D,N2P,OXPLUS,N2PLUS,UVDISN,NOPLUS,NPLUS,NNO,&
-            O2PLUS,PDNOSR,1.0)
-        !..N4S=PN4S/LN4S
-        !.. NO Calculate and print densities, production, loss.
-        CALL CNO(JPRINT,15,K,ALT,RTS,OXN,O2N,N2N,NE,PNO,LNO&
-            ,N2D,N4S,N2P,NNO,O2PLUS,OXPLUS,OTHPR2(2),OTHPR2(1),N2A,NPLUS)
-        NNO=PNO/LNO     !.. NO chemical equilibrium density
-        !.. Set a floor on NO density, which is needed below ~150 km at night
-        IF(NNO < 1.0E8*EXP((100-ALT)/20)) NNO=1.0E8*EXP((100-ALT)/20)
-        IF(USER_NO > 1.0) NNO=USER_NO  !.. substitute user specified value
-        IF(NNO > 1.5E8) NNO=1.5E8      !.. Don't let NO get too big
-        !.. NO+ Calculate and print densities, production, loss.
-        CALL CNOP(JPRINT,11,K,ALT,RTS,OXN,O2N,N2N,NE,TPNOP,NOPLUS,OXPLUS&
-            ,N2PLUS,O2PLUS,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
-        !.. O2+ Calculate and print densities, production, loss.
-        !.. EUV + PE production
-        TPROD5=EUVION(2,1)+EUVION(2,2)+EUVION(2,3)+PEPION(2,1)+&
-            PEPION(2,2)+PEPION(2,3)
-        CALL CO2P(JPRINT,12,K,ALT,RTS,OXN,O2N,N2N,NE,O2PPROD&
-            ,O2PLUS,TPROD5,OXPLUS,OP2D,N2PLUS,NPLUS,N4S,NNO,OP2P)
-    ENDDO
-    !.. This section for chemical equilibrium densities for all species
-    !.. including O+. It is used when the Newton procedure fails to get O+
-    !.. Don't bother if molecular ions greater than Ne/2
-    !.. It increments ALTCHEM to force this action. The ion densities are
-    !.. normalized to the input NE. N+ is excluded in case it is user specified
-    INEWT=1
-    SUMIONS=OXPLUS+NOPLUS+O2PLUS+NPLUS
-    IF(ALT < ALTCHEM.OR.NOPLUS+O2PLUS > 0.85*NE) THEN
-        OXPLUS=OXPLUS*NE/SUMIONS
-        NOPLUS=NOPLUS*NE/SUMIONS
-        O2PLUS=O2PLUS*NE/SUMIONS
-        NPLUS=NPLUS*NE/SUMIONS
-        INEWT=0
-        RETURN
-    ENDIF
-    !.. Newton solution for O+ density given the electron density (NE)
-    !.. Go through twice to set up the derivative (F(x+h)-F(x))/h
-    !.. First O+ guess for Newton. This is important for high altitudes
-    !.. because Newton may converge on first try.
-    OXPLUSAVE=OXPLUS
-    IF(NE-NOPLUS-O2PLUS > 100) OXPLUS=NE-NOPLUS-O2PLUS
-    !..IF(SZAD > 89) OXPLUS=NE  !.. first guess at night
-    9    DO ITS=1,2
-    IF(ITS == 1) H=OXPLUS*0.0001         !.. increment for dn/dt
-    IF(ITS == 2) OXPLUS=OXPLUS+H       !.. increment N
-    !.. N+ Calculate and print densities, production, loss.
-    CALL CNPLS(JPRINT,10,K,ALT,RTS,OXN,O2N,N2N,NE,DISNP,NPLUS,&
-        OXPLUS,N2D,OP2P,HEPLUS,PHOTN,O2PLUS,N4S,OP2D,N2PLUS,NNO)
-    IF(USER_NPLUS > 0) NPLUS=USER_NPLUS  !.. User specified N+
-    !.. N2+ Calculate and print densities, production, loss.
-    CALL CN2PLS(JPRINT,9,K,ALT,RTS,OXN,O2N,N2N,NE,N2PLUS,EUVION(3,1)&
-        ,EUVION(3,2),EUVION(3,3),PEPION(3,1),PEPION(3,2),PEPION(3,3)&
-        ,OP2D,OP2P,HEPLUS,NPLUS,NNO,N4S)
-    !.. NO+ Calculate and print densities, production, loss.
-    CALL CNOP(JPRINT,11,K,ALT,RTS,OXN,O2N,N2N,NE,TPNOP,NOPLUS,OXPLUS&
-        ,N2PLUS,O2PLUS,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
-    !.. O2+ Calculate and print densities, production, loss.
-    !.. EUV + PE production
-    TPROD5=EUVION(2,1)+EUVION(2,2)+EUVION(2,3)+PEPION(2,1)+&
-        PEPION(2,2)+PEPION(2,3)
-    CALL CO2P(JPRINT,12,K,ALT,RTS,OXN,O2N,N2N,NE,O2PPROD&
-        ,O2PLUS,TPROD5,OXPLUS,OP2D,N2PLUS,NPLUS,N4S,NNO,OP2P)
-    !.. N(2D) Calculate and print densities, production, loss.
-    CALL CN2D(JPRINT,16,K,ALT,RTS,OXN,O2N,N2N,NOPLUS,NE,PN2D,LN2D&
-        ,N2PLUS,DISN2D,UVDISN,NPLUS,N2P,N2D,OXPLUS,NNO,N2A)
-    N2D=PN2D/LN2D
-    !.. calculation of F(x) from the total ion concentration
-    FEX(ITS)=OXPLUS+NOPLUS+O2PLUS+N2PLUS+NPLUS-NE
-ENDDO
-!.. Test for convergence and add increment to O+ if not
-JITER=JITER+1          !.. for stopping the iterations
-DEX=(FEX(2)-FEX(1))/H
-OXPLUS=OXPLUS-H-FEX(1)/DEX
-!.. If Newton fails, go back and calculate O+ chem equilibrium
-IF(JITER > 6.OR.OXPLUS < 0.0.OR.OXPLUS > 1.0E7) THEN
-    ALTCHEM=ALT+1  !.. forces chemical equilibrium densities
-    GOTO 5         !.. Go back to chemical eqilibrium
-ENDIF
-!.. Test for convergence
-SUMIONS=OXPLUS+NOPLUS+O2PLUS+N2PLUS+NPLUS
-IF(ABS((NE-SUMIONS)/NE) > 0.05) GOTO 9
-!.. Normalize ion densities to the input electron density
-OXPLUS=OXPLUS*NE/SUMIONS
-NOPLUS=NOPLUS*NE/SUMIONS
-O2PLUS=O2PLUS*NE/SUMIONS
-NPLUS=NPLUS*NE/SUMIONS
-!.. If O+ a very minor ion, Newton solution may not be good, force
-!.. chemical equilibrium solution instead
-IF(OXPLUS/SUMIONS < 0.1) THEN
-    ALTCHEM=ALT+1  !.. forces chemical equilibrium densities
-    GOTO 5         !.. Go back to chemical eqilibrium
-ENDIF
-RETURN
-END
-!
-!
+    CALL SECIPRD(ALT, SZAD, F107, F107A, TE, TN, OXN, O2N,&
+                 N2N, NE, N2APRD)
+    DISNP = EUVION(3, 4) + EUVION(3, 5) + EUVION(3, 6)&
+            + 0.1*( PEPION(3, 1) + PEPION(3, 2) + PEPION(3, 3) )&  !.. Rydberg diss&
+            + PEPION(3, 4) + PEPION(3, 5) + PEPION(3, 6)
+    DISN2D = 2.0*PEPION(3, 1) + OTHPR2(3)
+    DISN4S = 2.0*PEPION(3, 1) + OTHPR2(3)
+
+    NEWT_SUCCESS = .FALSE.
+    WHILE ( .not. NEWT_SUCCESS ) DO
+        !.. initialize variables to avoid using left over values
+        HEPLUS = 0.0
+        OXPLUS = 0.0
+        N2PLUS = 0.0
+        NOPLUS = 0.0
+        O2PLUS = 0.0
+        NPLUS  = 0.0
+        N2P    = 0.0
+        N2D    = 0.0
+        OP2D   = 0.0
+        OP2P   = 0.0
+        N2A    = 0.0
+        ! Assume that Newton is going to succeed.
+        ! This will be reset if Newton's method fails.
+        NEWT_SUCCESS = .TRUE.
+
+        !.. Iterate through chemistry twice in case O+ is chemical equilibrium
+        DO ITERS=1,3
+            !.. K counts number of iterations for printing headers in routines
+            K = K + 1
+
+            !.. Set initial value for electron density
+            !.. O+(2P) Calculate and print densities, production, loss
+            PSEC   = PEPION(1, 3)           !.. Photoelectron production
+            TPROD3 = EUVION(1, 3) + PSEC    !.. Add EUV and photoelectrons
+            CALL COP2P(JPRINT, 7, K, ALT, RTS, OXN, O2N, N2N, NE, &
+                       OP2P, TPROD3, PSEC, HEPLUS, N4S, NNO, TE)
+
+            !.. O+(2D) Calculate and print densities, production, loss
+            PSEC   = PEPION(1, 2)    !.. Photoelectron production
+            TPROD2 = EUVION(1, 2)    !.. EUV
+            CALL COP2D(JPRINT, 8, K, ALT, RTS, OXN, O2N, N2N, NE,&
+                       OP2D, TPROD2, OP2P, HEPLUS, N4S, NNO, PSEC)
+
+            !.. O+(4S) Calculate and print densities, production, loss.
+            TPROD1 = EUVION(1, 1)
+            PDISOP = EUVION(2, 4) + EUVION(2, 5) + PEPION(2, 4) + PEPION(2, 5)
+            CALL COP4S(JPRINT, 4, K, ALT, RTS, OXN, O2N, N2N, NE, OXPLUS, TPROD1, &
+                       OP2D, OP2P, PEPION(1, 1), PDISOP, N2PLUS, N2D, NNO, 1.0, HEPLUS)
+            CALL CN2A(JPRINT, 27, K, ALT, RTS, OXN, O2N, N2N, NE, N2A, N2APRD, 0.0, &
+                      0.0, 0.0)
+
+            !..CALL CN2P(JPRINT,0,K,ALT,RTS,OXN,O2N,N2N,NE,PN2P,LN2P
+            !..> ,N2P,P3X7,UVDISN,O2PLUS,NNO,N2PLUS)
+            !.. N(2D) Calculate and print densities, production, loss.
+            CALL CN2D(JPRINT, 16, K, ALT, RTS, OXN, O2N, N2N, NOPLUS, NE, PN2D, LN2D,&
+                      N2PLUS, DISN2D, UVDISN, NPLUS, N2P, N2D, OXPLUS, NNO, N2A)
+            N2D = PN2D / LN2D
+
+            !.. N2+ Calculate and print densities, production, loss.
+            CALL CN2PLS(JPRINT, 9, K, ALT, RTS, OXN, O2N, N2N, NE, N2PLUS, EUVION(3, 1),&
+                        EUVION(3, 2), EUVION(3, 3), PEPION(3, 1), PEPION(3, 2), PEPION(3, 3),&
+                        OP2D, OP2P, HEPLUS, NPLUS, NNO, N4S)
+
+            !.. N+ Calculate and print densities, production, loss.
+            !.. Note that N(2D) is turned off in N+ solution
+            PHOTN = OTHPR2(3)  !.. N+ prod
+            CALL CNPLS(JPRINT, 10, K, ALT, RTS, OXN, O2N, N2N, NE, DISNP, NPLUS, &
+                       OXPLUS, N2D, OP2P, HEPLUS, PHOTN, O2PLUS, N4S, OP2D, N2PLUS, NNO)
+            IF ( USER_NPLUS > 0 ) NPLUS = USER_NPLUS  !.. User specified N+
+            CALL CN4S(JPRINT, 28, K, ALT, RTS, OXN, O2N, N2N, NE, PN4S, LN4S, N4S, &
+                      DISN4S, N2D, N2P, OXPLUS, N2PLUS, UVDISN, NOPLUS, NPLUS, NNO, &
+                      O2PLUS, PDNOSR, 1.0)
+
+            !..N4S=PN4S/LN4S
+            !.. NO Calculate and print densities, production, loss.
+            CALL CNO(JPRINT, 15, K, ALT, RTS, OXN, O2N, N2N, NE, PNO, LNO,&
+                     N2D, N4S, N2P, NNO, O2PLUS, OXPLUS, OTHPR2(2), OTHPR2(1), N2A, NPLUS)
+            NNO = PNO / LNO     !.. NO chemical equilibrium density
+            !.. Set a floor on NO density, which is needed below ~150 km at night
+            IF ( NNO < 1.0E8*EXP( (100-ALT)/20 ) )&
+                                 NNO = 1.0E8 * EXP( (100-ALT)/20 )
+            IF ( USER_NO > 1.0 ) NNO = USER_NO  !.. substitute user specified value
+            IF ( NNO > 1.5E8 )   NNO = 1.5E8      !.. Don't let NO get too big
+
+            !.. NO+ Calculate and print densities, production, loss.
+            CALL CNOP(JPRINT, 11, K, ALT, RTS, OXN, O2N, N2N, NE, TPNOP, NOPLUS, OXPLUS,&
+                      N2PLUS, O2PLUS, N4S, NNO, NPLUS, N2P, PLYNOP, VCON, N2D, OP2D)
+            !.. O2+ Calculate and print densities,  production,  loss.
+            !.. EUV + PE production
+            TPROD5  =  EUVION(2, 1)  +  EUVION(2, 2)  +  EUVION(2, 3)  +  PEPION(2, 1) &
+                      +  PEPION(2, 2)  +  PEPION(2, 3)
+            CALL CO2P(JPRINT, 12, K, ALT, RTS, OXN, O2N, N2N, NE, O2PPROD,&
+                      O2PLUS, TPROD5, OXPLUS, OP2D, N2PLUS, NPLUS, N4S, NNO, OP2P)
+        END DO
+
+        !.. This section for chemical equilibrium densities for all species
+        !.. including O+. It is used when the Newton procedure fails to get O+
+        !.. Don't bother if molecular ions greater than Ne/2
+        !.. It increments ALTCHEM to force this action. The ion densities are
+        !.. normalized to the input NE. N+ is excluded in case it is user specified
+        INEWT   = 1
+        SUMIONS = OXPLUS + NOPLUS + O2PLUS + NPLUS
+        IF ( ALT < ALTCHEM .OR. NOPLUS + O2PLUS > 0.85*NE ) THEN
+            OXPLUS *= NE/SUMIONS
+            NOPLUS *= NE/SUMIONS
+            O2PLUS *= NE/SUMIONS
+            NPLUS  *= NE/SUMIONS
+            INEWT   = 0
+            RETURN
+        ENDIF
+
+        !.. Newton solution for O+ density given the electron density (NE)
+        !.. Go through twice to set up the derivative (F(x+h)-F(x))/h
+        !.. First O+ guess for Newton. This is important for high altitudes
+        !.. because Newton may converge on first try.
+        OXPLUSAVE = OXPLUS
+        IF ( NE - NOPLUS - O2PLUS > 100) OXPLUS = NE - NOPLUS - O2PLUS
+
+        SUMIONS = 0 ! Re-initialize SUMIONS
+        WHILE ( ABS( 1. - SUMIONS/NE ) > 0.05 ) DO
+            DO ITS = 1, 2
+                IF ( ITS == 1 ) H = OXPLUS * 0.0001         !.. increment for dn/dt
+                IF ( ITS == 2 ) OXPLUS += H       !.. increment N
+
+                !.. N+ Calculate and print densities, production, loss.
+                CALL CNPLS(JPRINT, 10, K, ALT, RTS, OXN, O2N, N2N, NE, DISNP, NPLUS, &
+                           OXPLUS, N2D, OP2P, HEPLUS, PHOTN, O2PLUS, N4S, OP2D, N2PLUS, NNO)
+                IF ( USER_NPLUS > 0 ) NPLUS = USER_NPLUS  !.. User specified N+
+
+                !.. N2+ Calculate and print densities, production, loss.
+                CALL CN2PLS(JPRINT, 9, K, ALT, RTS, OXN, O2N, N2N, NE, N2PLUS, EUVION(3, 1),&
+                            EUVION(3, 2), EUVION(3, 3), PEPION(3, 1), PEPION(3, 2), PEPION(3, 3),&
+                            OP2D, OP2P, HEPLUS, NPLUS, NNO, N4S)
+
+                !.. NO+ Calculate and print densities,  production,  loss.
+                CALL CNOP(JPRINT, 11, K, ALT, RTS, OXN, O2N, N2N, NE, TPNOP, NOPLUS, OXPLUS,&
+                          N2PLUS, O2PLUS, N4S, NNO, NPLUS, N2P, PLYNOP, VCON, N2D, OP2D)
+
+                !.. O2+ Calculate and print densities, production, loss.
+                !.. EUV + PE production
+                TPROD5 = EUVION(2,1) + EUVION(2,2) + EUVION(2,3) + PEPION(2,1)&
+                         + PEPION(2,2) + PEPION(2,3)
+                CALL CO2P(JPRINT, 12, K, ALT, RTS, OXN, O2N, N2N, NE, O2PPROD,&
+                          O2PLUS, TPROD5, OXPLUS, OP2D, N2PLUS, NPLUS, N4S, NNO, OP2P)
+
+                !.. N(2D) Calculate and print densities, production, loss.
+                CALL CN2D(JPRINT, 16, K, ALT, RTS, OXN, O2N, N2N, NOPLUS, NE, PN2D, LN2D,&
+                          N2PLUS, DISN2D, UVDISN, NPLUS, N2P, N2D, OXPLUS, NNO, N2A)
+                N2D = PN2D/LN2D
+
+                !.. calculation of F(x) from the total ion concentration
+                FEX(ITS) = OXPLUS + NOPLUS + O2PLUS + N2PLUS + NPLUS - NE
+            ENDDO
+
+            !.. Test for convergence and add increment to O+ if not
+            JITER  = JITER + 1          !.. for stopping the iterations
+            DEX    = ( FEX(2) - FEX(1) )/H
+            OXPLUS = OXPLUS - H - FEX(1)/DEX
+
+            !.. If Newton fails, go back and calculate O+ chem equilibrium
+            IF ( JITER > 6 .OR. OXPLUS < 0.0 .OR. OXPLUS > 1.0E7 ) THEN
+                ALTCHEM = ALT + 1  !.. forces chemical equilibrium densities
+                NEWT_SUCCESS = .FALSE.
+                exit
+            END IF
+
+            !.. Update SUMIONS, used in convergence test
+            SUMIONS = OXPLUS + NOPLUS + O2PLUS + N2PLUS + NPLUS
+        END DO
+
+        IF (NEWT_SUCCESS) THEN
+            !.. Normalize ion densities to the input electron density
+            OXPLUS *= NE/SUMIONS
+            NOPLUS *= NE/SUMIONS
+            O2PLUS *= NE/SUMIONS
+            NPLUS  *= NE/SUMIONS
+
+            !.. If O+ a very minor ion, Newton solution may not be good, force
+            !.. chemical equilibrium solution instead
+            IF ( OXPLUS/SUMIONS < 0.1 ) THEN
+                NEWT_SUCCESS = .FALSE.
+                ALTCHEM = ALT + 1  !.. forces chemical equilibrium densities
+            ENDIF
+        ENDIF
+    END DO
+    RETURN
+end subroutine ChemIon
+
+
 !.................... KEMPRN.FOR ......................................
 !.. This file contains the chemistry routines for ions and neutrals
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CN2D(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NOP,NE,P1,L1&
-        ,N2PLS,DISN2D,UVDISN,NPLUS,N2P,N2D,OPLS,NNO,N2A)
+subroutine CN2D(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NOP, NE, P1, L1, &
+                N2PLS, DISN2D, UVDISN, NPLUS, N2P, N2D, OPLS, NNO, N2A)
     !.......n(2d)
     IMPLICIT REAL(A-H,L,N-Z)
-    DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=NOP*NE*RTS(50)
-    PR(2)=N2PLS*NE*RTS(32)*RTS(11)
-    PR(3)=N2PLS*ON*RTS(10)
-    PR(4)=DISN2D
-    PR(5)=RTS(63)*UVDISN
-    PR(6)=RTS(65)*NPLUS*O2N
-    PR(7)=N2P*RTS(57)
-    PR(8)=RTS(27)*N2A*ON
-    LR(1)=ON*RTS(15)
-    LR(2)=O2N*RTS(16)
-    LR(3)=NE*RTS(8)
-    LR(4)=OPLS*RTS(29)
-    LR(5)=RTS(61)
-    LR(6)=RTS(41)*NNO
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)
-    L1=LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6)
+    DIMENSION RTS(99), LR(22), PR(22)
+
+    PR(1) = NOP     * NE * RTS(50)
+    PR(2) = N2PLS   * NE * RTS(32) * RTS(11)
+    PR(3) = N2PLS   * ON * RTS(10)
+    PR(4) = DISN2D
+    PR(5) = RTS(63) * UVDISN
+    PR(6) = RTS(65) * NPLUS * O2N
+    PR(7) = N2P     * RTS(57)
+    PR(8) = RTS(27) * N2A * ON
+    LR(1) = ON      * RTS(15)
+    LR(2) = O2N     * RTS(16)
+    LR(3) = NE      * RTS(8)
+    LR(4) = OPLS    * RTS(29)
+    LR(5) = RTS(61)
+    LR(6) = RTS(41) * NNO
+    P1    = SUM( PR(1:8) )
+    L1    = SUM( LR(1:6) )
     !....... EF is used to convert production rates to volume emission rates
-    EF=1.0
+    EF    = 1.0
     !....... This line in for volume emission rates
     !...      EF=RTS(61)*0.76/L1
-    IF(JPT == 1.AND.JPR > 0.AND.INT(EF+0.1) /= 1) WRITE(I,189)
-    IF(JPT == 1.AND.JPR > 0.AND.INT(EF+0.1) == 1) WRITE(I,191)
-    189  FORMAT(/2X,'N(2D)',25X,'EMISSION',28X,':',20X,'Loss rate')
-    191  FORMAT(/2X,'N(2D)',25X,'Production',36X,':',20X,'Loss rate')
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,96)
-    96   FORMAT(2X,'ALT   [N2D]   NO++e   N2++e   N2++O    e+N2   hv+N2'&
-        ,3X,'N++O2   N(2P)   N2A+O    +O     +O2      +e     +O+'&
-        ,5X,'RAD     +NO')
-    IF(JPR > 0) WRITE(I,7) Z,P1/L1,(PR(K)*EF,K=1,8)&
-        ,(LR(K)*N2D,K=1,6)
+    IF ( JPT == 1 .AND. JPR > 0 .AND. INT( EF + 0.1 ) /= 1) WRITE(I, 189)
+    IF ( JPT == 1 .AND. JPR > 0 .AND. INT( EF + 0.1 ) == 1) WRITE(I, 191)
+    IF ( JPT == 1 .AND. JPR > 0) WRITE(I,96)
+    IF ( JPR > 0 ) WRITE(I,7) Z, P1/L1, (PR(K)*EF, K=1, 8), (LR(K)*N2D, K=1, 6)
     RETURN
-    7    FORMAT(F6.1,1P,22E8.1)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E8.1)
+96   FORMAT(2X,'ALT   [N2D]   NO++e   N2++e   N2++O    e+N2   hv+N2',&
+            3X,'N++O2   N(2P)   N2A+O    +O     +O2      +e     +O+',&
+            5X,'RAD     +NO')
+189  FORMAT(/2X,'N(2D)',25X,'EMISSION',28X,':',20X,'Loss rate')
+191  FORMAT(/2X,'N(2D)',25X,'Production',36X,':',20X,'Loss rate')
+end subroutine CN2D
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CNO(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1&
-        ,N2D,N4S,N2P,NNO,O2P,OPLS,PDNOSR,PLYNOP,N2A,NPLUS)
+subroutine CNO(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, P1, L1, &
+               N2D, N4S, N2P, NNO, O2P, OPLS, PDNOSR, PLYNOP, N2A, NPLUS)
     !........no
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=RTS(16)*O2N*N2D
-    PR(2)=RTS(7)*O2N*N4S
-    PR(3)=RTS(38)*N2P*O2N
-    PR(4)=RTS(27)*N2A*ON
-    PR(5)=RTS(22)*NPLUS*O2N          !.. Fox
-    LR(1)=RTS(9)*N4S
-    LR(2)=RTS(23)*O2P
-    LR(3)=RTS(24)*OPLS
-    LR(4)=RTS(41)*N2D
-    LR(5)=PDNOSR
-    LR(6)=PLYNOP
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)
-    L1=LR(1)+LR(2)+LR(3) + LR(4) + (LR(5)+LR(6))
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,192)
-    192  FORMAT(/2X,'NO',17X,'PRODUCTION',20X,':',10X,'LOSS RATES'/&
-        ,4X,'ALT',3X,'[NO]',5X,'[NO]c',3X,'O2+N2D',&
-        3X,'O2+N4S   N2P+O2   N2A+O    N++O2    N4S+NO   O2P+NO   O++NO'&
-        ,3X,'N2D+NO   hv<1910   Lyman-a')
-    IF(JPR > 0) WRITE(I,7) Z,NNO,P1/L1,(PR(K),K=1,5)&
-        ,(LR(K)*NNO,K=1,6)
+
+    PR(1) = RTS(16) * O2N   * N2D
+    PR(2) = RTS(7)  * O2N   * N4S
+    PR(3) = RTS(38) * N2P   * O2N
+    PR(4) = RTS(27) * N2A   * ON
+    PR(5) = RTS(22) * NPLUS * O2N          !.. Fox
+    LR(1) = RTS(9)  * N4S
+    LR(2) = RTS(23) * O2P
+    LR(3) = RTS(24) * OPLS
+    LR(4) = RTS(41) * N2D
+    LR(5) = PDNOSR
+    LR(6) = PLYNOP
+    P1    = SUM( PR(1:5) )
+    L1    = SUM( LR(1:6) )
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,192)
+    IF ( JPR > 0 ) WRITE(I,7) Z, NNO, P1/L1, (PR(K), K=1, 5), (LR(K)*NNO, K=1, 6)
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E9.2)
+192  FORMAT(/2X,'NO',17X,'PRODUCTION',20X,':',10X,'LOSS RATES'/&
+    ,4X,'ALT',3X,'[NO]',5X,'[NO]c',3X,'O2+N2D',&
+    3X,'O2+N4S   N2P+O2   N2A+O    N++O2    N4S+NO   O2P+NO   O++NO'&
+    ,3X,'N2D+NO   hv<1910   Lyman-a')
+end subroutine CNO
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CN4S(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1,N4S,DISN4S&
-        ,N2D,N2P,OPLS,N2PLS,UVDISN,NOP,NPLUS,NNO,O2P,PDNOSR,VCON)
+subroutine CN4S(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1,N4S,DISN4S,&
+                N2D,N2P,OPLS,N2PLS,UVDISN,NOP,NPLUS,NNO,O2P,PDNOSR,VCON)
     !........N(4S)
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=DISN4S
-    PR(2)=RTS(15)*ON*N2D
-    PR(3)=RTS(8)*NE*N2D
-    PR(4)=VCON*RTS(3)*OPLS*N2N
-    PR(5)=RTS(53)*RTS(11)*N2PLS*NE
-    PR(6)=RTS(62)*UVDISN
-    PR(7)=NOP*NE*RTS(49)
-    PR(8)=N2D*RTS(61)
-    PR(9)=N2P*RTS(58)
-    PR(10)=RTS(25)*NPLUS*O2N
-    PR(11)=PDNOSR*NNO
-    PR(12)=NPLUS*NNO*RTS(81)      !..Fox
-    LR(1)=RTS(7)*O2N
-    LR(2)=RTS(9)*NNO
-    LR(3)=RTS(21)*O2P
-    LR(4)=RTS(79)*N2PLS     !..Fox
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)+PR(9)+PR(10)&
-        +PR(11)+PR(12)
-    L1=LR(1)+LR(2)+LR(3)+LR(4)
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,193)
-    193   FORMAT(/2X,'N(4S)',38X,'PRODUCTION',46X,':',7X,'LOSS RATES'/&
-        ,3X,'ALT',2X,'[N4S]',2X,'hv->N+'&
-        ,3X,'O+N2D',2X,'e+N2D',3X,'O++N2',3X,'N2++e',4X,'hv->2N'&
-        ,2X,'NO++e',2X,'N(2D)',4X,'N(2P)   N+&X    hv+NO    +O2  '&
-        ,2X,' +NO  ',2X,'+O2+ & N2+')
-    PR(10)=PR(10)+PR(12)  !... for printing fit
-    LR(3)=LR(3)+LR(4)     !... for printing fit
-    IF(JPR > 0) WRITE(I,7) Z,N4S,(PR(K),K=1,11),(LR(K)*N4S,K=1,3)
+
+    PR(1)  = DISN4S
+    PR(2)  = RTS(15) * ON      * N2D
+    PR(3)  = RTS(8)  * NE      * N2D
+    PR(4)  = VCON    * RTS(3)  * OPLS  * N2N
+    PR(5)  = RTS(53) * RTS(11) * N2PLS * NE
+    PR(6)  = RTS(62) * UVDISN
+    PR(7)  = NOP     * NE      * RTS(49)
+    PR(8)  = N2D     * RTS(61)
+    PR(9)  = N2P     * RTS(58)
+    PR(10) = RTS(25) * NPLUS   * O2N
+    PR(11) = PDNOSR  * NNO
+    PR(12) = NPLUS   * NNO     * RTS(81)      !..Fox
+    LR(1)  = RTS(7)  * O2N
+    LR(2)  = RTS(9)  * NNO
+    LR(3)  = RTS(21) * O2P
+    LR(4)  = RTS(79) * N2PLS     !..Fox
+    P1 = SUM( PR(1:12) )
+    L1 = SUM( LR(1:4) )
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,193)
+    PR(10) = PR(10) + PR(12)  !... for printing fit
+    LR(3)  = LR(3)  + LR(4)     !... for printing fit
+    IF(JPR > 0) WRITE(I,7) Z, N4S, (PR(K), K=1, 11), (LR(K)*N4S, K=1, 3)
     RETURN
-    7    FORMAT(F6.1,1P,22E8.1)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E8.1)
+193  FORMAT(/2X,'N(4S)',38X,'PRODUCTION',46X,':',7X,'LOSS RATES'/,&
+            3X,'ALT',2X,'[N4S]',2X,'hv->N+',&
+            3X,'O+N2D',2X,'e+N2D',3X,'O++N2',3X,'N2++e',4X,'hv->2N',&
+            2X,'NO++e',2X,'N(2D)',4X,'N(2P)   N+&X    hv+NO    +O2  ',&
+            2X,' +NO  ',2X,'+O2+ , N2+')
+end subroutine CN4S
+
+
 !::::::::::::::::::::::::::::::: CN2PLS :::::::::::::::::::::::::::::::
 !..... Simplified chemistry of N2+.  PUN2P* = production of N2+ by euv
 !..... in the (X,A,B states). PEN2P* same for p.e.s (X,A,B states)
-SUBROUTINE CN2PLS(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,N2PLS,PUN2PX,&
-        PUN2PA,PUN2PB,PEN2PX,PEN2PA,PEN2PB,OP2D,OP2P,HEPLUS,NPLUS,&
-        NNO,N4S)
+subroutine CN2PLS(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, N2PLS, PUN2PX, &
+                  PUN2PA, PUN2PB, PEN2PX, PEN2PA, PEN2PB, OP2D, OP2P, HEPLUS, NPLUS, &
+                  NNO, N4S)
     IMPLICIT REAL(A-H,L,N-Z)
     REAL PUN2PX,PUN2PA,PUN2PB,PEN2PX,PEN2PA,PEN2PB
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=PUN2PX
-    PR(2)=PUN2PA
-    PR(3)=PUN2PB
-    PR(4)=PEN2PX
-    PR(5)=PEN2PA
-    PR(6)=PEN2PB
-    PR(7)=RTS(19)*OP2D*N2N
-    PR(8)=RTS(20)*OP2P*N2N
-    PR(9)=RTS(44)*HEPLUS*N2N
-    PR(10)=RTS(82)*NPLUS*NNO   !..Fox
-    LR(1)=RTS(10)*ON
-    LR(2)=RTS(11)*NE
-    LR(3)=RTS(17)*O2N
-    LR(4)=RTS(99)*ON
-    LR(5)=RTS(79)*N4S     !..Fox
-    LR(6)=RTS(80)*NNO     !..Fox
-    N2PLS=&
-        (PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)+PR(9)+PR(10))/&
-        (LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6))
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,95)
-    95   FORMAT(/2X,'N2+',29X,'PRODUCTION',45X,':',12X,'LOSS RATES'/&
-        ,3X,'ALT  [N2+]  EUV-X   EUV-A    EUV-B   PE-X'&
-        ,5X,'PE-A    PE-B  O+2D+N2  O+2P+N2  He++N2  O+N2+'&
-        ,2X,'e+N2+  O2+N2+  N2++O  Other')
-    PR(9)=PR(9)+PR(10)     !.. for printing fit
-    LR(5)=LR(5)+LR(6)      !.. for printing fit
-    IF(JPR > 0) WRITE(I,7) Z,N2PLS,(PR(K),K=1,9)&
-        ,(LR(K)*N2PLS,K=1,5)
+
+    PR(1)  = PUN2PX
+    PR(2)  = PUN2PA
+    PR(3)  = PUN2PB
+    PR(4)  = PEN2PX
+    PR(5)  = PEN2PA
+    PR(6)  = PEN2PB
+    PR(7)  = RTS(19) * OP2D   * N2N
+    PR(8)  = RTS(20) * OP2P   * N2N
+    PR(9)  = RTS(44) * HEPLUS * N2N
+    PR(10) = RTS(82) * NPLUS  * NNO   !..Fox
+    LR(1)  = RTS(10) * ON
+    LR(2)  = RTS(11) * NE
+    LR(3)  = RTS(17) * O2N
+    LR(4)  = RTS(99) * ON
+    LR(5)  = RTS(79) * N4S     !..Fox
+    LR(6)  = RTS(80) * NNO     !..Fox
+    N2PLS  = SUM( PR(1:10) ) / SUM( LR(1:6) )
+
+    IF( JPT == 1 .AND. JPR > 0 ) WRITE(I,95)
+    PR(9) = PR(9) + PR(10)     !.. for printing fit
+    LR(5) = LR(5) + LR(6)      !.. for printing fit
+    IF(JPR > 0) WRITE(I,7) Z, N2PLS, (PR(K), K=1, 9), (LR(K)*N2PLS, K=1, 5)
     RETURN
-    7    FORMAT(F6.1,1P,22E8.1)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E8.1)
+95   FORMAT(/2X,'N2+',29X,'PRODUCTION',45X,':',12X,'LOSS RATES'/,&
+            3X,'ALT  [N2+]  EUV-X   EUV-A    EUV-B   PE-X',&
+            5X,'PE-A    PE-B  O+2D+N2  O+2P+N2  He++N2  O+N2+',&
+            2X,'e+N2+  O2+N2+  N2++O  Other')
+end subroutine CN2PLS
+
+
 !:::::::::::::::::::::::::::::: CNOP ::::::::::::::::::::::::::::::::::
-SUBROUTINE CNOP(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,NOP,OPLS&
-        ,N2PLS,O2P,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
+subroutine CNOP(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, P1, NOP, OPLS, &
+                N2PLS, O2P, N4S, NNO, NPLUS, N2P, PLYNOP, VCON, N2D, OP2D)
     !........no+
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=VCON*RTS(3)*N2N*OPLS
-    PR(2)=N2PLS*ON*RTS(10)
-    PR(3)=O2P*N4S*RTS(21)
-    PR(4)=O2P*NNO*RTS(23)
-    !.. N+ + O2 -> O2+ + N(2D,4S) or NO+ + O(1S)
-    PR(5)=(RTS(30)+RTS(66)+RTS(59))*NPLUS*O2N
-    PR(6)=RTS(37)*N2P*ON
-    PR(7)=RTS(24)*OPLS*NNO
-    PR(8)=PLYNOP*NNO
-    PR(9)=O2P*N2D*RTS(77)         !..Fox
-    PR(10)=N2PLS*NNO*RTS(80)      !..Fox
-    PR(11)=NPLUS*NNO*RTS(81)      !..Fox
-    PR(12)=RTS(83)*NNO*OP2D       !..Fox
-    PR(13)=OP2D*RTS(90)*N2N        !.. -> NO+ + N, Li et al. [1997]
-    LR(1)=NE*RTS(5)
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)&
-        +PR(9)+PR(10)+PR(11)+PR(12)+PR(13)
-    NOP=P1/LR(1)
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,96)
-    96   FORMAT(/2X,'NO+',31X,'PRODUCTION',48X,':',2X,'LOSS RATES'/&
-        ,3X,'ALT',3X,'[NO+]',4X,'O++N2',3X,'N2++O',3X,'O2++N4S'&
-        ,3X,'O2++NO',3X,'N++O2',4X,'N2P+O',3X,'O++NO   hv+NO'&
-        ,5X,'O2++N2D   N2++NO   N++NO   OP2D+NO   OP2D+N2  NO++e')
+
+    PR(1)  = VCON  * RTS(3) * N2N * OPLS
+    PR(2)  = N2PLS * ON     * RTS(10)
+    PR(3)  = O2P   * N4S    * RTS(21)
+    PR(4)  = O2P   * NNO    * RTS(23)
+    !.. N +   +  O2 -> O2 +   +  N(2D,4S) or NO +   +  O(1S)
+    PR(5)  = (RTS(30) + RTS(66) + RTS(59)) * NPLUS * O2N
+    PR(6)  = RTS(37) * N2P  * ON
+    PR(7)  = RTS(24) * OPLS * NNO
+    PR(8)  = PLYNOP  * NNO
+    PR(9)  = O2P     * N2D  * RTS(77)    !..Fox
+    PR(10) = N2PLS   * NNO  * RTS(80)    !..Fox
+    PR(11) = NPLUS   * NNO  * RTS(81)    !..Fox
+    PR(12) = RTS(83) * NNO  * OP2D       !..Fox
+    PR(13) = OP2D    * RTS(90) * N2N     !.. -> NO +   +  N, Li et al. [1997]
+    LR(1)  = NE      * RTS(5)
+    P1     = SUM( PR(1:13) )
+    NOP    = P1/LR(1)
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,96)
     !PR(9)=PR(9)+PR(10)+PR(11)+PR(12)+PR(13)
-    IF(JPR > 0) WRITE(I,7) Z,NOP,(PR(K),K=1,13),LR(1)*NOP
+    IF ( JPR > 0 ) WRITE(I,7) Z,NOP,(PR(K),K=1,13),LR(1)*NOP
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E9.2)
+96   FORMAT(/2X,'NO+',31X,'PRODUCTION',48X,':',2X,'LOSS RATES'/,&
+            3X,'ALT',3X,'[NO+]',4X,'O++N2',3X,'N2++O',3X,'O2++N4S',&
+            3X,'O2++NO',3X,'N++O2',4X,'N2P+O',3X,'O++NO   hv+NO',&
+            5X,'O2++N2D   N2++NO   N++NO   OP2D+NO   OP2D+N2  NO++e')
+end subroutine CNOP
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CO2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1&
-        ,O2P,TPROD5,OPLS,OP2D,N2PLS,NPLUS,N4S,NNO,OP2P)
+subroutine CO2P(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, P1, &
+                O2P, TPROD5, OPLS, OP2D, N2PLS, NPLUS, N4S, NNO, OP2P)
     !........o2+
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
+
     !......... TPROD5=euv @ p.e. production
-    PR(1)=TPROD5
-    PR(2)=RTS(4)*O2N*OPLS
-    PR(3)=RTS(43)*OP2D*O2N
-    PR(4)=RTS(17)*O2N*N2PLS
-    PR(5)=RTS(25)*NPLUS*O2N
-    PR(6)=RTS(86)*OP2P*O2N           !.. Fox
-    PR(7)=RTS(65)*NPLUS*O2N
-    LR(1)=RTS(6)*NE
-    LR(2)=RTS(21)*N4S
-    LR(3)=RTS(23)*NNO
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)
-    O2P=P1/(LR(1)+LR(2)+LR(3))
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,97)
-    97  FORMAT(/2X,'O2+',22X,'PRODUCTION',24X,':',12X,'LOSS RATES'&
-        /,3X,'ALT',3X,'[O2+]',3X,'hv+O2',3X,'O++O2',3X,'O+(2D)+O2'&
-        ,4X,'N2++O2   N++O2   O+(2P)+O2  O2++e   O2++N   O2++NO')
+    PR(1) = TPROD5
+    PR(2) = RTS(4)  * O2N   * OPLS
+    PR(3) = RTS(43) * OP2D  * O2N
+    PR(4) = RTS(17) * O2N   * N2PLS
+    PR(5) = RTS(25) * NPLUS * O2N
+    PR(6) = RTS(86) * OP2P  * O2N           !.. Fox
+    PR(7) = RTS(65) * NPLUS * O2N
+    LR(1) = RTS(6)  * NE
+    LR(2) = RTS(21) * N4S
+    LR(3) = RTS(23) * NNO
+    P1    = SUM( PR(1:7) )
+    O2P   = P1/SUM( LR(1:3) )
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,97)
     IF(JPR > 0) WRITE(I,7) Z,O2P,(PR(K),K=1,7),(LR(K)*O2P,K=1,3)
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E9.2)
+97   FORMAT(/2X,'O2+',22X,'PRODUCTION',24X,':',12X,'LOSS RATES'/,&
+            3X,'ALT',3X,'[O2+]',3X,'hv+O2',3X,'O++O2',3X,'O+(2D)+O2',&
+            4X,'N2++O2   N++O2   O+(2P)+O2  O2++e   O2++N   O2++NO')
+end subroutine CO2P
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE COP4S(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OPLS,TPROD1,OP2D&
-        ,OP2P,PEPION,PDISOP,N2PLS,N2D,NNO,VCON,HEPLUS)
+subroutine COP4S(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, OPLS, TPROD1, OP2D, &
+                 OP2P, PEPION, PDISOP, N2PLS, N2D, NNO, VCON, HEPLUS)
     !...........o+(4s)
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
+
     !.........pr(1)= euv production of o+(4s)
-    PR(1)=TPROD1
-    PR(2)=OP2D*NE*RTS(12)
-    PR(3)=OP2P*ON*RTS(26)
-    PR(4)=PEPION
-    PR(5)=PDISOP
-    PR(6)=RTS(99)*N2PLS*ON
-    PR(7)=OP2P*NE*RTS(14)
-    PR(8)=OP2P*0.047
-    PR(9)=RTS(28)*ON*OP2D
-    PR(10)=RTS(85)*OP2P*O2N              !.. Fox
-    PR(11)=HEPLUS*O2N*(RTS(91)+RTS(93))  !..Fox
-    PR(12)=RTS(95)*NNO*HEPLUS            !..Fox
-    !      PR(13)=RTS(22)*NPLUS*O2N             !..Fox
-    PR(13)=0.0
-    LR(1)=N2N*VCON*RTS(3)
-    LR(2)=O2N*RTS(4)
-    LR(3)=NNO*RTS(24)
-    LR(4)=N2D*RTS(29)    !.... small loss?? ..Fox
-    !..LR(4)=(LR(1)+LR(2)+LR(3))  !.. total loss for printing
-    PR(10)=PR(10)+PR(11)+PR(12)+PR(13)
-    PRTOT=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)+PR(9)+PR(10)
-    LRTOT=LR(1)+LR(2)+LR(3)+LR(4)
-    OPLS=PRTOT/LRTOT
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,98)
-    98   FORMAT(/2X,'O+',41X,'PRODUCTION',39X,':',10X,'LOSS RATES'/&
-        ,' ALT    [O+]   hv+O  O+(2D)+e O+(2P)+O   e*+O  O2-diss  '&
-        ,'N2++O  O+(2P)+e O+(2P) O+O+(2D)   Other  +N2     +O2    '&
-        ,'+NO   +N2D')
-    IF(JPR > 0) WRITE(I,7) Z,OPLS,(PR(K),K=1,10)&
-        ,(LR(K)*OPLS,K=1,4)
+    PR(1)  = TPROD1
+    PR(2)  = OP2D    * NE * RTS(12)
+    PR(3)  = OP2P    * ON * RTS(26)
+    PR(4)  = PEPION
+    PR(5)  = PDISOP
+    PR(6)  = RTS(99) * N2PLS * ON
+    PR(7)  = OP2P    * NE * RTS(14)
+    PR(8)  = OP2P    * 0.047
+    PR(9)  = RTS(28) * ON * OP2D
+    PR(10) = RTS(85) * OP2P * O2N              !.. Fox
+    PR(11) = HEPLUS  * O2N * (RTS(91) + RTS(93))  !..Fox
+    PR(12) = RTS(95) * NNO * HEPLUS            !..Fox
+    !      PR(13) = RTS(22) * NPLUS * O2N             !..Fox
+    PR(13) = 0.0
+    LR(1)  = N2N * VCON * RTS(3)
+    LR(2)  = O2N * RTS(4)
+    LR(3)  = NNO * RTS(24)
+    LR(4)  = N2D * RTS(29)    !.... small loss?? ..Fox
+    !..LR(4) = (LR(1) + LR(2) + LR(3))  !.. total loss for printing
+    PR(10) = SUM(PR(10:13))
+    PRTOT  = SUM(PR(1:10))
+    LRTOT  = SUM(LR(1:4))
+    OPLS   = PRTOT/LRTOT
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,98)
+    IF ( JPR > 0 ) WRITE(I,7) Z,OPLS,(PR(K),K=1,10),(LR(K)*OPLS,K=1,4)
     RETURN
-    7    FORMAT(F6.1,1P,22E8.1)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E8.1)
+98   FORMAT(/2X,'O+',41X,'PRODUCTION',39X,':',10X,'LOSS RATES'/,&
+            ' ALT    [O+]   hv+O  O+(2D)+e O+(2P)+O   e*+O  O2-diss  ',&
+            'N2++O  O+(2P)+e O+(2P) O+O+(2D)   Other  +N2     +O2    ',&
+            '+NO   +N2D')
+end subroutine COP4S
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE COP2D(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OP2D,TPROD2,OP2P&
-        ,HEPLUS,N4S,NNO,PSEC)
+subroutine COP2D(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, OP2D, TPROD2, OP2P, &
+                 HEPLUS, N4S, NNO, PSEC)
     !.......o+(2d)
     IMPLICIT REAL (A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=TPROD2                ! EUV  prod
-    PR(2)=OP2P*NE*RTS(13)
-    PR(3)=OP2P*0.171
-    PR(4)=HEPLUS*O2N*RTS(76)     !..Fox
-    PR(5)=PSEC
-    LR(1)=RTS(19)*N2N
-    LR(2)=7.7E-5                 !.. radiation at 3726 and 3729 A
-    LR(3)=NE*RTS(12)
-    LR(4)=ON*RTS(28)
-    LR(5)=RTS(43)*O2N
-    LR(6)=RTS(83)*NNO      !..Fox
-    LR(7)=RTS(84)*N4S      !..Fox
-    LR(8)=RTS(90)*N2N      !.. -> NO+ + N, Li et al. [1997]
-    OP2D=(PR(1)+PR(2)+PR(3)+PR(4)+PR(5))/&
-        (LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6)+LR(7)+LR(8))
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,99)
-    99   FORMAT(/2X,'O+(2D)',13X,'PRODUCTION',27X,':',18X,'LOSS RATES'/&
-        ,3X,'ALT',3X,'[O+2D]',3X,'hv+O',4X,'e*+O',4X,'O+2P+e',3X,&
-        'O+2P>hv',2X,'He++O2     +N2    E3726_29    +e       +O',&
-        '      +O2      +NO     +N  +N2>NO+')
-    IF(JPR > 0) WRITE(I,7) Z,OP2D,PR(1),PR(5),PR(2),PR(3),PR(4)&
-        ,(LR(K)*OP2D,K=1,8)
+
+    PR(1) = TPROD2                ! EUV  prod
+    PR(2) = OP2P    * NE * RTS(13)
+    PR(3) = OP2P    * 0.171
+    PR(4) = HEPLUS  * O2N * RTS(76)     !..Fox
+    PR(5) = PSEC
+    LR(1) = RTS(19) * N2N
+    LR(2) = 7.7E-5                 !.. radiation at 3726 and 3729 A
+    LR(3) = NE      * RTS(12)
+    LR(4) = ON      * RTS(28)
+    LR(5) = RTS(43) * O2N
+    LR(6) = RTS(83) * NNO      !..Fox
+    LR(7) = RTS(84) * N4S      !..Fox
+    LR(8) = RTS(90) * N2N      !.. -> NO +   +  N, Li et al. [1997]
+    OP2D  = SUM( PR(1:5) )/SUM( LR(1:8) )
+
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,99)
+    IF ( JPR > 0 ) WRITE(I,7) Z,OP2D,PR(1),PR(5),PR(2),PR(3),PR(4),(LR(K)*OP2D,K=1,8)
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+! Format Statements
+7    FORMAT(F6.1,1P,22E9.2)
+99   FORMAT(/2X,'O+(2D)',13X,'PRODUCTION',27X,':',18X,'LOSS RATES'/,&
+            3X,'ALT',3X,'[O+2D]',3X,'hv+O',4X,'e*+O',4X,'O+2P+e',3X,&
+            'O+2P>hv',2X,'He++O2     +N2    E3726_29    +e       +O',&
+            '      +O2      +NO     +N  +N2>NO+')
+end subroutine COP2D
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE COP2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,OP2P,TPROD3,PSEC&
-        ,HEPLUS,N4S,NNO,TE)
+subroutine COP2P(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, OP2P, TPROD3, PSEC, &
+                 HEPLUS, N4S, NNO, TE)
     !.......o+(2p)
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=0.0
-    IF(TPROD3 >= PSEC) PR(1)=TPROD3-PSEC
-    PR(2)=PSEC
-    PR(3)=HEPLUS*O2N*RTS(92)        !..Fox
-    LR(1)=RTS(26)*ON
-    LR(2)=RTS(20)*N2N
-    LR(3)=RTS(13)*NE
-    LR(4)=0.218
-    LR(5)=RTS(14)*NE
-    LR(6)=(RTS(85)+RTS(86))*O2N    !..Fox
-    LR(7)=RTS(87)*N4S              !..Fox
-    LR(8)=RTS(88)*NNO              !..Fox
-    OP2P=(TPROD3+PR(3))&
-        /(LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6)+LR(7)+LR(8))
+
+    PR(1) =  0.0
+    IF ( TPROD3 >= PSEC ) PR(1) = TPROD3 - PSEC
+    PR(2) =  PSEC
+    PR(3) =  HEPLUS  * O2N * RTS(92)        !..Fox
+    LR(1) =  RTS(26) * ON
+    LR(2) =  RTS(20) * N2N
+    LR(3) =  RTS(13) * NE
+    LR(4) =  0.218
+    LR(5) =  RTS(14) * NE
+    LR(6) = (RTS(85) + RTS(86)) * O2N    !..Fox
+    LR(7) =  RTS(87) * N4S              !..Fox
+    LR(8) =  RTS(88) * NNO              !..Fox
+    OP2P  = (TPROD3  + PR(3))/SUM( LR(1:8) )
+
     IF(JPT == 1.AND.JPR > 0) WRITE(I,100)
-    100   FORMAT(/2X,' O+(2P)',6X,'PRODUCTION',10X,':',12X,'LOSS RATES'/&
-        ,3X,'ALT   [O+2P]    hv+O     e*+O  He++O2      +O',7X,'+N2'&
-        ,6x,'+e       RAD      +e      +O2      +N4S     +NO'&
-        ,6x,'OX       N2        e      Te       E7320')
-    IF(JPR > 0) WRITE(I,7) Z,OP2P,PR(1),PR(2),PR(3),&
-        (LR(K)*OP2P,K=1,8),ON,N2N,NE,TE,OP2P*0.218*0.781
+    IF(JPR > 0) WRITE(I,7) Z,OP2P,PR(1),PR(2),PR(3),(LR(K)*OP2P,K=1,8),ON,N2N,NE,TE,OP2P*0.218*0.781
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+7    FORMAT(F6.1,1P,22E9.2)
+100  FORMAT(/2X,' O+(2P)',6X,'PRODUCTION',10X,':',12X,'LOSS RATES'/,&
+            3X,'ALT   [O+2P]    hv+O     e*+O  He++O2      +O',7X,'+N2',&
+            6x,'+e       RAD      +e      +O2      +N4S     +NO',&
+            6x,'OX       N2        e      Te       E7320')
+end subroutine COP2P
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CNPLS(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,DISNP&
-        ,NPLUS,OPLS,N2D,OP2P,HEPLUS,PHOTN,O2P,N4S,OP2D,N2PLS,NNO)
+subroutine CNPLS(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, DISNP, &
+                 NPLUS, OPLS, N2D, OP2P, HEPLUS, PHOTN, O2P, N4S, OP2D, N2PLS, NNO)
     !........n+
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=DISNP
-    PR(2)=RTS(29)*OPLS*N2D
-    PR(3)=0
-    PR(4)=RTS(45)*HEPLUS*N2N
-    PR(5)=PHOTN
-    PR(6)=O2P*N2D*RTS(78)          !..Fox
-    PR(7)=N2PLS*N4S*RTS(79)        !..Fox
-    PR(8)=OP2D*N4S*RTS(84)         !..Fox
-    PR(9)=RTS(94)*NNO*HEPLUS       !..Fox
-    LR(1)=RTS(30)*O2N              !..Fox
-    LR(2)=RTS(25)*O2N              !..Fox
-    LR(3)=RTS(22)*O2N              !..Fox
-    LR(4)=RTS(65)*O2N              !..Fox
-    LR(5)=RTS(66)*O2N              !..Fox
-    LR(6)=RTS(31)*ON               !..Fox
-    CNPLUS=0.0
-    IF(LR(1)+LR(2)+LR(3) > 0.0)&
-        CNPLUS=(PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)+PR(9))&
-        /(LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6))
-    NPLUS=CNPLUS
+
+    PR(1) = DISNP
+    PR(2) = RTS(29) * OPLS * N2D
+    PR(3) = 0
+    PR(4) = RTS(45) * HEPLUS * N2N
+    PR(5) = PHOTN
+    PR(6) = O2P     * N2D * RTS(78)    !..Fox
+    PR(7) = N2PLS   * N4S * RTS(79)    !..Fox
+    PR(8) = OP2D    * N4S * RTS(84)    !..Fox
+    PR(9) = RTS(94) * NNO * HEPLUS     !..Fox
+    LR(1) = RTS(30) * O2N              !..Fox
+    LR(2) = RTS(25) * O2N              !..Fox
+    LR(3) = RTS(22) * O2N              !..Fox
+    LR(4) = RTS(65) * O2N              !..Fox
+    LR(5) = RTS(66) * O2N              !..Fox
+    LR(6) = RTS(31) * ON               !..Fox
+    CNPLUS = 0.0
+    IF ( SUM( LR(1:3) ) > 0.0) CNPLUS = SUM( PR(1:9) ) / SUM( LR(1:6) )
+    NPLUS = CNPLUS
+
     IF(JPT == 1.AND.JPR > 0) WRITE(I,101)
-    101   FORMAT(/2X,'N+',20X,'PRODUCTION',71X,':',8X,'LOSS RATES'/&
-        ,4X,'ALT   [N+]   [N+]c     hv+N2   O++N2D  O+2P+N2',3X&
-        ,'He++N2',3X,' hv+N   O2++N2D  N2++N4S O+(2D)+N4S  He++NO'&
-        ,3X,'N++O2    N++O2    N++O2    N++O2    N++O2    N++O')
-    IF(JPR > 0) WRITE(I,7) Z,NPLUS,CNPLUS&
-        ,(PR(K),K=1,9),(LR(K)*NPLUS,K=1,6)
+    IF(JPR > 0) WRITE(I,7) Z,NPLUS,CNPLUS,(PR(K),K=1,9),(LR(K)*NPLUS,K=1,6)
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+7    FORMAT(F6.1,1P,22E9.2)
+101  FORMAT(/2X,'N+',20X,'PRODUCTION',71X,':',8X,'LOSS RATES'/,&
+            4X,'ALT   [N+]   [N+]c     hv+N2   O++N2D  O+2P+N2',3X,&
+            'He++N2',3X,' hv+N   O2++N2D  N2++N4S O+(2D)+N4S  He++NO',&
+            3X,'N++O2    N++O2    N++O2    N++O2    N++O2    N++O')
+end subroutine CNPLS
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CN2A(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE&
-        ,N2A,P3X1,P3X2,P3X3,P3X4)
+subroutine CN2A(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, &
+                N2A, P3X1, P3X2, P3X3, P3X4)
     !........n2(a3sigma) and total LBH
     IMPLICIT REAL(A-H,L,N-Z)
     REAL P3X1,P3X2,P3X3,P3X4
     DIMENSION RTS(99),LR(22),PR(22)
+
     !....... pr(1,2,3)= electron impact excitation of n2(a,b,c) states
-    PR(1)=P3X1
-    PR(2)=P3X2
-    PR(3)=P3X3
-    LR(1)=RTS(36)*ON
-    LR(2)=RTS(27)*ON
-    LR(3)=0.57
-    N2A=(PR(1)+PR(2)+PR(3))/(LR(1)+LR(2)+LR(3))
+    PR(1) = P3X1
+    PR(2) = P3X2
+    PR(3) = P3X3
+    LR(1) = RTS(36) * ON
+    LR(2) = RTS(27) * ON
+    LR(3) = 0.57
+    N2A = SUM( PR(1:3) ) / SUM( LR(1:3) )
+
     IF(JPT == 1.AND.JPR > 0) WRITE(I,102)
-    102   FORMAT(/2X,'N2(A)',12X,'PRODUCTION',13X,':',5X,'LOSS RATES'&
-        ,3X,':  Total LBH'&
-        /,3X,'ALT',3X,'N2(A)',3X,'e*->N2A',3X,'e*->N2B',3X,'e*->N2C',2X&
-        ,'N2A>O1S',2X,'N2A>NO',2X,'RAD',5X,'LBH')
-    IF(JPR > 0) WRITE(I,7) Z,N2A,(PR(K),K=1,3),(LR(K)*N2A,K=1,3)&
-        ,P3X4
+    IF(JPR > 0) WRITE(I,7) Z,N2A,(PR(K),K=1,3),(LR(K)*N2A,K=1,3),P3X4
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
-END
+
+7    FORMAT(F6.1,1P,22E9.2)
+102  FORMAT(/2X,'N2(A)',12X,'PRODUCTION',13X,':',5X,'LOSS RATES',&
+            3X,':  Total LBH'/,&
+            3X,'ALT',3X,'N2(A)',3X,'e*->N2A',3X,'e*->N2B',3X,'e*->N2C',2X,&
+            'N2A>O1S',2X,'N2A>NO',2X,'RAD',5X,'LBH')
+end subroutine CN2A
+
+
 !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE CN2P(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,L1&
-        ,N2P,P3X7,UVDISN,O2P,NNO,N2PLUS)
+subroutine CN2P(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, P1, L1, &
+                N2P, P3X7, UVDISN, O2P, NNO, N2PLUS)
     !....... N(2P). the rates are from Zipf et al JGR, 1980 p687
     !.... 21-AUG-1992. Added N2+ recombination source
     IMPLICIT REAL(A-H,L,N-Z)
     DIMENSION RTS(99),LR(22),PR(22)
-    PR(1)=P3X7
-    PR(2)=RTS(64)*UVDISN
-    PR(3)=RTS(73)*RTS(11)*N2PLUS*NE
-    LR(1)=RTS(37)*ON
-    LR(2)=RTS(38)*O2N
-    LR(3)=RTS(39)*O2P
-    LR(4)=RTS(40)*NNO
-    LR(5)=RTS(57)
-    LR(6)=RTS(58)
-    LR(7)=(RTS(96)+RTS(97))*NE    !..Fox
-    P1=PR(1)+PR(2)+PR(3)
-    L1=LR(1)+LR(2)+LR(3)+LR(4)+LR(5)+LR(6)+LR(7)
+
+    PR(1) = P3X7
+    PR(2) = RTS(64) * UVDISN
+    PR(3) = RTS(73) * RTS(11) * N2PLUS * NE
+    LR(1) = RTS(37) * ON
+    LR(2) = RTS(38) * O2N
+    LR(3) = RTS(39) * O2P
+    LR(4) = RTS(40) * NNO
+    LR(5) = RTS(57)
+    LR(6) = RTS(58)
+    LR(7) = (RTS(96) + RTS(97)) * NE    !..Fox
+    P1 = SUM( PR(1:3) )
+    L1 = SUM( LR(1:7) )
+
     IF(JPT == 1.AND.JPR > 0) WRITE(I,103)
-    103   FORMAT(/2X,'N(2P)',9X,'PRODUCTION',17X,':',20X,'LOSS RATES'/&
-        ,3X,'ALT',3X,'[N2P]',3X,'e+N2',5X,'hv+N2',3X,'e+N2+',6X,'+O  '&
-        ,3X,'+O2      +O2+      +NO       +2D     +4S      +e')
     IF(JPR > 0) WRITE(I,7) Z,N2P,(PR(K),K=1,3),(LR(K)*N2P,K=1,7)
     RETURN
-    7    FORMAT(F6.1,1P,22E9.2)
+
+7    FORMAT(F6.1,1P,22E9.2)
+103  FORMAT(/2X,'N(2P)',9X,'PRODUCTION',17X,':',20X,'LOSS RATES'/,&
+            3X,'ALT',3X,'[N2P]',3X,'e+N2',5X,'hv+N2',3X,'e+N2+',6X,'+O  ',&
+            3X,'+O2      +O2+      +NO       +2D     +4S      +e')
 END
+
+
 !:::::::::::::::::::::::::::::: CNOPV ::::::::::::::::::::::::::::::::::
 !...... This routine calculates the vibrational distribution of no+
 !...... Uses AFRL report by Winick et al. AFGL-TR-87-0334, Environmental
 !...... Research papers, NO. 991, "An infrared spectral radiance code
 !...... for the auroral thermosphere (AARC)
 !...... Written by P. Richards in February 2004
-SUBROUTINE CNOPV(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,NOP,OPLS&
-        ,N2PLS,O2P,N4S,NNO,NPLUS,N2P,PLYNOP,VCON,N2D,OP2D)
+subroutine CNOPV(JPR, I, JPT, Z, RTS, ON, O2N, N2N, NE, P1, NOP, OPLS, &
+                 N2PLS, O2P, N4S, NNO, NPLUS, N2P, PLYNOP, VCON, N2D, OP2D)
+
     IMPLICIT NONE
-    INTEGER JPR,I,JPT,INV,IJ,IV,K
-    PARAMETER (INV=20)            !.. NO+(v) array dimensions
-    REAL Z,RTS(99),   !.. Altitude, rate coefficients&
-        ON,O2N,N2N,NE,              !.. O, N2, O2, electron densities&
-        P1,                         !.. total source output for finding [e]&
-        NOP,OPLS,N2PLS,O2P,         !.. NO+, )+,N2+,O2+ densities&
-        N4S,NNO,NPLUS,N2P,          !.. N(4S), NO, N+, N(2P) densities&
-        PLYNOP,VCON,                !.. Lyman-a source, N2(v) rate factor&
-        N2D,OP2D,                   !.. N(2D), O+(2D) densities&
-        NOPV(INV),NOPTOT,           !.. NO+(v) densities and total NO+ density&
-        LR(22),PR(22),              !.. storage for NO+ sources and sinks&
-        EINSCO1(INV),EINSCO2(INV),  !.. Einstein coeffs for delv=1,2&
-        LRV(INV),                   !.. NO+(v) + e rate factors&
-        PNOPV,LNOPV,                !.. Sources and sinks of NO+(v)&
-        PCASC,LRAD,                 !.. Temp total cascade source, sink&
-        K_N2_Q,P_N2_Q,L_N2_Q        !.. N2 queching rate :- coeff, source, sink
+
+    INTEGER JPR, I, JPT, INV, IJ, IV, K
+    PARAMETER (INV=20)              !.. NO+(v) array dimensions
+    REAL Z, RTS(99)                 !.. Altitude,  rate coefficients&
+    REAL ON, O2N, N2N, NE           !.. O,  N2,  O2,  electron densities&
+    REAL P1                         !.. total source output for finding [e]&
+    REAL NOP, OPLS, N2PLS, O2P      !.. NO+,  )+, N2+, O2+ densities&
+    REAL N4S, NNO, NPLUS, N2P       !.. N(4S),  NO,  N+,  N(2P) densities&
+    REAL PLYNOP, VCON               !.. Lyman-a source,  N2(v) rate factor&
+    REAL N2D, OP2D                  !.. N(2D),  O+(2D) densities&
+    REAL NOPV(INV), NOPTOT          !.. NO+(v) densities and total NO+ density&
+    REAL LR(22), PR(22)             !.. storage for NO+ sources and sinks&
+    REAL EINSCO1(INV), EINSCO2(INV) !.. Einstein coeffs for delv=1, 2&
+    REAL LRV(INV)                   !.. NO+(v) + e rate factors&
+    REAL PNOPV, LNOPV               !.. Sources and sinks of NO+(v)&
+    REAL PCASC, LRAD                !.. Temp total cascade source,  sink&
+    REAL K_N2_Q, P_N2_Q, L_N2_Q     !.. N2 queching rate :- coeff,  source,  sink
     !.. Fractions of each source going to each vib. level. Assume
     !.. N+ + O2 fractions for each source. NEED UPDATE
-    REAL PRV1(INV),PRV2(INV),PRV3(INV),PRV4(INV),PRV5(INV),PRV6(INV),&
-        PRV7(INV),PRV8(INV),PRV9(INV),PRV10(INV),PRV11(INV),PRV12(INV)
+    REAL PRV1(INV), PRV2(INV), PRV3(INV), PRV4(INV), PRV5(INV), PRV6(INV), &
+         PRV7(INV), PRV8(INV), PRV9(INV), PRV10(INV), PRV11(INV), PRV12(INV)
     DATA PRV1/0,.05,.07,.09,.11,.13,.14,.17,.07,.01,.02,.06,.08,7*0/
     DATA PRV2/0,.05,.07,.09,.11,.13,.14,.17,.07,.01,.02,.06,.08,7*0/
     DATA PRV3/0,.05,.07,.09,.11,.13,.14,.17,.07,.01,.02,.06,.08,7*0/
@@ -726,416 +812,447 @@ SUBROUTINE CNOPV(JPR,I,JPT,Z,RTS,ON,O2N,N2N,NE,P1,NOP,OPLS&
         21.3,25.1,29.0,33.2,37.4,5*40.0/ !.. Einstein coeff delv=1
     !.. rate factors for NO+(v)+e -> N + O. Sheehan and St-Maurice 2004
     DATA LRV/1.0,19*0.3333/
+
     !... Evaluate total production and loss rates
-    PR(1)=VCON*RTS(3)*N2N*OPLS        !.. N2 + O+
-    PR(2)=N2PLS*ON*RTS(10)            !.. N2+ + O
-    PR(3)=O2P*N4S*RTS(21)             !.. O2+ + N(4S)
-    PR(4)=O2P*NNO*RTS(23)             !.. O2+ + NO
-    !.. N+ + O2 -> O2+ + N(2D,4S) or NO+ + O(1S)
-    PR(5)=(RTS(30)+RTS(66)+RTS(59))*NPLUS*O2N
-    PR(6)=RTS(37)*N2P*ON              !.. N2+ + O
-    PR(7)=RTS(24)*OPLS*NNO            !.. O+ + NO
-    PR(8)=PLYNOP*NNO                  !.. Lyman-a + NO
-    PR(9)=O2P*N2D*RTS(77)             !.. Fox: O2+ + N(2D)
-    PR(10)=N2PLS*NNO*RTS(80)          !.. Fox: N2+ + NO
-    PR(11)=NPLUS*NNO*RTS(81)          !.. Fox: N+ + NO
-    PR(12)=RTS(83)*NNO*OP2D           !.. Fox: O+(2D) + NO
-    PR(13)=OP2D*RTS(90)*N2N           !.. -> NO+ + N, Li et al. [1997]
-    LR(1)=NE*RTS(5)                   !.. NO+ + e
+    PR(1)  = VCON  * RTS(3) * N2N * OPLS    !.. N2  +  O + 
+    PR(2)  = N2PLS * ON  * RTS(10)          !.. N2 +   +  O
+    PR(3)  = O2P   * N4S * RTS(21)          !.. O2 +   +  N(4S)
+    PR(4)  = O2P   * NNO * RTS(23)          !.. O2 +   +  NO
+    !.. N+   +  O2 -> O2 +   +  N(2D,4S) or NO+   +  O(1S)
+    PR(5)  = (RTS(30) + RTS(66) + RTS(59)) * NPLUS * O2N
+    PR(6)  = RTS(37) * N2P * ON             !.. N2 +   +  O
+    PR(7)  = RTS(24) * OPLS * NNO           !.. O +   +  NO
+    PR(8)  = PLYNOP  * NNO                  !.. Lyman-a  +  NO
+    PR(9)  = O2P     * N2D * RTS(77)        !.. Fox: O2 +   +  N(2D)
+    PR(10) = N2PLS   * NNO * RTS(80)        !.. Fox: N2 +   +  NO
+    PR(11) = NPLUS   * NNO * RTS(81)        !.. Fox: N +   +  NO
+    PR(12) = RTS(83) * NNO * OP2D           !.. Fox: O + (2D)  +  NO
+    PR(13) = OP2D    * RTS(90) * N2N        !.. -> NO +   +  N, Li et al. [1997]
+    LR(1)  = NE      * RTS(5)               !.. NO +   +  e
+
     !..Total source term used in main program to calculate [e]
-    P1=PR(1)+PR(2)+PR(3)+PR(4)+PR(5)+PR(6)+PR(7)+PR(8)&
-        +PR(9)+PR(10)+PR(11)+PR(12)+PR(13)
-    NOP=P1/LR(1)         !.. NO+ density
-    DO IJ=1,INV
-        NOPV(IJ)=0.0
-    ENDDO
-    NOPTOT=0.0
+    P1          = SUM( PR(1:13) )
+    NOP         = P1/LR(1)         !.. NO+ density
+    NOPV(1:INV) = 0.0
+    NOPTOT      = 0.0
+
     !.. loop down evaluating the vibrational populations. Must start
     !.. less than INV-1 because need cascade from v+2
     DO IV=INV-4,1,-1
+
         !... chemical production for v=IV = total source * fraction
-        PNOPV=PR(1)*PRV1(IV)+PR(2)*PRV2(IV)+PR(3)*PRV3(IV)+&
-            PR(4)*PRV4(IV)+PR(5)*PRV5(IV)+PR(6)*PRV6(IV)+&
-            PR(7)*PRV7(IV)+PR(8)*PRV8(IV)+PR(9)*PRV9(IV)+&
-            PR(10)*PRV10(IV)+PR(11)*PRV11(IV)+PR(12)*PRV12(IV)
+        PNOPV = PR(1)*PRV1(IV)   + PR(2)*PRV2(IV)   &
+               +PR(3)*PRV3(IV)   + PR(4)*PRV4(IV)   &
+               +PR(5)*PRV5(IV)   + PR(6)*PRV6(IV)   &
+               +PR(7)*PRV7(IV)   + PR(8)*PRV8(IV)   &
+               +PR(9)*PRV9(IV)   + PR(10)*PRV10(IV) &
+               +PR(11)*PRV11(IV) + PR(12)*PRV12(IV)
+
         !.. cascade production from v+1, v+2
-        PCASC=NOPV(IV+1)*EINSCO1(IV+1)+NOPV(IV+2)*EINSCO2(IV+2)
-        LRAD=EINSCO1(IV)+EINSCO2(IV)   !.. total radiative loss
-        L_N2_Q=K_N2_Q*N2N              !.. sink of quanta by N2 quenching
-        IF(IV == 1) L_N2_Q=0.0
-        P_N2_Q=K_N2_Q*N2N*NOPV(IV+1)   !.. source of quanta by N2 quenching
-        LNOPV=LR(1)*LRV(IV)            !.. recombination rate for level IV
+        PCASC  = NOPV(IV+1)*EINSCO1(IV+1) + NOPV(IV+2)*EINSCO2(IV+2)
+        LRAD   = EINSCO1(IV) + EINSCO2(IV)  !.. total radiative loss
+        L_N2_Q = K_N2_Q * N2N               !.. sink of quanta by N2 quenching
+        IF (IV == 1) L_N2_Q = 0.0
+        P_N2_Q = K_N2_Q * N2N * NOPV(IV+1)  !.. source of quanta by N2 quenching
+        LNOPV  = LR(1) * LRV(IV)            !.. recombination rate for level IV
+
         !.. evaluate NO+(iV) population
-        NOPV(IV)=(PNOPV+PCASC+P_N2_Q)/(LNOPV+LRAD+L_N2_Q)
-        NOPTOT=NOPTOT+NOPV(IV)  !.. total NO+ concentration
+        NOPV(IV) = ( PNOPV + PCASC + P_N2_Q )/( LNOPV + LRAD + L_N2_Q)
+        NOPTOT   = NOPTOT + NOPV(IV)  !.. total NO+ concentration
+
         !... diagnostic print. Set alt range to invoke
-        IF(JPR > 0.AND.Z >= 0.AND.Z < 10)&
-            WRITE(6,'(F10.1,I7,1P,22E10.2)')&
-            Z,IV,PNOPV,P1,PCASC,P_N2_Q,LNOPV,LRAD,L_N2_Q,&
-            NOPV(IV),NOP,NOPTOT
+        IF ( JPR > 0 .AND. Z >= 0 .AND. Z < 10 )&
+            WRITE(6,'(F10.1,I7,1P,22E10.2)') &
+                Z,IV,PNOPV,P1,PCASC,P_N2_Q,LNOPV,LRAD,L_N2_Q,NOPV(IV),NOP,NOPTOT
     ENDDO
-    PR(9)=PR(9)+PR(10)+PR(11)+PR(12)         !.. for printing only
-    IF(JPT == 1.AND.JPR > 0) WRITE(I,96)
-    96   FORMAT(/5X,'NO+',34X,'PRODUCTION',69X,':LOSS RATE'/&
-        ,3X,'ALT NO+(v=0) NO+(v=1) NO+(v=2)  NO+(v=3) O++N2    N2++O',&
-        4X,'O2++N4S   O2++NO   N++O2    N2P+O   O++NO   hv+NO',&
-        4X,'Other_P   NO++e')
-    IF(JPR > 0) WRITE(I,'(F6.1,1P,22E9.2)')  Z,&
-        (NOPV(K),K=1,4),(PR(K),K=1,9),LR(1)*NOP
+
+    PR(9) = SUM( PR(9:12) )                 !.. for printing only
+    IF ( JPT == 1 .AND. JPR > 0 ) WRITE(I,96)
+    IF ( JPR > 0 ) WRITE(I,'(F6.1,1P,22E9.2)')  Z,(NOPV(K),K=1,4),(PR(K),K=1,9),LR(1)*NOP
     RETURN
-END
-!
-!
+
+96   FORMAT(/5X,'NO+',34X,'PRODUCTION',69X,':LOSS RATE'/,&
+            3X,'ALT NO+(v=0) NO+(v=1) NO+(v=2)  NO+(v=3) O++N2    N2++O',&
+            4X,'O2++N4S   O2++NO   N++O2    N2P+O   O++NO   hv+NO',&
+            4X,'Other_P   NO++e')
+end subroutine CNOPV
+
+
 !.................................... RATES.FOR .................
 !.... This is the reaction rate subroutine for the FLIP model. It takes
 !.... temperatures as input and puts the rates in array RTS. It includes
 !.... reaction rates, efficiencies for various products, and Einstein
 !.... coefficients. For a complete set of references see Fox and Sung JGR
 !.... 2001, page 21,305. Rates different from Fox and Sung indicated by PGR
-SUBROUTINE RATS(J,TE,TI,TN,RTS)
+subroutine RATS(J,TE,TI,TN,RTS)
+
     IMPLICIT REAL(A-H,L,N-Z)
     REAL TE,TI,TN,RTS,T13,TOT_NP_O2_RATE
     DIMENSION RTS(99)
+
     !.. zero out array
-    DO 898 ITJS=1,99
-        898  RTS(ITJS)=0.0
-        !.. O + H+ -> O+ + H      Fox and Sung [2001]
-        ZED=1+0.6*EXP(-228.0/TN)+0.2*EXP(-326.0/TN)
-        RTS(1)=(8*6.4E-10/(9*ZED))&
-            *(EXP(-232.1/TI)+0.6*EXP(-228.0/TI)+0.2*EXP(-326.0/TI))
-        !.. O+ + H -> O + H+    Anicich et al. [1993]
-        RTS(2)=6.4E-10
-        !.. O+ + N2 --> NO+ + N,   Hierl et al.[1997]
-        !.. The Hierl et al. [1997] lab rate is contaminated by N2(v)
-        !.. for T > 1300K. Therefore, the Hierl et al. rate is not really
-        !.. appropriate  in the ionosphere. The IDC model uses the Hierl et
-        !.. al. rate because it does not solve for N2(v). The FLIP model
-        !.. solves for N2(v) and uses the St. Maurice and Torr rate (JGR,1978,p969)
-        IF(TI <= 1000) RTS(3)=1.2E-12*(300/TI)**0.45     !.. Hierl et al.[1997]
-        IF(TI > 1000) RTS(3)=7.0E-13*(TI/1000)**2.12    !.. Hierl et al.[1997]
-        !.. O+ + O2 -> O2+ + O,   Lindinger et al. [1974]
-        !.. Hierl et al. lists different rates. Hierl et al. [1997] not
-        !.. used above 1600 because rates are contaminated by O2(v) for
-        !.. T > 1000K. We don't know the vibrational state in the
-        !.. thermosphere. This fit was done by PGR May 2009. It is similar
-        !.. to Fox and Sung but does not increase sharply above 1000K.
-        IF(TI <= 1600) RTS(4)=1.6E-11*(300/TI)**0.52
-        IF(TI > 1600) RTS(4)=6.7E-12*(TI/1600)**0.6
-        !.. NO+ + e -> N + O    Walls and Dunn [1974)
-        !.. Vejby-Christensen et al [1998] gives 4.0E-7*(300/TE)**0.5
-        !.. Torr and Torr [1979] gives 4.3E-7*(300/TE)**0.83(-0.16,+.08)
-        !.. Sheehan and St. Maurice gives 3.5E-7*(300/TE)**0.65
-        RTS(5)=4.0E-7*(300/TE)**0.85
-        !.. O2+ + e -> O + O   Mehr and Biondi (1969)
-        IF(TE <= 1200) RTS(6)=1.953E-7*(300/TE)**0.70
-        IF(TE > 1200) RTS(6)=7.389E-8*(1200/TE)**0.56
-        !..  O2 + N(4S)-> NO + O           Baulch et al.[1994]
-        RTS(7)=1.5E-14*TN*EXP(-3270.0/TN)
-        !..   N(2D) + e -> N(4S) + e     Berrington and Burke [1981]
-        RTS(8)=3.86E-10*(TE/300.)**0.81
-        !..   NO + N(4S) -> N2 + O      Lee et al. [1978]
-        RTS(9)=3.4E-11
-        !.. N2+ + O -> NO+ + N   Scott et al.[1999]
-        IF(TI <= 1500) RTS(10)= 1.33E-10*(300/TI)**0.44
-        IF(TI > 1500) RTS(10)= 6.55E-11*(1500/TI)**(-0.2)
-        !.. N2+ + e -> N + N  Mehr and Biondi (1969)
-        RTS(11)=2.2E-7*(300/TE)**0.39    !.. Zipf (1980)
-        !.. O+(2D) + e -> O+(4S) + e   McLaughlin and Bell (1998)
-        !.. Henry [1969] gives 7.8E-8*(300/TE)**0.5
-        RTS(12)=6.03E-8*(300/TE)**0.5
-        !.. O+(2P) + e ->  O+(2D) + e   McLaughlin and Bell (1998)
-        !.. RTS(13)+RTS(14) agrees with Walker et al (1975) and
-        !.. Chang et al (1993)
-        RTS(13)=1.84E-7*(300/TE)**0.5
-        !.. O+(2P) + e -> O+(4S) + e  McLaughlin and Bell (1998)
-        RTS(14)=3.03E-8*(300/TE)**0.5
-        !.. N(2D) + O ->  N(4S) + O  Fell et al.[1990]. Lin and Kaufman[1971]
-        RTS(15)=6.9E-13
-        !.. N(2D) + O2 -> NO + O  Herron[1999]. Shihira et al.[1994]
-        RTS(16)=9.7E-12*EXP(-185.0/TN)
-        !.. N2+ + O2 -> O2+ + N2   Scott et al.[1999]
-        IF(TI < 1000) THEN
-            RTS(17)=5.1E-11*(300/TI)**1.16
-        ELSEIF(TI <= 2000) THEN
-            RTS(17)=1.26E-11*(TI/1000)**0.67
-        ELSE
-            RTS(17)=2.39E-11
-        ENDIF
-        !.. thermal electron excitation of O(1D); Rees et al 1967 pss, p1097 .....
-        RTS(18)=1.1E-10*SQRT(TE)*EXP(-2.27E+4/TE)*(0.406&
-            +0.357E-4*TE-(0.333+0.183E-4*TE)*EXP(-1.37E4/TE)&
-            -(0.456+0.174E-4*TE)*EXP(-2.97E4/TE))
-        !.. N2 + O+(2D) -> N2+ + O
-        !..RTS(19)=8.0E-10                   !.. Johnson and Biondi
-        RTS(19)=1.50E-10*(300/Ti)**(-0.55)   !.. Li et al by PGR
-        !.. N2 + O+(2P) -> N2+ + 0    Fox
-        !.. RTS(20)=6.2E-10*EXP(-340/TI)   !.. Li et al from Fox wrong
-        RTS(20)=2.0E-10*(300/Ti)**(-0.55)    !.. Li et al by PGR
-        !.. O2+ + N(4S) -> NO+ + 0   Scott et al.[1999]
-        RTS(21)=1.0E-10
-        !.. N+ + O2 -> O+ + NO
-        !.. Torr and Torr gives 6.0E-10 for total N+ + O2 reaction rate
-        !.. Dotan et al [1997] from Fox and Sung gives
-        !IF(TI <= 1000) TOT_NP_O2_RATE=2.02E-10*(300/TI)**(-0.45)
-        !IF(TI > 1000) TOT_NP_O2_RATE=3.49E-10
-        !.. does not seem to be correct. Probably vibrationally excited O2
-        !.. Branching ratios for N+ + O2 from O'Keefe et al J. Chem. Phys. 1986
-        !.. NO+ +O(3P) = .09, NO+ + O(1D) = .36, O2+ + N(4S) = 0.35,
-        !.. O2+ + N(2D) = 0.15, O+(4S) + NO = .05
-        TOT_NP_O2_RATE=6.0E-10                !.. Total N+ + O2 rate
-        RTS(22)=0.05*TOT_NP_O2_RATE
-        !.. O2+ + NO -> NO+ + O2 Midey and Viggiano [1999]
-        RTS(23)=4.5E-10 * 1.0000
-        !.. O+ + NO -> O + NO+   Dotan and Viggiano [1999]
-        IF(TI <= 300) RTS(24)=7.0E-13*(300/TI)**0.66
-        IF(TI > 300) RTS(24)=7.0E-13*(TI/300)**0.87
-        !.. N+ + O2 -> O2+ + N(4S)
-        RTS(25)=0.35*TOT_NP_O2_RATE
-        !.. O+(2P) + O -> O+(4S) + O
-        !..RTS(26)=5.2E-10  !.. Fox appears to be wrong
-        !.. (Chang et al., JGR 1993) c.f. 5.2E-11  (Rusch)
-        RTS(26)=4.0E-10
-        !.. N2(A3sig) + O -> NO + N(2D)
-        RTS(27)=2.0E-11       !..see Campbell et al. 2006
-        RTS(27)=0.000000      !.. Torr and Torr value
-        !.. O+(2D) + O ->  O+(4S) + O  Torr and Torr [1980]
-        RTS(28)=1.0E-11
-        !.. O+ + N(2D) -> O + N+  Constantinides et al.[1979].Bates[1989]
-        RTS(29)=1.3E-10
-        !.. O2 + N+ -> O(3P) + NO+
-        !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
-        RTS(30)=0.09*TOT_NP_O2_RATE
-        !.. O + N+ -> O+ + N   Constantinides et al.[1979].Bates[1989]
-        RTS(31)=2.2E-12
-        !.. Efficiency for   N2+ + e -> N(2D) + N(2D)
-        RTS(32)=1.46
-        !.. N2 + O(1D) -> O + NO
-        RTS(33)=1.8E-11*EXP(107.0/TN)
-        !.. O2 + O(1D) -> O + O2
-        RTS(34)=3.2E-11*EXP(67/TN)
-        !.. O2 + N(4S) -> O(1S) + NO. Kopp et al. 1977, JGR, p4715
-        RTS(35)=2.5E-11
-        !.. N2(A3sig) + O -> O(1S) + N2
-        RTS(36)=2.5E-11*EXP(TN/298)**0.55    !..  see Campbell et al. 2006
-        RTS(36)=2.0E-11                      ! .. Torr et al.
-        !.. N(2P) + O -> products (N(2D,4S) and NO+) and O(3P,1D)
-        !.. from Piper et al 1993, J. Chem. Phys. vol 98 page 8560.
-        RTS(37)=1.7E-11
-        !.. N(2P) + O2 -> NO + O
-        RTS(38)=3.9E-12*EXP(-60/TN)
-        !.. N(2P) quenching rates(O2+,NO) from Zipf et al jgr 1980 p687
-        RTS(39)=2.2E-11
-        RTS(40)=1.8E-10
-        !.. N(2D) + NO -> N2 + O
-        RTS(41)=6.7E-11
-        !.. efficiency N2+ + O -> N2 + O+(4S)
-        IF(TI <= 1500) RTS(42)= 7.0E-12*(300/TI)**0.21
-        IF(TI > 1500) RTS(42)= 4.83E-12*(1500/TI)**(-0.41)
-        RTS(42)=RTS(42)/RTS(10)    !.. converts to efficiency
-        !.. O+(2D) + O2 -> O2+ + O   Fox
-        RTS(43)=7.0E-10
-        !.. He+ + N2 -> He + N2+
-        RTS(44)=5.2E-10
-        !.. He+ + N2 -> He + N+
-        RTS(45)=7.8E-10
-        !.. O(1S)+ e -> O(1D) + e
-        RTS(46)=8.5E-9
-        !.. O(1S)+ e -> O(3P) + e
-        RTS(47)=1.56E-10*(TE/300)**0.94
-        !.. O(1S) + O2 -> O2 + O
-        RTS(48)=4.4E-12*EXP(-815.0/TN)
-        !.. NO+ + e -> N(4S) + O
-        RTS(49)=0.15 * RTS(5)
-        !.. NO+ + e -> N(2D) + O
-        RTS(50)=0.85 * RTS(5)
-        !.. O2+ + e -> O(1D) + O
-        RTS(51)=1.11 * RTS(6)
-        !.. O2+ + e -> O(1S) + O
-        RTS(52)=0.05 * RTS(6)
-        !.. Efficiency for   N2+ + e -> N(4S) + N(2D)
-        RTS(53)=0.46
-        !.. O(1D) -> O + 6300 + 6364
-        RTS(54)=0.00934
-        !.. O(1S) -> O(1D) + 5577
-        RTS(55)= 1.06
-        !.. O(1S) -> O(3P) + hv (2972) RTS(56)= 4.5E-2 !.. old value
-        RTS(56)= 0.10 * RTS(55)  !.. From Slanger, Spring AGU 2005
-        !.. N(2P) -> N(2D) + hv
-        RTS(57)=7.9E-2
-        !.. N(2P) -> N(4S) + hv
-        RTS(58)=5.0E-3
-        !.. N+ + O2 -> NO+ + O(1S) Langford et al., PSS, 33,1225,1985
-        RTS(59)=1.0E-3*TOT_NP_O2_RATE
-        !.. Efficiency for   N2(A3sig) + O -> O(1S) + N2
-        RTS(60)=0.37
-        !.. N(2D) -> N(4S) + hv
-        RTS(61)=1.07E-5
-        !.. hv(>600A) + N2 -> N(4S) + N   branching ratio
-        RTS(62)=0.5
-        !.. hv(>600A) + N2 -> N(2D) + N   branching ratio
-        RTS(63)=0.4
-        !.. hv(>600A) + N2 -> N(2P) + N   branching ratio
-        RTS(64)=0.1
-        !.. N+ + O2 -> O2+ + N(2D)
-        !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
-        RTS(65)=0.15*TOT_NP_O2_RATE
-        !.. N+ + O2 -> NO+ + O(1D)
-        !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
-        RTS(66)=0.36*TOT_NP_O2_RATE
-        !.. hv(Scum-Runge) + O2 -> O(1S) + O   branching ratio
-        RTS(67)=0.001
-        !.. Effic of O2(A3,DEL) + O -> O(1S)
-        RTS(68)=0.1
-        !.. O(1D) + O -> O + O   Abreu et al. PSS, p1143, 1986
-        RTS(69)=6.47E-12*(TN/300)**0.14
-        !.. hv + N2 -> N+(5S) -> 2143 A emission yield from the 2s sigma g state
-        !.. of N2. This was taken as 0.6 the value of Cleary and Barth JGR 1987,
-        !.. p13,635 because they did not double EUV below 250 A.
-        RTS(70)=0.06
-        !.. hv + N2 -> N+(1D) -> 6584 A emission (guess)
-        RTS(71)=0.3
-        !.. hv + N2 -> N+(1S) -> 5755 A emission (guess)
-        RTS(72)=0.03
-        !.. efficiency of production of N(2P) from e + N2+ reaction
-        RTS(73)=0.08
-        !.. Efficiency for production of O(1D) from N(2D) + O2 reaction
-        !.. See Link and Swaminathan, PSS, 1992, page 699
-        RTS(74)=0.1    !??? check
-        !.. He+ + O2 -> He + O2+
-        RTS(75) = 9.2E-12
-        !.. He+ + O2 -> He + O+(2D) + O(3P)
-        RTS(76) = 2.37E-10
-        !.. O2+ + N(2D) -> NO+ + O
-        RTS(77) = 1.8E-10
-        !.. O2+ + N(2D) -> N+ + O2
-        RTS(78) = 8.65E-10
-        !.. N2+ + N(4S) -> N+ + N2
-        RTS(79) = 1.0E-11
-        !.. N2+ + NO -> NO+ + N2
-        RTS(80) = 3.6E-10
-        !.. N+ + NO -> N(4S) + NO+
-        RTS(81) = 4.72E-10*(300/TI)**0.24
-        !.. N+ + NO -> N2+ + O
-        RTS(82) = 8.33E-11*(300/TI)**0.24
-        !.. O+(2D) + NO -> NO+ + O
-        RTS(83)=1.2E-9
-        !.. O+(2D) + N -> N+ + O
-        RTS(84)=1.5E-10
-        !.. O+(2P) + O2 -> O+ + O2  Fox
-        RTS(85)=1.3E-10
-        !.. O+(2P) + O2 -> O2+ + O
-        RTS(86)=1.3E-10
-        !.. O+(2P) + N -> O+ + N(2D)
-        RTS(87)=1.0E-11
-        !.. O+(2P) + NO -> NO+ + O
-        RTS(88)=1.2E-9
-        !.. H+ + O2 -> O2+ + H
-        RTS(89)=3.8E-9
-        !.. O+(2D) + N2 -> NO+ + N  !.. Li et al. (1997).
-        !.. From the ratio of the cross sections.
-        !.. The branching ratio to O+(4S) + N2 not given by Li et al.
-        RTS(90)=2.5E-11
-        !.. He+ + O2 -> He + O+(4S) + O
-        RTS(91) = 2.39E-11
-        !.. He+ + O2 -> He + O+(2P) + O
-        RTS(92) = 6.04E-10
-        !.. He+ + O2 -> He + O+(4S) + O(1D)
-        RTS(93) = 4.6E-11
-        !.. He+ + NO -> He + N+ + O
-        RTS(94) = 1.35E-9
-        !.. He+ + NO -> He + O+ + N
-        RTS(95) = 1.0E-10
-        !.. N(2P) + e -> N(4S) + e
-        RTS(96)=2.04E-10*(TE/300)**0.85
-        !.. N(2P) + e -> N(2D) + e
-        RTS(97)=9.5E-9
-        !.. O(1D) + e -> O(3P) + e
-        RTS(98)=2.87E-10*(TE/300)**0.91
-        !.. N2+ + O -> O+ + N2  !.. McFarland et al.(1974)
-        !.. From Fox and Sung 2001
-        RTS(99)=0.07*1.0E-10*(300/Ti)**0.23
-        RETURN
-    END
-    !
-    !
-    !.........................<PESIMP.FOR>......................3 APR 92
-    !...... This test driver demonstrates how to call the model and
-    !...... how to calculate electron heating rate and 3371 excitation rate.
-SUBROUTINE SECIPRD(ALT,SZADEG,F107,F107A,&
-        TE,TN,OXN,O2N,N2N,XNE,N2APRD)
-    INTEGER I,K,IK           !-- loop control variables
-    INTEGER IDIM             !.. Array dimensions
-    INTEGER IMAX             !.. Maximum PE energy
+    RTS(1:99) = 0.0
+
+    !.. O + H+ -> O+ + H      Fox and Sung [2001]
+    ZED    = 1 + 0.6*exp(-228.0/TN) + 0.2*exp(-326.0/TN)
+
+    RTS(1) = 8 * 6.4E-10/(9 * ZED) * &
+             ( exp(-232.1/TI) + 0.6*exp(-228.0/TI) + 0.2*exp(-326.0/TI) )
+    !.. O+ + H -> O + H+    Anicich et al. [1993]
+    RTS(2) = 6.4E-10
+    !.. O+ + N2 --> NO+ + N,   Hierl et al.[1997]
+    !.. The Hierl et al. [1997] lab rate is contaminated by N2(v)
+    !.. for T > 1300K. Therefore, the Hierl et al. rate is not really
+    !.. appropriate  in the ionosphere. The IDC model uses the Hierl et
+    !.. al. rate because it does not solve for N2(v). The FLIP model
+    !.. solves for N2(v) and uses the St. Maurice and Torr rate (JGR,1978,p969)
+    IF(TI <= 1000) RTS(3)=1.2E-12*(300/TI)**0.45     !.. Hierl et al.[1997]
+    IF(TI > 1000) RTS(3)=7.0E-13*(TI/1000)**2.12    !.. Hierl et al.[1997]
+    !.. O+ + O2 -> O2+ + O,   Lindinger et al. [1974]
+    !.. Hierl et al. lists different rates. Hierl et al. [1997] not
+    !.. used above 1600 because rates are contaminated by O2(v) for
+    !.. T > 1000K. We don't know the vibrational state in the
+    !.. thermosphere. This fit was done by PGR May 2009. It is similar
+    !.. to Fox and Sung but does not increase sharply above 1000K.
+    IF(TI <= 1600) RTS(4) = 1.6E-11*(300/TI)**0.52
+    IF(TI > 1600)  RTS(4) = 6.7E-12*(TI/1600)**0.6
+    !.. NO+ + e -> N + O    Walls and Dunn [1974)
+    !.. Vejby-Christensen et al [1998] gives 4.0E-7*(300/TE)**0.5
+    !.. Torr and Torr [1979] gives 4.3E-7*(300/TE)**0.83(-0.16,+.08)
+    !.. Sheehan and St. Maurice gives 3.5E-7*(300/TE)**0.65
+    RTS(5) = 4.0E-7*(300/TE)**0.85
+
+    !.. O2+ + e -> O + O   Mehr and Biondi (1969)
+    IF(TE <= 1200) RTS(6) = 1.953E-7*(300/TE)**0.70
+    IF(TE > 1200)  RTS(6) = 7.389E-8*(1200/TE)**0.56
+    !..  O2 + N(4S)-> NO + O           Baulch et al.[1994]
+    RTS(7) = 1.5E-14*TN*EXP(-3270.0/TN)
+    !..   N(2D) + e -> N(4S) + e     Berrington and Burke [1981]
+    RTS(8) = 3.86E-10*(TE/300.)**0.81
+    !..   NO + N(4S) -> N2 + O      Lee et al. [1978]
+    RTS(9) = 3.4E-11
+    !.. N2+ + O -> NO+ + N   Scott et al.[1999]
+    IF(TI <= 1500) RTS(10)= 1.33E-10*(300/TI)**0.44
+    IF(TI > 1500)  RTS(10)= 6.55E-11*(1500/TI)**(-0.2)
+
+    !.. N2+ + e -> N + N  Mehr and Biondi (1969)
+    RTS(11) = 2.2E-7*(300/TE)**0.39    !.. Zipf (1980)
+    !.. O+(2D) + e -> O+(4S) + e   McLaughlin and Bell (1998)
+    !.. Henry [1969] gives 7.8E-8*(300/TE)**0.5
+    RTS(12) = 6.03E-8*SQRT(300/TE)
+    !.. O+(2P) + e ->  O+(2D) + e   McLaughlin and Bell (1998)
+    !.. RTS(13)+RTS(14) agrees with Walker et al (1975) and
+    !.. Chang et al (1993)
+    RTS(13) = 1.84E-7*SQRT(300/TE)
+    !.. O+(2P) + e -> O+(4S) + e  McLaughlin and Bell (1998)
+    RTS(14) = 3.03E-8*SQRT(300/TE)
+    !.. N(2D) + O ->  N(4S) + O  Fell et al.[1990]. Lin and Kaufman[1971]
+    RTS(15) = 6.9E-13
+
+    !.. N(2D) + O2 -> NO + O  Herron[1999]. Shihira et al.[1994]
+    RTS(16) = 9.7E-12*EXP(-185.0/TN)
+    !.. N2+ + O2 -> O2+ + N2   Scott et al.[1999]
+    IF(TI < 1000) THEN
+        RTS(17) = 5.1E-11*(300/TI)**1.16
+    ELSE IF(TI <= 2000) THEN
+        RTS(17) = 1.26E-11*(TI/1000)**0.67
+    ELSE
+        RTS(17) = 2.39E-11
+    ENDIF
+    !.. thermal electron excitation of O(1D); Rees et al 1967 pss, p1097 .....
+    RTS(18) = 1.1E-10*SQRT(TE)*EXP(-2.27E+4/TE)*&
+              ( 0.406 + 0.357E-4*TE - (0.333 + 0.183E-4*TE) * EXP(-1.37E4/TE)&
+                - (0.456 + 0.174E-4*TE)*EXP(-2.97E4/TE) )
+    !.. N2 + O+(2D) -> N2+ + O
+    !..RTS(19) = 8.0E-10                   !.. Johnson and Biondi
+    RTS(19) = 1.50E-10*(300/Ti)**(-0.55)   !.. Li et al by PGR
+    !.. N2 + O+(2P) -> N2+ + 0    Fox
+    !.. RTS(20) = 6.2E-10*EXP(-340/TI)   !.. Li et al from Fox wrong
+    RTS(20) = 2.0E-10*(300/Ti)**(-0.55)    !.. Li et al by PGR
+
+    !.. O2+ + N(4S) -> NO+ + 0   Scott et al.[1999]
+    RTS(21) = 1.0E-10
+    !.. N+ + O2 -> O+ + NO
+    !.. Torr and Torr gives 6.0E-10 for total N+ + O2 reaction rate
+    !.. Dotan et al [1997] from Fox and Sung gives
+    !IF(TI < =  1000) TOT_NP_O2_RATE=2.02E-10*(300/TI)**(-0.45)
+    !IF(TI > 1000) TOT_NP_O2_RATE = 3.49E-10
+    !.. does not seem to be correct. Probably vibrationally excited O2
+    !.. Branching ratios for N+ + O2 from O'Keefe et al J. Chem. Phys. 1986
+    !.. NO+ +O(3P)  =  .09, NO+ + O(1D) = .36, O2+ + N(4S) = 0.35,
+    !.. O2+ + N(2D)  =  0.15, O+(4S) + NO = .05
+    TOT_NP_O2_RATE = 6.0E-10                !.. Total N+ + O2 rate
+    RTS(22) = 0.05*TOT_NP_O2_RATE
+    !.. O2+ + NO -> NO+ + O2 Midey and Viggiano [1999]
+    RTS(23) = 4.5E-10 * 1.0000
+    !.. O+ + NO -> O + NO+   Dotan and Viggiano [1999]
+    IF(TI <= 300) RTS(24) = 7.0E-13*(300/TI)**0.66
+    IF(TI > 300)  RTS(24) = 7.0E-13*(TI/300)**0.87
+    !.. N+ + O2 -> O2+ + N(4S)
+    RTS(25) = 0.35*TOT_NP_O2_RATE
+
+    !.. O+(2P) + O -> O+(4S) + O
+    !..RTS(26)=5.2E-10  !.. Fox appears to be wrong
+    !.. (Chang et al., JGR 1993) c.f. 5.2E-11  (Rusch)
+    RTS(26) = 4.0E-10
+    !.. N2(A3sig) + O -> NO + N(2D)
+    RTS(27) = 2.0E-11       !..see Campbell et al. 2006
+    RTS(27) = 0.000000      !.. Torr and Torr value
+    !.. O+(2D) + O ->  O+(4S) + O  Torr and Torr [1980]
+    RTS(28) = 1.0E-11
+    !.. O+ + N(2D) -> O + N+  Constantinides et al.[1979].Bates[1989]
+    RTS(29) = 1.3E-10
+    !.. O2 + N+ -> O(3P) + NO+
+    !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
+    RTS(30) = 0.09*TOT_NP_O2_RATE
+
+    !.. O + N+ -> O+ + N   Constantinides et al.[1979].Bates[1989]
+    RTS(31) = 2.2E-12
+    !.. Efficiency for   N2+ + e -> N(2D) + N(2D)
+    RTS(32) = 1.46
+    !.. N2 + O(1D) -> O + NO
+    RTS(33) = 1.8E-11*EXP(107.0/TN)
+    !.. O2 + O(1D) -> O + O2
+    RTS(34) = 3.2E-11*EXP(67/TN)
+    !.. O2 + N(4S) -> O(1S) + NO. Kopp et al. 1977, JGR, p4715
+    RTS(35) = 2.5E-11
+
+    !.. N2(A3sig) + O -> O(1S) + N2
+    RTS(36) = 2.5E-11*EXP(TN/298)**0.55    !..  see Campbell et al. 2006
+    RTS(36) = 2.0E-11                      ! .. Torr et al.
+    !.. N(2P) + O -> products (N(2D,4S) and NO+) and O(3P,1D)
+    !.. from Piper et al 1993, J. Chem. Phys. vol 98 page 8560.
+    RTS(37) = 1.7E-11
+    !.. N(2P) + O2 -> NO + O
+    RTS(38) = 3.9E-12*EXP(-60/TN)
+    !.. N(2P) quenching rates(O2+,NO) from Zipf et al jgr 1980 p687
+    RTS(39) = 2.2E-11
+    RTS(40) = 1.8E-10
+    
+    !.. N(2D) + NO -> N2 + O
+    RTS(41) = 6.7E-11
+    !.. efficiency N2+ + O -> N2 + O+(4S)
+    IF(TI <= 1500) RTS(42) = 7.0E-12*(300/TI)**0.21
+    IF(TI > 1500)  RTS(42) = 4.83E-12*(1500/TI)**(-0.41)
+    RTS(42) = RTS(42)/RTS(10)    !.. converts to efficiency
+    !.. O+(2D) + O2 -> O2+ + O   Fox
+    RTS(43) = 7.0E-10
+    !.. He+ + N2 -> He + N2+
+    RTS(44) = 5.2E-10
+    !.. He+ + N2 -> He + N+
+    RTS(45) = 7.8E-10
+
+    !.. O(1S)+ e -> O(1D) + e
+    RTS(46) = 8.5E-9
+    !.. O(1S)+ e -> O(3P) + e
+    RTS(47) = 1.56E-10*(TE/300)**0.94
+    !.. O(1S) + O2 -> O2 + O
+    RTS(48) = 4.4E-12*EXP(-815.0/TN)
+    !.. NO+ + e -> N(4S) + O
+    RTS(49) = 0.15 * RTS(5)
+    !.. NO+ + e -> N(2D) + O
+    RTS(50) = 0.85 * RTS(5)
+
+    !.. O2+ + e -> O(1D) + O
+    RTS(51) = 1.11 * RTS(6)
+    !.. O2+ + e -> O(1S) + O
+    RTS(52) = 0.05 * RTS(6)
+    !.. Efficiency for   N2+ + e -> N(4S) + N(2D)
+    RTS(53) = 0.46
+    !.. O(1D) -> O + 6300 + 6364
+    RTS(54) = 0.00934
+    !.. O(1S) -> O(1D) + 5577
+    RTS(55) =  1.06
+
+    !.. O(1S) -> O(3P) + hv (2972) RTS(56)= 4.5E-2 !.. old value
+    RTS(56) = 0.10 * RTS(55)  !.. From Slanger, Spring AGU 2005
+    !.. N(2P) -> N(2D) + hv
+    RTS(57) = 7.9E-2
+    !.. N(2P) -> N(4S) + hv
+    RTS(58) = 5.0E-3
+    !.. N+ + O2 -> NO+ + O(1S) Langford et al., PSS, 33,1225,1985
+    RTS(59) = 1.0E-3*TOT_NP_O2_RATE
+    !.. Efficiency for   N2(A3sig) + O -> O(1S) + N2
+    RTS(60) = 0.37
+
+    !.. N(2D) -> N(4S) + hv
+    RTS(61) = 1.07E-5
+    !.. hv(>600A) + N2 -> N(4S) + N   branching ratio
+    RTS(62) = 0.5
+    !.. hv(>600A) + N2 -> N(2D) + N   branching ratio
+    RTS(63) = 0.4
+    !.. hv(>600A) + N2 -> N(2P) + N   branching ratio
+    RTS(64) = 0.1
+    !.. N+ + O2 -> O2+ + N(2D)
+    !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
+    RTS(65) = 0.15*TOT_NP_O2_RATE
+
+    !.. N+ + O2 -> NO+ + O(1D)
+    !.. Branching ratio from O'Keefe et al J. Chem. Phys. 1968
+    RTS(66) = 0.36*TOT_NP_O2_RATE
+    !.. hv(Scum-Runge) + O2 -> O(1S) + O   branching ratio
+    RTS(67) = 0.001
+    !.. Effic of O2(A3,DEL) + O -> O(1S)
+    RTS(68) = 0.1
+    !.. O(1D) + O -> O + O   Abreu et al. PSS, p1143, 1986
+    RTS(69) = 6.47E-12*(TN/300)**0.14
+    !.. hv + N2 -> N+(5S) -> 2143 A emission yield from the 2s sigma g state
+    !.. of N2. This was taken as 0.6 the value of Cleary and Barth JGR 1987,
+    !.. p13,635 because they did not double EUV below 250 A.
+    RTS(70) = 0.06
+
+    !.. hv + N2 -> N+(1D) -> 6584 A emission (guess)
+    RTS(71) = 0.3
+    !.. hv + N2 -> N+(1S) -> 5755 A emission (guess)
+    RTS(72) = 0.03
+    !.. efficiency of production of N(2P) from e + N2+ reaction
+    RTS(73) = 0.08
+    !.. Efficiency for production of O(1D) from N(2D) + O2 reaction
+    !.. See Link and Swaminathan, PSS, 1992, page 699
+    RTS(74) = 0.1    !??? check
+    !.. He+ + O2 -> He + O2+
+    RTS(75) = 9.2E-12
+
+    !.. He+ + O2 -> He + O+(2D) + O(3P)
+    RTS(76) = 2.37E-10
+    !.. O2+ + N(2D) -> NO+ + O
+    RTS(77) = 1.8E-10
+    !.. O2+ + N(2D) -> N+ + O2
+    RTS(78) = 8.65E-10
+    !.. N2+ + N(4S) -> N+ + N2
+    RTS(79) = 1.0E-11
+    !.. N2+ + NO -> NO+ + N2
+    RTS(80) = 3.6E-10
+
+    !.. N+ + NO -> N(4S) + NO+
+    RTS(81) = 4.72E-10*(300/TI)**0.24
+    !.. N+ + NO -> N2+ + O
+    RTS(82) = 8.33E-11*(300/TI)**0.24
+    !.. O+(2D) + NO -> NO+ + O
+    RTS(83) = 1.2E-9
+    !.. O+(2D) + N -> N+ + O
+    RTS(84) = 1.5E-10
+    !.. O+(2P) + O2 -> O+ + O2  Fox
+    RTS(85) = 1.3E-10
+
+    !.. O+(2P) + O2 -> O2+ + O
+    RTS(86) = 1.3E-10
+    !.. O+(2P) + N -> O+ + N(2D)
+    RTS(87) = 1.0E-11
+    !.. O+(2P) + NO -> NO+ + O
+    RTS(88) = 1.2E-9
+    !.. H+ + O2 -> O2+ + H
+    RTS(89) = 3.8E-9
+    !.. O+(2D) + N2 -> NO+ + N  !.. Li et al. (1997).
+    !.. From the ratio of the cross sections.
+    !.. The branching ratio to O+(4S) + N2 not given by Li et al.
+    RTS(90) = 2.5E-11
+
+    !.. He+ + O2 -> He + O+(4S) + O
+    RTS(91) = 2.39E-11
+    !.. He+ + O2 -> He + O+(2P) + O
+    RTS(92) = 6.04E-10
+    !.. He+ + O2 -> He + O+(4S) + O(1D)
+    RTS(93) = 4.6E-11
+    !.. He+ + NO -> He + N+ + O
+    RTS(94) = 1.35E-9
+    !.. He+ + NO -> He + O+ + N
+    RTS(95) = 1.0E-10
+
+    !.. N(2P) + e -> N(4S) + e
+    RTS(96) = 2.04E-10*(TE/300)**0.85
+    !.. N(2P) + e -> N(2D) + e
+    RTS(97) = 9.5E-9
+    !.. O(1D) + e -> O(3P) + e
+    RTS(98) = 2.87E-10*(TE/300)**0.91
+    !.. N2+ + O -> O+ + N2  !.. McFarland et al.(1974)
+    !.. From Fox and Sung 2001
+    RTS(99) = 0.07*1.0E-10*(300/Ti)**0.23
+    RETURN
+end subroutine RATS
+    
+   
+!.........................<PESIMP.FOR>......................3 APR 92
+!...... This test driver demonstrates how to call the model and
+!...... how to calculate electron heating rate and 3371 excitation rate.
+subroutine SECIPRD(ALT, SZADEG, F107, F107A, TE, TN, OXN, O2N, N2N, XNE, N2APRD)
+
+    INTEGER I, K, IK          !-- loop control variables
+    INTEGER IDIM              !.. Array dimensions
+    INTEGER IMAX              !.. Maximum PE energy
     PARAMETER (IDIM=501)
-    REAL PEFLUX(IDIM)        !-- PE flux
-    REAL SIGIT(3)            !-- Total electron impact cross sections
-    REAL SIGEX(22)           !-- Electron impact cross sections for OX
-    REAL ALT                 !-- ALT = altitude (km)  { 120 -> 500 }
-    REAL SZADEG              !-- solar zenith angle {0 -> 90 degrees}
-    REAL F107, F107A         !-- F107 = Solar 10.7 cm flux
-    REAL TE,TN               !-- electron, neutral temperatures (K)
-    REAL XN(3),OXN,O2N,N2N   !-- XN, O, O2, N2, neutral densities  (cm-3)
-    REAL XNE                 !-- electron density  (cm-3)
-    REAL XN2D                !-- N(2D) density for N(2D) + e -> 2.5 eV
-    REAL XOP2D               !-- O+(2D) density for O+(2D) + e -> 3.3 eV
-    REAL SPRD(3,6)
-    REAL SIGOX,SIGN2,SIGEE  !.. Total exciation cross sections for O, N2, O2
-    REAL N2APRD             !.. Production of N2A
-    REAL DE(IDIM),EV(IDIM)
+    REAL PEFLUX(IDIM)         !-- PE flux
+    REAL SIGIT(3)             !-- Total electron impact cross sections
+    REAL SIGEX(22)            !-- Electron impact cross sections for OX
+    REAL ALT                  !-- ALT = altitude (km)  { 120 -> 500 }
+    REAL SZADEG               !-- solar zenith angle {0 -> 90 degrees}
+    REAL F107,  F107A         !-- F107 = Solar 10.7 cm flux
+    REAL TE, TN               !-- electron,  neutral temperatures (K)
+    REAL XN(3), OXN, O2N, N2N !-- XN,  O,  O2,  N2,  neutral densities  (cm-3)
+    REAL XNE                  !-- electron density  (cm-3)
+    REAL XN2D                 !-- N(2D) density for N(2D) + e -> 2.5 eV
+    REAL XOP2D                !-- O+(2D) density for O+(2D) + e -> 3.3 eV
+    REAL SPRD(3, 6)
+    REAL SIGOX, SIGN2, SIGEE  !.. Total exciation cross sections for O,  N2,  O2
+    REAL N2APRD               !.. Production of N2A
+    REAL DE(IDIM), EV(IDIM)
     !.. various ionization and excitation rates by EUV and PE
-    REAL EUVION,PEXCIT,PEPION,OTHPR1,OTHPR2
+    REAL EUVION, PEXCIT, PEPION, OTHPR1, OTHPR2
     COMMON/EUVPRD/EUVION(3,12),PEXCIT(3,12),PEPION(3,12),OTHPR1(6)&
         ,OTHPR2(6)
     DATA SPRD/.4,.56,.44, .4,.28,.44, .2,.06,.10, 0.,.05,.00, 0.,.05&
         ,.00, 0.0,0.0,0.02/
     DATA IMAX/0/              !.. Initialize IMAX Reset in FLXCAL
+
     !.. Transfer neutral densities to the density array
-    XN(1)=OXN
-    XN(2)=O2N
-    XN(3)=N2N
-    N2APRD=0.0
-    DO K=1,3
-        DO IK=1,6
-            PEPION(K,IK)=1.0E-15
-            PEXCIT(K,IK)=1.0E-15
-        ENDDO
-    ENDDO
+    XN(1) = OXN
+    XN(2) = O2N
+    XN(3) = N2N
+    N2APRD = 0.0
+
+    PEPION(1:3,1:6) = 1.0E-15
+    PEXCIT(1:3,1:6) = 1.0E-15
+
     !.. Cannot calculate PE if no densities
-    IF(OXN < 1.0E5.OR.N2N < 1.0E5) RETURN
-    IF(SZADEG > 105) RETURN
+    IF ( OXN < 1.0E5 .OR. N2N < 1.0E5 ) RETURN
+    IF ( SZADEG > 105 ) RETURN
+
     !********************************************************************
     !.. Go and get the photoelectron fluxes
-    XN2D=0        !.. N(2D) density for calculating N(2D) + e -> 2.5 eV
-    XOP2D=0       !.. O+(2D) density for calculating O+(2D) + e -> 3.3 eV
-    CALL FLXCAL(IDIM,ALT,SZADEG,&
-        TE,TN,XN,XNE,XN2D,XOP2D,PEFLUX,AFAC,IMAX,DE,EV)
+    XN2D  = 0     !.. N(2D) density for calculating N(2D) + e -> 2.5 eV
+    XOP2D = 0     !.. O+(2D) density for calculating O+(2D) + e -> 3.3 eV
+    CALL FLXCAL(IDIM, ALT, SZADEG, TE, TN, XN, XNE, XN2D,&
+                XOP2D, PEFLUX, AFAC, IMAX, DE, EV)
     !***************************************************************
+
     !........ sample calculation of ion production rates.
     DO I=1,IMAX
-        E=EV(I)
-        CALL TXSION(E,SIGIT)                     !.. total ion XS
-        CALL SIGEXS(E,TE,XNE,SIGOX,SIGN2,SIGEE)  !.. Total excitation XS
-        CALL OXSIGS(E,SIGEX,SIGOX)               !.. OX cross sections
-        IF(E < 250) N2APRD=N2APRD+0.22*PEFLUX(I)*SIGN2*XN(3)*DE(I) !.. N2(A) prod
-        PEXCIT(1,1)=PEXCIT(1,1)+PEFLUX(I)*SIGEX(1)*XN(1)*DE(I)   !.. O(1D) prod
-        PEXCIT(1,2)=PEXCIT(1,2)+PEFLUX(I)*SIGEX(2)*XN(1)*DE(I)   !.. O(1S) prod
+
+        E = EV(I)
+        CALL TXSION(E, SIGIT)                          !.. total ion XS
+        CALL SIGEXS(E, TE, XNE, SIGOX, SIGN2, SIGEE)   !.. Total excitation XS
+        CALL OXSIGS(E, SIGEX, SIGOX)                   !.. OX cross sections
+        IF(E < 250) N2APRD += 0.22*PEFLUX(I)*SIGN2*XN(3)*DE(I) !.. N2(A) prod
+        PEXCIT(1,1) += PEFLUX(I)*SIGEX(1)*XN(1)*DE(I)  !.. O(1D) prod
+        PEXCIT(1,2) += PEFLUX(I)*SIGEX(2)*XN(1)*DE(I)  !.. O(1S) prod
+
         !.. Evaluate ionization branching ratios for O+
         CALL OXRAT(E,SPRD(1,1),SPRD(1,2),SPRD(1,3))
         !.. Calculate ion production rates
-        DO K=1,3
-            DO IK=1,6
-                PEPION(K,IK)=PEPION(K,IK)+PEFLUX(I)*SIGIT(K)*XN(K)*SPRD(K,IK)*&
-                    DE(I)
-            ENDDO
-        ENDDO
-        EP=E+17
-        PEFLX=PEFLUX(I)/12.57
-        !      WRITE(29,'(3F8.1,1P,22E10.2)') ALT,E,12398/EP,PEFLX,
-        !     >     PEFLUX(I),(SIGIT(K),K=1,3),T_XS_OX(EP),2.2*T_XS_OX(EP),
-        !     >     T_XS_N2(EP),PEPION(1,1),PEXCIT(1,1)
-    ENDDO
+        PEPION(1:3,1:6) = PEPION(1:3,1:6) &
+                          + PEFLUX(I)*SIGIT(1:3)*XN(1:3)*SPRD(1:3,1:6)*DE(I)
+        EP = E + 17
+        PEFLX = PEFLUX(I)/12.57
+    END DO
     RETURN
-END
+end subroutine SECIPRD
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!! TODO: FIX THE REST OF THIS FILE !!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 !:::::::::::::::::::::::::: PHOTOELECTRON MODEL  ::::::::::::::::::::::::
 !....... This subroutine evaluates the photoelectron flux using the concept
 !.......  production frequencies developed by Phil Richards at Utah
@@ -2073,4 +2190,3 @@ SUBROUTINE FACSR(UVFAC,F107,F107A)
         !ENDIF
         RETURN
     END
-BAD ENDING
