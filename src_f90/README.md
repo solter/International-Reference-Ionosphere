@@ -14,13 +14,14 @@ been performed, only the awk scripts.
 
 Manual refactoring steps indicate the following:
 
-1. Manual updates to remove all gotos
+1. Remove all gotos, indentation fixes, and spacing for readability
 
 ## Files
 The are as follows:
 * *cira* - Neutral temperature and density model
 * *igrf* - calculates international geomagnetic reference field
-* *iridreg* - d region model by Friedrich and Torkar
+* *iridreg* - d region model by Friedrich and Torkar.
+              Consists of a short routine, and ~19700 lines of data
 * *iriflip* - calculates ion densities via the FLIP (IDC?) model
 * *irifun* - a hodgepodge of functions iri uses. 
   This has been broken into the following:
