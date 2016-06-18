@@ -1,4 +1,3 @@
-! iridreg.for, version number can be found at the end of this comment.
 !-----------------------------------------------------------------------
 !
 ! This file contains the D-region models of Friedrich and Torkar (2001)
@@ -14,234 +13,222 @@
 !            if(ierror == 0.or.ierror == 2) outf(1,kk)=edens
 !
 !-----------------------------------------------------------------------
-! Corrections/Version Numbers:
-!-Version-mm/dd/yy-description (person reporting correction)
-! 2001.01 05/07/01 initial version
-! 2001.02 07/11/01 new version of F00 (as provided by K. Torkar)
-! 2002.01 28/10/02 replace TAB/6 blanks, PARAMETER () (D. Simpson)
-! 2007.00 05/18/07 Release of IRI-2007
-! 2012.00 12/29/11 Release of IRI-2012; no change in iridreg.for
-! 2012.00 01/18/12 Moved subroutine DRegion (Danilov model) to IRIFUN
+
+!---------------------------------------------------------------------
+!     PURPOSE:
+!     THIS SUBROUTINE COMPUTES "FIRI" ELECTRON DENSITIES
+!
+!     COMMON BLOCK REQUIRED:
+!       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
+!       COMMON/FIRCOM/EDEN(81,5,12,12,3),
+!                    TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
+!
+!       ARRAY EDEN contains LOG10(tabulated electron density,
+!       ordered in (height,latitude,month,zenithangle,f107)
+!       Quantity      Minimum  Maximum  Number of steps
+!       Height        60       140      81
+!       Latitude       0        60       5
+!       Month          1        12      12
+!       Zenith angle   0       180      12
+!       F10.7         75       200       3
+!
+!     PARAMETERS:
+!        HGT   height in km (input, REAL)
+!        GLAT1 latitude in degrees, north is positive (input, REAL)
+!        IDAY  day of the year (input, INTEGER)
+!        ZANG  solar zenith angle in degrees (input, REAL)
+!        F107T 10.7cm flux in Ja (input, REAL)
+!        EDENS model electron density in m**-3 (output, REAL)
+!        IERROR  Error code (INTEGER, output)
+!
+!       Error code
+!         0         no error
+!         1         model undefined for given combination of input
+!                   parameters, output is set to zero
+!         2         input parameters outside valid range, output is invalid
+!         3         both error conditions detected, output is zero
+!
+!     USAGE
+!        CALL F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
+!
+!     SUBROUTINES AND FUNCTION SUBPROGRAMS REQUIRED
+!        none
+!
+!     Reference: Friedrich, M., Torkar, K. FIRI: a semiempirical model of the lower
+!                ionosphere. J. Geophys. Res. 106 (A10), 21409Ð21418, 2001.
+!     WRITTEN BY K. TORKAR, IWF GRAZ
+!     Klaus.Torkar@oeaw.ac.at
+!
+!     LAST MODIFICATION:  06.07.2001
+!
+!     VERSION: 1.1
+!
 !-----------------------------------------------------------------------
-!
-!
-SUBROUTINE F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
-    !---------------------------------------------------------------------
-    !     PURPOSE:
-    !     THIS SUBROUTINE COMPUTES "FIRI" ELECTRON DENSITIES
-    !
-    !     COMMON BLOCK REQUIRED:
-    !       REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
-    !       COMMON/FIRCOM/EDEN(81,5,12,12,3),
-    !      1              TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
-    !
-    !       ARRAY EDEN contains LOG10(tabulated electron density,
-    !       ordered in (height,latitude,month,zenithangle,f107)
-    !       Quantity      Minimum  Maximum  Number of steps
-    !       Height        60       140      81
-    !       Latitude       0        60       5
-    !       Month          1        12      12
-    !       Zenith angle   0       180      12
-    !       F10.7         75       200       3
-    !
-    !     PARAMETERS:
-    !        HGT   height in km (input, REAL)
-    !        GLAT1 latitude in degrees, north is positive (input, REAL)
-    !        IDAY  day of the year (input, INTEGER)
-    !        ZANG  solar zenith angle in degrees (input, REAL)
-    !        F107T 10.7cm flux in Ja (input, REAL)
-    !        EDENS model electron density in m**-3 (output, REAL)
-    !        IERROR  Error code (INTEGER, output)
-    !
-    !       Error code
-    !         0         no error
-    !         1         model undefined for given combination of input
-    !                   parameters, output is set to zero
-    !         2         input parameters outside valid range, output is invalid
-    !         3         both error conditions detected, output is zero
-    !
-    !     USAGE
-    !        CALL F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
-    !
-    !     SUBROUTINES AND FUNCTION SUBPROGRAMS REQUIRED
-    !        none
-    !
-    !     Reference: Friedrich, M., Torkar, K. FIRI: a semiempirical model of the lower
-    !                ionosphere. J. Geophys. Res. 106 (A10), 21409Ð21418, 2001.
-    !     WRITTEN BY K. TORKAR, IWF GRAZ
-    !     Klaus.Torkar@oeaw.ac.at
-    !
-    !     LAST MODIFICATION:  06.07.2001
-    !
-    !     VERSION: 1.1
-    !
-    !     ------------------------------------------------------------------
-    !
-    REAL HGT,GLAT1,ZANG,F107T,EDENS,F107L
-    INTEGER IDAY,IERROR
-    !
+ 
+subroutine F00(HGT,GLAT1,IDAY,ZANG,F107T,EDENS,IERROR)
+   
+    REAL HGT, GLAT1, ZANG, F107T, EDENS, F107L
+    INTEGER IDAY, IERROR
+
     PARAMETER (NHGT=81)
     PARAMETER (NLAT=5)
     PARAMETER (NMON=12)
     PARAMETER (NZEN=12)
     PARAMETER (NF10=3)
-    !
-    REAL EDEN,TABHE,TABLA,TABMO,TABZA,TABFL
-    COMMON/FIRCOM/EDEN(81,5,12,12,3),&
-        TABHE(81),TABLA(5),TABMO(12),TABZA(12),TABFL(3)
-    !
-    INTEGER MON,I,J,L,M,ISTEPJ,I1,I2,J1,J2,K1,K2,L1,L2,M1,M2
+    
+    REAL EDEN, TABHE, TABLA, TABMO, TABZA, TABFL
+    COMMON/FIRCOM/EDEN(81,5,12,12,3), TABHE(81),TABLA(5),&
+                  TABMO(12),TABZA(12),TABFL(3)
+    INTEGER MON, I, J, L, M, ISTEPJ, I1, I2, J1, J2, K1, K2, L1, L2, M1, M2
     INTEGER TABM(12)
-    REAL EDENI(2,2,2,2),EDENIJ(2,2,2),EDENIJK(2,2),EDENIJKL(2)
-    REAL STEPJ,DAY1,H1,DEG1,XHI1,FLX1,EL
-    !
+    REAL EDENI(2,2,2,2), EDENIJ(2,2,2), EDENIJK(2,2), EDENIJKL(2)
+    REAL STEPJ, DAY1, H1, DEG1, XHI1, FLX1, EL
+    
     DATA TABM/0,31,59,90,120,151,181,212,243,273,304,334/
     DATA STEPJ,ISTEPJ/15.0,15/
-    !
-    !     INDICES:
-    !     I=HEIGHT, J=LATITUDE, K=MONTH, L=ZANG, M=F10.7
-    !
-    !     CHECK INPUT
-    !
+    
+    !INDICES:
+    ! I=HEIGHT, J=LATITUDE, K=MONTH, L=ZANG, M=F10.7
+    
+    !CHECK INPUT
     IERROR=0
     F107L=ALOG10(MIN(1000.0,MAX(1.0,F107T)))
-    IF (HGT < TABHE(1).OR.HGT > TABHE(NHGT).OR.&
-        GLAT1 > TABLA(NLAT).OR.GLAT1 < -TABLA(NLAT).OR.&
-        IDAY < 1.OR.IDAY > 366.OR.&
-        ZANG < TABZA(1).OR.ZANG > TABZA(NZEN).OR.&
-        F107L < TABFL(1).OR.F107L > TABFL(NF10)) IERROR=2
-    !
-    !     assume height table is in 1 km steps from 60 to 140 km
-    I=MIN0(NHGT-1,IFIX(HGT)-59)
-    IF(I < 1)I=1
-    H1=HGT-TABHE(I)
-    I1=I
-    I2=I+1
-    !
-    !     assume latitude table is in 15 deg steps from 0 to 60 deg
-    J=MAX0(1,MIN0(NLAT-1,IFIX(ABS(GLAT1))/ISTEPJ))
-    DEG1=(ABS(GLAT1)-TABLA(J))/STEPJ
-    J1=J
-    J2=J+1
-    !
-    !     assume month table is given for each month
-    MON=12
+    IF (HGT < TABHE(1) .OR. TABHE(NHGT) < HGT .OR.&
+        GLAT1 < -TABLA(NLAT) .OR. TABLA(NLAT) < GLAT1 .OR.&
+        IDAY < 1 .OR. 366 < IDAY .OR.&
+        ZANG < TABZA(1) .OR. TABZA(NZEN) < ZANG .OR.&
+        F107L < TABFL(1) .OR. TABFL(NF10) < F107L) IERROR=2
+    
+    ! assume height table is in 1 km steps from 60 to 140 km
+    I = MIN( NHGT-1, INT(HGT) - 59 )
+    IF(I < 1) I = 1
+    H1 = HGT - TABHE(I)
+    I1 = I
+    I2 = I+1
+    
+    ! assume latitude table is in 15 deg steps from 0 to 60 deg
+    J = MIN( NLAT - 1, INT( ABS(GLAT1) )/ISTEPJ )
+    IF(J < 1) J = 1
+    DEG1 = ( ABS(GLAT1) - TABLA(J) )/STEPJ
+    J1 = J
+    J2 = J + 1
+    
+    ! assume month table is given for each month
+    MON = 12
     DO WHILE (TABM(MON) > IDAY)
-        MON=MON-1
+        MON = MON - 1
     END DO
-    DAY1=FLOAT(IDAY-TABM(MON)-15)/30.0
-    IF (DAY1 < 0.0) MON=MON-1
-    IF(MON >= 1.AND.MON <= 11)THEN
-        K1=MON
-        K2=MON+1
+    DAY1 = FLOAT( IDAY - TABM(MON) - 15 )/30.0
+    IF(DAY1 < 0.0) MON = MON - 1
+    IF( 1 <= MON .AND. MON <= 11 )THEN
+        K1 = MON
+        K2 = MON + 1
     ELSE
-        K1=12
-        K2=1
+        K1 = 12
+        K2 = 1
     END IF
-    !
-    !     assume zenith angle table has 12 entries between 0 and 180 deg
-    DO L=2,NZEN-1
-        IF(ZANG < TABZA(L))GOTO 1
+    
+    ! assume zenith angle table has 12 entries between 0 and 180 deg
+    DO L=2,NZEN
+        IF(ZANG < TABZA(L)) exit
     END DO
-    L=NZEN
-    1     L=L-1
-    L1=L
-    L2=L+1
-    XHI1=(ZANG-TABZA(L1))/(TABZA(L2)-TABZA(L1))
-    !
-    !     assume solar activity table has 3 entries
-    F107L=MIN(TABFL(3),MAX(TABFL(1),F107L))
-    IF(F107L < TABFL(NF10-1))THEN
-        M1=1
-        M2=2
+    L  = L - 1
+    L1 = L
+    L2 = L + 1
+    XHI1 = ( ZANG - TABZA(L1) )/( TABZA(L2) - TABZA(L1) )
+    
+    ! assume solar activity table has 3 entries
+    F107L = MIN( TABFL(3), MAX( TABFL(1), F107L ) )
+    IF( F107L < TABFL(NF10-1) )THEN
+        M1 = 1
+        M2 = 2
     ELSE
-        M1=2
-        M2=3
+        M1 = 2
+        M2 = 3
     END IF
-    FLX1=(F107L-TABFL(M1))/(TABFL(M2)-TABFL(M1))
-    !
-    !     ADJUST SOUTHERN LATITUDES TO NORTH AND MONTH+6
-    !
+    FLX1 = ( F107L - TABFL(M1) )/( TABFL(M2) - TABFL(M1) )
+    
+    ! ADJUST SOUTHERN LATITUDES TO NORTH AND MONTH+6
     IF(GLAT1 < 0.0)THEN
-        K1=K1+6
-        IF(K1 > 12)K1=K1-12
-        K2=K2+6
-        IF(K2 > 12)K2=K2-12
+        K1 = K1 + 6
+        IF(K1 > 12) K1 = K1 - 12
+        K2 = K2 + 6
+        IF(K2 > 12) K2 = K2 - 12
     END IF
-    !
-    !     EDEN(hgt,lat,mon,zang,f107)
-    !          I   J   K   L    M
-    !
+    
+    ! EDEN(hgt,lat,mon,zang,f107)
+    !       I   J   K   L    M
     DO M=M1,M2
-        !
-        MH=M+1-M1
-        !       INTERPOLATE IN HEIGHT I
+        
+        MH = M + 1 - M1
+        ! INTERPOLATE IN HEIGHT I
         DO L=L1,L2
+            ! If EDEN is zero for anything
             IF(EDEN(I1,J1,K1,L,M) == 0.0.OR.&
-                EDEN(I2,J1,K1,L,M) == 0.0.OR.&
-                EDEN(I1,J2,K1,L,M) == 0.0.OR.&
-                EDEN(I2,J2,K1,L,M) == 0.0.OR.&
-                EDEN(I1,J1,K2,L,M) == 0.0.OR.&
-                EDEN(I2,J1,K2,L,M) == 0.0.OR.&
-                EDEN(I1,J2,K2,L,M) == 0.0.OR.&
-                EDEN(I2,J2,K2,L,M) == 0.0)THEN
-                EDENS=0.0
-                IERROR=IERROR+1
+               EDEN(I2,J1,K1,L,M) == 0.0.OR.&
+               EDEN(I1,J2,K1,L,M) == 0.0.OR.&
+               EDEN(I2,J2,K1,L,M) == 0.0.OR.&
+               EDEN(I1,J1,K2,L,M) == 0.0.OR.&
+               EDEN(I2,J1,K2,L,M) == 0.0.OR.&
+               EDEN(I1,J2,K2,L,M) == 0.0.OR.&
+               EDEN(I2,J2,K2,L,M) == 0.0)THEN
+
+                EDENS  = 0.0
+                IERROR = IERROR+1
                 RETURN
             END IF
+
             IF(HGT < TABHE(1))THEN
-                EDENI(1,1,L+1-L1,MH)=EDEN(I1,J1,K1,L,M)
-                EDENI(2,1,L+1-L1,MH)=EDEN(I1,J2,K1,L,M)
-                EDENI(1,2,L+1-L1,MH)=EDEN(I1,J1,K2,L,M)
-                EDENI(2,2,L+1-L1,MH)=EDEN(I1,J2,K2,L,M)
+                EDENI(1, 1, L+1-L1, MH) = EDEN(I1,J1,K1,L,M)
+                EDENI(2, 1, L+1-L1, MH) = EDEN(I1,J2,K1,L,M)
+                EDENI(1, 2, L+1-L1, MH) = EDEN(I1,J1,K2,L,M)
+                EDENI(2, 2, L+1-L1, MH) = EDEN(I1,J2,K2,L,M)
             ELSE IF(HGT > TABHE(NHGT))THEN
-                EDENI(1,1,L+1-L1,MH)=EDEN(I2,J1,K1,L,M)
-                EDENI(2,1,L+1-L1,MH)=EDEN(I2,J2,K1,L,M)
-                EDENI(1,2,L+1-L1,MH)=EDEN(I2,J1,K2,L,M)
-                EDENI(2,2,L+1-L1,MH)=EDEN(I2,J2,K2,L,M)
+                EDENI(1, 1, L+1-L1, MH) = EDEN(I2,J1,K1,L,M)
+                EDENI(2, 1, L+1-L1, MH) = EDEN(I2,J2,K1,L,M)
+                EDENI(1, 2, L+1-L1, MH) = EDEN(I2,J1,K2,L,M)
+                EDENI(2, 2, L+1-L1, MH) = EDEN(I2,J2,K2,L,M)
             ELSE
-                EDENI(1,1,L+1-L1,MH)=EDEN(I1,J1,K1,L,M)+&
-                    H1*(EDEN(I2,J1,K1,L,M)-EDEN(I1,J1,K1,L,M))
-                EDENI(2,1,L+1-L1,MH)=EDEN(I1,J2,K1,L,M)+&
-                    H1*(EDEN(I2,J2,K1,L,M)-EDEN(I1,J2,K1,L,M))
-                EDENI(1,2,L+1-L1,MH)=EDEN(I1,J1,K2,L,M)+&
-                    H1*(EDEN(I2,J1,K2,L,M)-EDEN(I1,J1,K2,L,M))
-                EDENI(2,2,L+1-L1,MH)=EDEN(I1,J2,K2,L,M)+&
-                    H1*(EDEN(I2,J2,K2,L,M)-EDEN(I1,J2,K2,L,M))
+                EDENI(1, 1, L+1-L1, MH) = EDEN(I1,J1,K1,L,M)&
+                                          + H1*( EDEN(I2,J1,K1,L,M) - EDEN(I1,J1,K1,L,M) )
+                EDENI(2, 1, L+1-L1, MH) = EDEN(I1,J2,K1,L,M)&
+                                          + H1*( EDEN(I2,J2,K1,L,M) - EDEN(I1,J2,K1,L,M) )
+                EDENI(1, 2, L+1-L1, MH) = EDEN(I1,J1,K2,L,M)&
+                                          + H1*( EDEN(I2,J1,K2,L,M) - EDEN(I1,J1,K2,L,M) )
+                EDENI(2, 2, L+1-L1, MH) = EDEN(I1,J2,K2,L,M)&
+                                          + H1*( EDEN(I2,J2,K2,L,M) - EDEN(I1,J2,K2,L,M) )
             END IF
         END DO
-        !
-        !       INTERPOLATE IN LATITUDE J
+        
+        ! INTERPOLATE IN LATITUDE J
         DO L=1,2
             IF(ABS(GLAT1) > TABLA(NLAT))THEN
-                EDENIJ(1,L,MH)=EDENI(2,1,L,MH)
-                EDENIJ(2,L,MH)=EDENI(2,2,L,MH)
+                EDENIJ(1,L,MH) = EDENI(2,1,L,MH)
+                EDENIJ(2,L,MH) = EDENI(2,2,L,MH)
             ELSE
-                EDENIJ(1,L,MH)=EDENI(1,1,L,MH)+&
-                    DEG1*(EDENI(2,1,L,MH)-EDENI(1,1,L,MH))
-                EDENIJ(2,L,MH)=EDENI(1,2,L,MH)+&
-                    DEG1*(EDENI(2,2,L,MH)-EDENI(1,2,L,MH))
+                EDENIJ(1,L,MH) = EDENI(1,1,L,MH)&
+                                 + DEG1*( EDENI(2,1,L,MH) - EDENI(1,1,L,MH) )
+                EDENIJ(2,L,MH) = EDENI(1,2,L,MH)&
+                                 + DEG1*( EDENI(2,2,L,MH) - EDENI(1,2,L,MH) )
             END IF
         END DO
-        !
-        !       INTERPOLATE IN MONTH K
-        EDENIJK(1,MH)=EDENIJ(1,1,MH)+&
-            DAY1*(EDENIJ(2,1,MH)-EDENIJ(1,1,MH))
-        EDENIJK(2,MH)=EDENIJ(1,2,MH)+&
-            DAY1*(EDENIJ(2,2,MH)-EDENIJ(1,2,MH))
-        !
-        !       INTERPOLATE IN ZENITH ANGLE L
-        EDENIJKL(MH)=EDENIJK(1,MH)+XHI1*(EDENIJK(2,MH)-EDENIJK(1,MH))
+        
+        ! INTERPOLATE IN MONTH K
+        EDENIJK(1,MH) = EDENIJ(1,1,MH)&
+                        + DAY1*( EDENIJ(2,1,MH) - EDENIJ(1,1,MH) )
+        EDENIJK(2,MH) = EDENIJ(1,2,MH)&
+                        + DAY1*( EDENIJ(2,2,MH) - EDENIJ(1,2,MH) )
+        
+        ! INTERPOLATE IN ZENITH ANGLE L
+        EDENIJKL(MH) = EDENIJK(1,MH) + XHI1*( EDENIJK(2,MH) - EDENIJK(1,MH) )
     END DO
-    !
-    EL=EDENIJKL(1)+FLX1*(EDENIJKL(2)-EDENIJKL(1))
-    !
-    EDENS=10.**EL
-    !
+    
+    EL = EDENIJKL(1) + FLX1*( EDENIJKL(2) - EDENIJKL(1) )
+    EDENS = 10.**EL
     RETURN
-END
-!
-!
+end subroutine F00
+
+
 BLOCK DATA
 !
 !     PURPOSE:
@@ -26050,6 +26037,5 @@ DATA ((EDEN(I,5,12,L,3),I=81,81),L=1,NZEN)/&
     8.369,&
     8.114,&
     8.068/
-!
+
 END
-BAD ENDING
