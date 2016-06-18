@@ -203,7 +203,7 @@ subroutine iri_tec (hstart,hend,istep,tectot,tectop,tecbot)
         end if
         ! NEW-GUL------------------------------
 
-        if ( expo .and. hh >= hr(4) ) exit
+        if ( expo .and. hh >= hr(4) ) cycle
 
         if (hh >= hend .or. i >= 6) then
             zzz    = sumtop + sumbot
