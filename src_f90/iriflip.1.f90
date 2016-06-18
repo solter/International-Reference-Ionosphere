@@ -135,7 +135,7 @@ subroutine ChemIon( jPrint, alt, F107, F107A, TE, TI, TN,&
     DISN4S = 2.0*PEPION(3, 1) + OTHPR2(3)
 
     NEWT_SUCCESS = .FALSE.
-    WHILE ( .not. NEWT_SUCCESS ) DO
+    DO WHILE ( .not. NEWT_SUCCESS )
         !.. initialize variables to avoid using left over values
         HEPLUS = 0.0
         OXPLUS = 0.0
@@ -230,11 +230,11 @@ subroutine ChemIon( jPrint, alt, F107, F107A, TE, TI, TN,&
         INEWT   = 1
         SUMIONS = OXPLUS + NOPLUS + O2PLUS + NPLUS
         IF ( ALT < ALTCHEM .OR. NOPLUS + O2PLUS > 0.85*NE ) THEN
-            OXPLUS *= NE/SUMIONS
-            NOPLUS *= NE/SUMIONS
-            O2PLUS *= NE/SUMIONS
-            NPLUS  *= NE/SUMIONS
-            INEWT   = 0
+            OXPLUS = OXPLUS * NE/SUMIONS
+            NOPLUS = NOPLUS * NE/SUMIONS
+            O2PLUS = O2PLUS * NE/SUMIONS
+            NPLUS  = NPLUS * NE/SUMIONS
+            INEWT  = 0
             RETURN
         ENDIF
 
@@ -246,10 +246,10 @@ subroutine ChemIon( jPrint, alt, F107, F107A, TE, TI, TN,&
         IF ( NE - NOPLUS - O2PLUS > 100) OXPLUS = NE - NOPLUS - O2PLUS
 
         SUMIONS = 0 ! Re-initialize SUMIONS
-        WHILE ( ABS( 1. - SUMIONS/NE ) > 0.05 ) DO
+        DO WHILE ( ABS( 1. - SUMIONS/NE ) > 0.05 )
             DO ITS = 1, 2
                 IF ( ITS == 1 ) H = OXPLUS * 0.0001         !.. increment for dn/dt
-                IF ( ITS == 2 ) OXPLUS += H       !.. increment N
+                IF ( ITS == 2 ) OXPLUS = OXPLUS + H       !.. increment N
 
                 !.. N+ Calculate and print densities, production, loss.
                 CALL CNPLS(JPRINT, 10, K, ALT, RTS, OXN, O2N, N2N, NE, DISNP, NPLUS, &
@@ -299,10 +299,10 @@ subroutine ChemIon( jPrint, alt, F107, F107A, TE, TI, TN,&
 
         IF (NEWT_SUCCESS) THEN
             !.. Normalize ion densities to the input electron density
-            OXPLUS *= NE/SUMIONS
-            NOPLUS *= NE/SUMIONS
-            O2PLUS *= NE/SUMIONS
-            NPLUS  *= NE/SUMIONS
+            OXPLUS = OXPLUS * NE/SUMIONS
+            NOPLUS = NOPLUS * NE/SUMIONS
+            O2PLUS = O2PLUS * NE/SUMIONS
+            NPLUS  = NPLUS  * NE/SUMIONS
 
             !.. If O+ a very minor ion, Newton solution may not be good, force
             !.. chemical equilibrium solution instead
@@ -1232,26 +1232,23 @@ subroutine SECIPRD(ALT, SZADEG, F107, F107A, TE, TN, OXN, O2N, N2N, XNE, N2APRD)
         CALL TXSION(E, SIGIT)                          !.. total ion XS
         CALL SIGEXS(E, TE, XNE, SIGOX, SIGN2, SIGEE)   !.. Total excitation XS
         CALL OXSIGS(E, SIGEX, SIGOX)                   !.. OX cross sections
-        IF(E < 250) N2APRD += 0.22*PEFLUX(I)*SIGN2*XN(3)*DE(I) !.. N2(A) prod
-        PEXCIT(1,1) += PEFLUX(I)*SIGEX(1)*XN(1)*DE(I)  !.. O(1D) prod
-        PEXCIT(1,2) += PEFLUX(I)*SIGEX(2)*XN(1)*DE(I)  !.. O(1S) prod
+        IF(E < 250) N2APRD = N2APRD + 0.22*PEFLUX(I)*SIGN2*XN(3)*DE(I) !.. N2(A) prod
+        PEXCIT(1,1) = PEXCIT(1,1) + PEFLUX(I)*SIGEX(1)*XN(1)*DE(I)  !.. O(1D) prod
+        PEXCIT(1,2) = PEXCIT(1,2) + PEFLUX(I)*SIGEX(2)*XN(1)*DE(I)  !.. O(1S) prod
 
         !.. Evaluate ionization branching ratios for O+
         CALL OXRAT(E,SPRD(1,1),SPRD(1,2),SPRD(1,3))
         !.. Calculate ion production rates
-        PEPION(1:3,1:6) = PEPION(1:3,1:6) &
-                          + PEFLUX(I)*SIGIT(1:3)*XN(1:3)*SPRD(1:3,1:6)*DE(I)
+        DO K=1,6
+            PEPION(1:3,K) = PEPION(1:3,K) &
+                              + PEFLUX(I)*SIGIT(1:3)*XN(1:3)*SPRD(1:3,K)*DE(I)
+        END DO
         EP = E + 17
         PEFLX = PEFLUX(I)/12.57
     END DO
     RETURN
 end subroutine SECIPRD
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!! TODO: FIX THE REST OF THIS FILE !!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !:::::::::::::::::::::::::: PHOTOELECTRON MODEL  ::::::::::::::::::::::::
 !....... This subroutine evaluates the photoelectron flux using the concept
@@ -1286,16 +1283,14 @@ end subroutine SECIPRD
 !------ (cm-3). You may put these to ZERO if not available.
 !------ PEFLUX = photoelectron flux to be returned (eV cm2 sec)-1
 !------ AFAC = the solar EUV attenuation warning flag
-SUBROUTINE FLXCAL(IDIM,ALT,SZADEG,&
-        TE,TN,XN,XNE,XN2D,XOP2D,PEFLUX,AFAC,IMAX,DE,EV)
+subroutine FLXCAL(IDIM, ALT, SZADEG, TE, TN, XN, XNE, XN2D,&
+                  XOP2D, PEFLUX, AFAC, IMAX, DE, EV)
+
     INTEGER RDIM,IMAX
     REAL EMAX             !.. maximum photoelectron energy.
     PARAMETER (RDIM=84)
-    !      REAL RJOX(RDIM),RJN2(RDIM),XN(3),COLUM(3),PEFLUX(IDIM)
-    !     >  ,DE(RDIM),DELTE(RDIM),EV(RDIM),EN(RDIM),UVFAC,EUV
-    !      COMMON/SOL/UVFAC(59),EUV
-    REAL RJOX(RDIM),RJN2(RDIM),XN(3),COLUM(3),PEFLUX(IDIM)&
-        ,DE(RDIM),DELTE(RDIM),EV(RDIM),EN(RDIM),UVFAC(59),EUV
+    REAL RJOX(RDIM), RJN2(RDIM), XN(3), COLUM(3), PEFLUX(IDIM),&
+         DE(RDIM), DELTE(RDIM), EV(RDIM), EN(RDIM), UVFAC(59), EUV
     COMMON/SOL/UVFAC,EUV
     !.. photoelectron production frequencies by 1.0E9. Renormalized below
     !-- O production frequencies
@@ -1317,196 +1312,241 @@ SUBROUTINE FLXCAL(IDIM,ALT,SZADEG,&
     !-- PE energy steps
     DATA DELTE/30*1.0,14*5.0,40*10/
     DATA EMAX/286.0/          !..  Maximum PE energy
+
     SZA = SZADEG/57.29578   !.. convert solar zenith angle to radians
     IF(IMAX < 10) THEN
         !.. transfer energy grid to pass back
+        DE(1:RDIM) = DELTE(1:RDIM)
+        EV(1:RDIM) = EN(1:RDIM)
         DO IE=1,RDIM
             IF(EN(IE) < EMAX) IMAX=IE
-            DE(IE)=DELTE(IE)
-            EV(IE)=EN(IE)
         ENDDO
     ENDIF
+
     !.. 2.5eV production from electron quenching of N2D
-    PN2D=XN2D*XNE*6.0E-10*SQRT(TE/300.0)
+    PN2D  = XN2D*XNE*6.0E-10*SQRT(TE/300.0)
     !.. 3.3eV production from electron quenching of O+(2D)
-    POP2D=XOP2D*XNE*6.6E-8*SQRT(300./TE)
-    CASEL=0.0
+    POP2D = XOP2D*XNE*6.6E-8*SQRT(300./TE)
+    CASEL = 0.0
     !.. evaluate the neutral column density  &&&&&&&&
-        CALL SCOLUM(I,SZA,ALT*1.0E5,TN,XN,COLUM)
+    CALL SCOLUM(I, SZA, ALT*1.0E5, TN, XN, COLUM)
+
     !...... begin flux calculation loop............................
-    DO 133 IE=1,IMAX
-        I=IMAX+1-IE
-        IF(I < 1) GO TO 55
-        PEFLUX(I)=0.0
+    DO IE=1,IMAX
+        I = IMAX + 1 - IE
+        IF(I < 1) exit
+
+        PEFLUX(I) = 0.0
+
         !... evaluate energy of photon responsible for electron at energy EE
-        EE=EV(I)
-        EP=EE+17
-        IF(EE < 22) EP=45
-        IF(EE >= 22.AND.EE < 28) EP=41
-        IF(EE >= 28.AND.EE < 38) EP=49
+        EE = EV(I)
+        EP = EE + 17
+        IF(EE < 22) EP = 45
+        IF(EE >= 22 .AND. EE < 28) EP = 41
+        IF(EE >= 28 .AND. EE < 38) EP = 49
+
         !.. evaluate total photoionization cross sections for photon energy EP
-        XSOXT=T_XS_OX(EP)         !.. New OX cross section
-        XSO2T=2.2*T_XS_OX(EP)     !.. O2 XS is 2.2* O XS
-        XSN2T=T_XS_N2(EP)         !.. New N2 cross section
+        XSOXT = T_XS_OX(EP)         !.. New OX cross section
+        XSO2T = 2.2*T_XS_OX(EP)     !.. O2 XS is 2.2* O XS
+        XSN2T = T_XS_N2(EP)         !.. New N2 cross section
+
         !... evaluate EUV attenuation factor AFAC
-        TAU=COLUM(1)*XSOXT+COLUM(2)*XSO2T+COLUM(3)*XSN2T
-        AFAC=EXP(-TAU)
+        TAU  = COLUM(1)*XSOXT + COLUM(2)*XSO2T + COLUM(3)*XSN2T
+        AFAC = EXP(-TAU)
+
         !..... low energy cascade production from O(1D) and N2* impact
-        CASOX=0.0
-        IF(EE < 10) CASOX=PEFLUX(I+2)*SIGOX*XN(1)
-        CASN2=0.0
-        IF(EE < 6) CASN2=PEFLUX(I+1)*SIGN2*XN(3)
+        CASOX = 0.0
+        IF(EE < 10) CASOX = PEFLUX(I+2)*SIGOX*XN(1)
+        CASN2 = 0.0
+        IF(EE < 6) CASN2 = PEFLUX(I+1)*SIGN2*XN(3)
+
         !..... cascade production from thermal electron degradation
-        CASEL=0.0
-        IF(I < IMAX) CASEL=PEFLUX(I+1)*SIGEE*XNE
+        CASEL = 0.0
+        IF(I < IMAX) CASEL = PEFLUX(I+1)*SIGEE*XNE
+
         !... Production from electron quenching of metastables
-        EPN2D=0.0
-        IF(NINT(EE) == 3) EPN2D=PN2D
-        EPOP2D=0.0
-        IF(NINT(EE) == 4) EPOP2D=POP2D
+        EPN2D = 0.0
+        IF(NINT(EE) == 3) EPN2D  = PN2D
+        EPOP2D = 0.0
+        IF(NINT(EE) == 4) EPOP2D = POP2D
+
         !.... evaluate cross sections (must be after cascade production)
         CALL SIGEXS(EE,TE,XNE,SIGOX,SIGN2,SIGEE)
         !..... adjust EUV production rate for different period of solar cycle
         CALL FACFLX(EE,UVFAC,FFAC)
+
         !..... Production of pe's at energy EE, taking into account
         !..... attenuation and EUV variation, and renormalize frequencies
-        PRODOX=RJOX(I)*XN(1)*AFAC*FFAC*1.0E-9
-        PRODN2=RJN2(I)*XN(3)*AFAC*FFAC*1.0E-9
+        PRODOX = RJOX(I) * XN(1) * AFAC * FFAC * 1.0E-9
+        PRODN2 = RJN2(I) * XN(3) * AFAC * FFAC * 1.0E-9
         !..... Sum all the production rates
-        PROD=PRODOX+PRODN2+CASEL+CASOX+CASN2+EPN2D+EPOP2D
+        PROD = PRODOX + PRODN2 + CASEL + CASOX + CASN2 + EPN2D + EPOP2D
         !.... total loss through collisions
-        RLOSS=SIGOX*XN(1)+SIGN2*XN(3)+SIGEE*XNE
+        RLOSS = SIGOX*XN(1) + SIGN2*XN(3) + SIGEE*XNE
         !....... evaluate photoelectron flux
-        PEFLUX(I)=PROD/RLOSS
-        133  CONTINUE
-        55   RETURN
-    END
-    !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE FACFLX(EE,UVFAC,FFAC)
+        PEFLUX(I) = PROD/RLOSS
+    end do
+    RETURN
+end subroutine FLXCAL
+
+
+subroutine FACFLX(EE,UVFAC,FFAC)
     !....... solar UVFAC factors. Correspond to the first 9 wavelengths
     !....... TORR et al.[1979] GRL page 771 table 3. UVFAC(9) is for 304A
     REAL UVFAC(59)
-    FFAC=(7*UVFAC(9)+UVFAC(8)+0.2*UVFAC(6))/8.2
-    IF(EE > 30.AND.EE <= 38) FFAC=(2*UVFAC(7)+.5*UVFAC(5))/2.5
-    IF(EE > 38.AND.EE <= 45) FFAC=UVFAC(4)
-    IF(EE > 45.AND.EE <= 66) FFAC=UVFAC(3)
-    IF(EE > 66.AND.EE <= 108) FFAC=UVFAC(2)
-    IF(EE > 108) FFAC=UVFAC(1)
+
+    if (EE <= 30) then
+        FFAC=(7*UVFAC(9)+UVFAC(8)+0.2*UVFAC(6))/8.2
+    else if(EE <= 38) then
+        FFAC = ( 2*UVFAC(7) + .5*UVFAC(5) )/2.5
+    else if(EE <= 45) then
+        FFAC = UVFAC(4)
+    else if(EE <= 66) then
+        FFAC = UVFAC(3)
+    else if(EE <= 108) then
+        FFAC = UVFAC(2)
+    else
+        FFAC = UVFAC(1)
+    end if
     RETURN
-END
-!::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE SIGEXS(E,TE,XNE,SIGOX,SIGN2,SIGEE)
-    !..... Program for evaluating the total inelastic cross sections
-    !
+end subroutine FACFLX
+
+
+!..... Program for evaluating the total inelastic cross sections
+subroutine SIGEXS(E,TE,XNE,SIGOX,SIGN2,SIGEE)
     !........ loss to thermal electrons ....
-    ET=8.618E-5*TE
-    SIGEE=(3.37E-12/E**0.94/XNE**0.03)*((E-ET)/&
-        (E-(0.53*ET)))**2.36
-    !
+    ET    = 8.618E-5*TE
+    SIGEE = ( 3.37E-12/E**0.94/XNE**0.03 )&
+            *( ( E - ET )/( E - 0.53*ET ) )**2.36
+    
     !...... cross section for o(1d)
-    SIGO1D=0.0
-    IF(E > 1.96) SIGO1D=4E-16*(1-1.96/E)**2/E
+    SIGO1D = 0.0
+    IF(E > 1.96) SIGO1D = 4E-16*( 1 - 1.96/E )**2 / E
+
     !...... total excitation cross section for O excluding O(1D)
-    IF(E < 25) SIGO=(0.4*E-5)*1.4E-17
-    IF(E >= 25) SIGO=7.0E-17
+    IF(E < 25) then
+        SIGO = ( 0.4*E - 5 )*1.4E-17
+    else
+        SIGO = 7.0E-17
+    end if
     IF(SIGO < 0.0) SIGO=0.0
-    !
+    
     !...... total excitation cross section for N2......
-    IF(E < 12) SIGN2=(15.5*E-104.8)*1.7E-18
-    IF(E < 4.0) SIGN2=5.0E-9*(1-1.4/E)**9 * (1.4/E)**16
-    IF(E > 11.5) SIGN2=1.4E-16
+    if(E < 4.0) then
+        SIGN2 = 5.0E-9*( 1 - 1.4/E )**9 * (1.4/E)**16
+    else if (E <= 11.5) then
+        SIGN2 = ( 15.5*E - 104.8 )*1.7E-18
+    else
+        SIGN2 = 1.4E-16
+    end if
     IF(SIGN2 < 0.0) SIGN2=0.0
     !
     !........ total ionization cross sections from Keiffer and Dunn ....
-    SIGION=0.0
-    AL=ALOG10(E)
-    IF(AL < 2.7.AND.AL >= 1.2) SIGION=-3.6E-16*(AL-1.2)*(AL-3)
-    IF(AL > 2.7) SIGION=1.2E-14*EXP(-AL*1.6)
-    IF(E < 50) SIGION=1.0E-16*(0.068*E-1.06)
+    SIGION = 0.0
+    AL = ALOG10(E)
+    if(E < 50) then
+        SIGION = 1.0E-16*( 0.068*E - 1.06 )
+    else if(1.2 <= AL .AND. AL < 2.7) then
+        SIGION = -3.6E-16*( AL - 1.2 )*( AL - 3 )
+    else if(2.7 < AL) then
+        SIGION = 1.2E-14*EXP(-AL*1.6)
+    end if
     IF(SIGION <= 0.0) SIGION=0.0
-    !
-    SIGOX=SIGO1D+SIGO+0.5*SIGION
-    SIGN2=SIGN2+SIGION
+    
+    SIGOX = SIGO1D + SIGO + 0.5*SIGION
+    SIGN2 = SIGN2 + SIGION
     RETURN
-END
+end subroutine SIGEXS
+
+
 !::::::::::::::::::::::: TXSION ::::::::::::::::::::::::::::::::::
 !..... total ionization cross sections for O, O2, and N2
 !..... ionization cross sections keiffer and dunn ........
 !..... The N2+ and O2+ cross sections were modified in April 99 to agree
 !..... with the Schram et al. cross sections at high energies
-SUBROUTINE TXSION(E,SIGIT)
+subroutine TXSION(E,SIGIT)
     DIMENSION SIGIT(3)
+
     !... SIGTMP is used for N2+ and O2+ at the high energies
-    SIGTMP=1.0E-13*EXP(-2.303*ALOG10(E))
+    SIGTMP = 1.0E-13*EXP( -2.303*ALOG10(E) )
+
     !... N2+ cross section
-    SIGIT(3)=0.0
-    IF(E > 15.0) SIGIT(3)=1.42E-14*(1-9.0/E)**7.1*E**(-0.7)
-    IF(SIGTMP < SIGIT(3)) SIGIT(3)=SIGTMP
+    SIGIT(3) = 0.0
+    IF(E > 15.0)          SIGIT(3) = 1.42E-14 * (1 - 9.0/E)**7.1 * E**(-0.7)
+    IF(SIGTMP < SIGIT(3)) SIGIT(3) = SIGTMP
     !... This correction to convert units to cm**2. Keiffer and Dunn page 10
-    SIGIT(3)=0.87972*SIGIT(3)
+    SIGIT(3) = SIGIT(3) * 0.87972
+
     !... O2+ cross section
-    SIGIT(2)=0.0
-    IF(E > 12.0) SIGIT(2)=1.08E-14*(1-7.0/E)**8.6*E**(-0.65)
-    IF(SIGTMP < SIGIT(2)) SIGIT(2)=SIGTMP
+    SIGIT(2) = 0.0
+    IF(E > 12.0)          SIGIT(2) = 1.08E-14 * (1 - 7.0/E)**8.6 * E**(-0.65)
+    IF(SIGTMP < SIGIT(2)) SIGIT(2) = SIGTMP
     !... This correction to convert units to cm**2. Keiffer and Dunn page 10
-    SIGIT(2)=0.87972*SIGIT(2)
+    SIGIT(2) = SIGIT(2) * 0.87972
+
     !... O+ cross section from Brook et al. J. Phys. B. Vol 11 p 3115, 1978
-    SIGIT(1)=0.0
-    IF(E > 12.0) SIGIT(1)=7.33E-15*(1-2.0/E)**34.3*E**(-0.7)
+    SIGIT(1) = 0.0
+    IF(E > 12.0) SIGIT(1) = 7.33E-15 * (1 - 2.0/E)**34.3 * E**(-0.7)
     RETURN
-END
+end subroutine TXSION
+
+
 !:::::::::::::::::::::::::::::::::::: OXRAT ::::::::::::::::::::::::::::::::
+!....... This subroutine returns the electron impact branching ratios
+!....... for atomic oxygen from Burnett and Rountree Phys. Rev. A. 20
+!....... 1979 page 1468
 SUBROUTINE OXRAT(E,R4S,R2D,R2P)
-    !....... This subroutine returns the electron impact branching ratios
-    !....... for atomic oxygen from Burnett and Rountree Phys. Rev. A. 20
-    !....... 1979 page 1468
-    R4S=1.0
-    R2D=0.0
-    R2P=0.0
-    EV=E
-    IF(E > 100.0) EV=100.0
-    IF(EV > 17) R4S=-1.6E-3*EV+0.56
-    IF(EV > 17) R2D=1.067E-3*EV+0.2933
-    R2P=1-R4S-R2D
+
+    R4S = 1.0
+    R2D = 0.0
+    R2P = 0.0
+    EV  = E
+    IF(E > 100.0) EV  = 100.0
+    IF(EV > 17)   R4S = -1.6E-3*EV + 0.56
+    IF(EV > 17)   R2D = 1.067E-3*EV + 0.2933
+    R2P = 1 - R4S - R2D
+
     IF(EV < 22) THEN
-        R2P=0.0
-        RTOT=R4S+R2D
-        R4S=R4S/RTOT
-        R2D=R2D/RTOT
+        R2P  = 0.0
+        RTOT = R4S + R2D
+        R4S  = R4S/RTOT
+        R2D  = R2D/RTOT
     ENDIF
     RETURN
-END
+END SUBROUTINE OXRAT
+
+
 !::::::::::::::::::::: T_XS_N2 :::::::::::::::::::::::::::
 !.... This function calculates the N2 total photoionization
 !.... cross section. P. Richards 2003-10-04
 REAL FUNCTION T_XS_N2(EP)
     IMPLICIT NONE
+
     REAL EP   !... photon energy
     REAL ESAVE
     DATA ESAVE/0.0/
-    !.. Wavelength < 20 A, Auger ionization
+
     IF(EP >= 600.0) THEN
-        T_XS_N2=0.5E-18
+        !.. Wavelength < 20 A, Auger ionization
+        T_XS_N2 = 0.5E-18
+    ELSE IF(EP >= 400.0) THEN
         !.. Wavelength < 31 A, Auger ionization
-    ELSEIF(EP >= 400.0) THEN
-        T_XS_N2=1.0E-18
+        T_XS_N2 = 1.0E-18
+    ELSE IF(EP >= 392.0) THEN
         !.. Wavelength 31.62 to 23.70 A
-    ELSEIF(EP >= 392.0) THEN
-        T_XS_N2=EXP(7.9864*ALOG(EP)-91.6604)
+        T_XS_N2 = EXP( 7.9864*ALOG(EP) - 91.6604 )
+    ELSE IF(EP >= 55.09) THEN
         !.. Wavelength 225 to 125 A
-    ELSEIF(EP >= 55.09) THEN
-        T_XS_N2=EXP(-2.3711*ALOG(EP)-29.8142)
-        !.. Wavelength > 225 A
+        T_XS_N2 = EXP( -2.3711*ALOG(EP) - 29.8142 )
     ELSE
-        T_XS_N2=EXP(-1.1077*ALOG(EP)-34.8787)
+        !.. Wavelength > 225 A
+        T_XS_N2 = EXP( -1.1077*ALOG(EP) - 34.8787 )
     ENDIF
-    !..IF(NINT(10*EP) /= NINT(10*ESAVE)) WRITE(6,'(2F8.1,1P,2E10.2)')
-    !..> 12394.224/EP,EP, T_XS_N2/(3.39E-17*EXP(-0.0263*EP)), T_XS_N2
-    ESAVE=EP
-    !.. old parameterization
-    !..T_XS_N2=3.39E-17*EXP(-0.0263*EP)
+    ESAVE = EP
     RETURN
-END
+END FUNCTION T_XS_N2
+
+
 !::::::::::::::::::::: T_XS_OX :::::::::::::::::::::::::::
 !.... This function calculates the OX total photoionization
 !.... cross section. P. Richards 2003-10-04
@@ -1516,86 +1556,88 @@ REAL FUNCTION T_XS_OX(EP)
     REAL EP   !... photon energy
     REAL ESAVE
     DATA ESAVE/0.0/
-    !.. NEW parameterization
+
     IF(EP >= 500.0) THEN
         !.. Wavelength shorter than 25 A, Auger ionization
-        T_XS_OX=0.5E-18
-    ELSEIF(EP >= 165.26) THEN
+        T_XS_OX = 0.5E-18
+    ELSE IF(EP >= 165.26) THEN
         !.. Wavelength shorter than 75 A
-        T_XS_OX=EXP(-2.5209*ALOG(EP)-28.8855)
-    ELSEIF(EP >= 55.09) THEN
+        T_XS_OX = EXP( -2.5209*ALOG(EP) - 28.8855 )
+    ELSE IF(EP >= 55.09) THEN
         !.. Wavelength between 78 and 256.26 A
-        T_XS_OX=EXP(-1.7871*ALOG(EP)-32.6335)
+        T_XS_OX = EXP( -1.7871*ALOG(EP) - 32.6335 )
     ELSE
         !.. Wavelength longer than 256.26 A
-        T_XS_OX=EXP(-1.3077*ALOG(EP)-34.5556)
+        T_XS_OX = EXP( -1.3077*ALOG(EP) - 34.5556 )
     ENDIF
-    !..IF(NINT(10*EP) /= NINT(10*ESAVE)) WRITE(6,'(2F8.1,1P,2E10.2)')
-    !..> 12394.224/EP,EP, T_XS_OX/(27.2E-18*EXP(-3.09E-2*EP)), T_XS_OX
-    ESAVE=EP
-    !.. old parameterization
-    !.. T_XS_OX=27.2E-18*EXP(-3.09E-2*EP)
+    ESAVE = EP
     RETURN
-END
-!
-!
+END FUNCTION T_XS_OX
+
+
 !:::::::::::::::::::::: OXSIGS :::::::::::::::::::::::::::::::::::::
-SUBROUTINE OXSIGS(E,SIGEX,SIGEXT)
-    !....... Inelastic cross sections for electron impact on atomic oxygen
-    !....... E=electron energy, SIGEX(22)=array of partial cross sections,
-    !....... SIGEXT=total excitation cross section, and S
+!....... Inelastic cross sections for electron impact on atomic oxygen
+!....... E=electron energy, SIGEX(22)=array of partial cross sections,
+!....... SIGEXT=total excitation cross section, and S
+subroutine OXSIGS(E,SIGEX,SIGEXT)
     DIMENSION SIGEX(22),SO1D(7)
-    DO 9 I=1,22
-        9    SIGEX(I)=0.0
-        !..- CROSS SECTION FOR O(1D) - New Doering cross section from JGR
-        !..- p19531, 1992. Increases production by a factor of 1.13
-        DATA SO1D/0.0,0.0,15.0,30.0,44.0,54.0,38.0/
-        !..      IF(E > 6.5) SIGEX(1)=3.77E-15*(1-2.0/E)**4.25/E**1.7
-        !..      IF(E <= 7.3) SIGEX(1)=SO1D(NINT(E))*1.0E-18
-        !
-        !..... Old cross section of Henry
-        IF(E > 1.96) SIGEX(1)=4E-16*(1-1.96/E)**2/E
-        !........ O(1S) cross section: may be double Shyn et al. JGR 1986, 13751
-        IF(E > 4.17) SIGEX(2)=6.54E-17*(1-SQRT(4.17/E))/E
-        !....... 1304, 1027 A, Zipf and Erdman JGR 1985, 11088 include cascade.
-        !....... Direct excitation is half for  1304 (Vaughan and Doering,
-        !........ JGR 1986, 13755 and 1987 in press)
-        IF(E >= 10) SIGEX(3)=67.6E-17*(E-10)/E**2
-        !....... 989 cross section from Doering 1987 (1/2 of Zipf)
-        IF(E >= 14) SIGEX(4)=7.0E-17*(1-14/E)/SQRT(E)
-        SIGEX(5)=0.38*SIGEX(4)
-        !....... O(5S) 1356 A Stone And Zipf Corrected By Zipf And Erdman 1985
-        !..- reparameterized 1 May 92 using FITXS.FOR (PGR)
-        IF(E > 10.0) SIGEX(6)=4.867E-12*(1.0-9.0/E)**2.67/ E**4.0
-        SIGEXT=SIGEX(1)+(SIGEX(2)+SIGEX(3)+SIGEX(4)+SIGEX(5)+SIGEX(6))
-        RETURN
-    END
-    !
-    !
-    !.................... RSPRIM.FOR ..................................
-    !.... This routine evaluates the ionization rates for photon impact
-    !.... It is based on a FLIP model routine that was modified in August
-    !.... 2009 for the chemical equilibrium model by P. richards.
-SUBROUTINE PRIMPR(IJ,Z,ZOX,ZN2,ZO2,HE,SZA,TN,F107,F107A,N4S)
+    !..- CROSS SECTION FOR O(1D) - New Doering cross section from JGR
+    !..- p19531, 1992. Increases production by a factor of 1.13
+    DATA SO1D/0.0,0.0,15.0,30.0,44.0,54.0,38.0/
+    
+    SIGEX = 0.0
+
+    !..... Old cross section of Henry
+    IF(E > 1.96) SIGEX(1) = 4E-16 * ( 1 - 1.96/E )**2 / E
+
+    !........ O(1S) cross section: may be double Shyn et al. JGR 1986, 13751
+    IF(E > 4.17) SIGEX(2) = 6.54E-17 * ( 1 - SQRT( 4.17/E ) ) / E
+
+    !....... 1304, 1027 A, Zipf and Erdman JGR 1985, 11088 include cascade.
+    !....... Direct excitation is half for  1304 (Vaughan and Doering,
+    !........ JGR 1986, 13755 and 1987 in press)
+    IF(E >= 10) SIGEX(3) = 67.6E-17*( E - 10 )/E**2
+
+    !....... 989 cross section from Doering 1987 (1/2 of Zipf)
+    IF(E >= 14) SIGEX(4) = 7.0E-17*( 1 - 14/E )/SQRT(E)
+
+    SIGEX(5) = 0.38*SIGEX(4)
+
+    !....... O(5S) 1356 A Stone And Zipf Corrected By Zipf And Erdman 1985
+    !..- reparameterized 1 May 92 using FITXS.FOR (PGR)
+    IF(E > 10.0) SIGEX(6) = 4.867E-12 * ( 1.0 - 9.0/E )**2.67 / E**4.0
+
+    SIGEXT = SUM(SIGEX(1:6))
+    RETURN
+end subroutine OXSIGS
+    
+   
+!.................... RSPRIM.FOR ..................................
+!.... This routine evaluates the ionization rates for photon impact
+!.... It is based on a FLIP model routine that was modified in August
+!.... 2009 for the chemical equilibrium model by P. richards.
+SUBROUTINE PRIMPR(IJ, Z, ZOX, ZN2, ZO2, HE, SZA, TN, F107, F107A, N4S)
     IMPLICIT NONE
-    INTEGER IVERT,I,IJ,IK,IPROBS,IS,K,L,LMAX,NNI,K1
-    REAL EUVION,F107,F107A,F107SV,FNFAC,FREQLY,FREQSR,O2LYXS,&
-        O2SRXS,TAUN,UVFAC,ZLAM,EUV,FLUXN,LAMAX,PEPION,PEXCIT,&
-        SIGABS,SIGION,TPOT,ZFLUX
-    REAL Z,ZOX,ZN2,ZO2,HE,SZA,TN,CHI,ZZ,TNJ,TAU,FLUX,HEPLS,&
-        FBSBN,DISN,TAUGAM,FLUXG,ALTG,XNSIGF,DSPECT,GL,N4S
-    REAL COLUM(3),OTHPR1,OTHPR2,OTHPR3(6)
-    REAL COLUMN(3),XN(3),PROB(3,6,37),XSNPLS(37),FNITE(37),CLNITE(3)
-    !pgr
+
+    INTEGER IVERT, I, IJ, IK, IPROBS, IS, K, L, LMAX, NNI, K1
+    REAL EUVION, F107, F107A, F107SV, FNFAC, FREQLY, FREQSR, O2LYXS, &
+         O2SRXS, TAUN, UVFAC, ZLAM, EUV, FLUXN, LAMAX, PEPION, PEXCIT, &
+         SIGABS, SIGION, TPOT, ZFLUX
+    REAL Z, ZOX, ZN2, ZO2, HE, SZA, TN, CHI, ZZ, TNJ, TAU, FLUX, HEPLS, &
+         FBSBN, DISN, TAUGAM, FLUXG, ALTG, XNSIGF, DSPECT, GL, N4S
+    REAL COLUM(3), OTHPR1, OTHPR2, OTHPR3(6)
+    REAL COLUMN(3), XN(3), PROB(3,6,37), XSNPLS(37), FNITE(37), CLNITE(3)
     REAL TPROB(3,6,37)
-    !pgr
+
     !-- common to hold the EUV and photoelectron production rates
-    COMMON/EUVPRD/EUVION(3,12),PEXCIT(3,12),PEPION(3,12),&
-        OTHPR1(6),OTHPR2(6)
-    COMMON/SIGS/ZFLUX(37),SIGABS(3,37),ZLAM(37),SIGION(3,37),&
-        TPOT(3,10),NNI(3),LAMAX
-    COMMON/SOL/UVFAC(59),EUV
-    SAVE PROB,F107SV,TPROB    !.. Save values that are only calc once
+    COMMON/EUVPRD/EUVION(3,12), PEXCIT(3,12), PEPION(3,12),&
+                  OTHPR1(6), OTHPR2(6)
+    COMMON/SIGS/ZFLUX(37), SIGABS(3,37), ZLAM(37), SIGION(3,37),&
+                TPOT(3,10), NNI(3), LAMAX
+    COMMON/SOL/UVFAC(59), EUV
+
+    SAVE PROB, F107SV, TPROB    !.. Save values that are only calc once
+
     DATA LMAX/0/, F107SV/0.0/, IPROBS/0/
     !.. Fluxes for nighttime ion production in the 37 wavelength bins of
     !.. Torr et al GRL 1979. The fluxes are set to reproduce the production
@@ -1605,243 +1647,240 @@ SUBROUTINE PRIMPR(IJ,Z,ZOX,ZN2,ZO2,HE,SZA,TN,F107,F107A,N4S)
     !.. the wavelengths in FNITE go from largest (#3=HI) to smallest.
     DATA FNITE/9E5,0.0,9E5,2*0.0,9E6,13*0.0,3E5,8*0.0,3E5,8*0.0/
     DATA FNFAC/1.0/
+
     !.. UVFAC(58) is left over from FLIP routines for compatibility
-    UVFAC(58)=-1.0
-    IF(ABS((F107-F107SV)/F107) > 0.005) THEN
+    UVFAC(58) = -1.0
+    IF( ABS( (F107 - F107SV)/F107 ) > 0.005) THEN
         !.. update UV flux factors
-        CALL FACEUV(UVFAC,F107,F107A)
-        CALL FACSR(UVFAC,F107,F107A)
+        CALL FACEUV(UVFAC, F107, F107A)
+        CALL FACSR(UVFAC, F107, F107A)
         !.. call params to get solar flux data and cross sections
-        CALL PARAMS(0,LMAX)
-        F107SV=F107
+        CALL PARAMS(0, LMAX)
+        F107SV = F107
     ENDIF
+
     !..  find probability for formation of each state  ........
     IF(IPROBS == 0) THEN
-        CALL PROBS(0,PROB,ZLAM,LMAX,NNI)
-        DO I=1,3
-            DO K=1,6
-                DO L=1,37
-                    TPROB(I,K,L)=PROB(I,K,L)
-                ENDDO
-            ENDDO
-        ENDDO
+        CALL PROBS(0, PROB, ZLAM, LMAX, NNI)
+        TPROB = PROB
         IPROBS=1
     ENDIF
+
     !... initialization of production rates. 1.0E-15 stabilizes
     !... e density evaluation at low altitudes in CMINOR
-    DO 10 IS=1,3
-        DO 10 IK=1,12
-            EUVION(IS,IK)=1.0E-15
-            10   CONTINUE
-            DISN=0.0
-            DO 687 I=1,6
-                OTHPR2(I)=1.0E-15
-                687  OTHPR1(I)=1.0E-15
-                !
-                !........ Nighttime He+ production is calculated and stored. Attenuated to
-                !........ avoid excess production at low altitudes
-                OTHPR1(2)= 8E-11* EXP(-1.0E-11*ZN2) *HE
-                DO 786 I=1,3
-                    786  COLUM(I)=1.0E+25
-                    TNJ=TN
-                    XN(1)=ZOX
-                    XN(2)=ZO2
-                    XN(3)=ZN2
-                    ZZ=Z*1.0E+5
-                    CHI=SZA
-                    !
-                    !*****  obtain reaction rates from subr rats to get their densities
-                    !....... determine if sun is below the horizon ...
-                    !---- Must now do calculation for night production - Feb 93
-                    ALTG=(6371.0+Z)*SIN(3.1416-CHI)-6371.0
-                    !....      IF(CHI > 1.57.AND.ALTG < 85.) RETURN
-                    IF(Z > 1500) RETURN
-                    !
-                    !...... get column densities for scattered light at night  &&&&&&&&
-                        CALL SCOLUM(IJ,0.0E0,ZZ,TNJ,XN,CLNITE)
-                    !
-                    !...... evaluate the neutral column density  &&&&&&&&
-                        CALL SCOLUM(IJ,CHI,ZZ,TNJ,XN,COLUMN)
-                    !........ Store the column densities for the 2-Stream program
-                    COLUM(1)=COLUMN(1)
-                    COLUM(2)=COLUMN(2)
-                    COLUM(3)=COLUMN(3)
-                    !
-                    !........ O2 dissociation by Schumann-Runge UV.
-                    !........ OTHPR1(3)= dissociation rate. OTHPR1(5)= Energy
-                    CALL SCHUMN(IJ,Z,ZO2,COLUMN,OTHPR1(3),OTHPR1(5))
-                    !
-                    !---- Calculate hv + NO ion. freq. from Lyman-a (Brasseur & Solomon)
-                    !---- OTHPR2(2) is photodissociation of NO in the SR bands.
-                    !---- A small night production from scattered light is included. FREQLY
-                    !---- varies with solar activity using Richards et al. 1994 page 8981
-                    !---- LY_a=2.5E11 (Lean), sigi(NO)=2.0E-18 (Brasseur & Solomon page 329)
-                    DATA O2LYXS,O2SRXS,FREQSR /1.0E-20,1.0E-21,5.0E-6/
-                    FREQLY=5.0E-7*(1+4.0E-3*(0.5*(F107+F107A)-80.0))
-                    OTHPR2(1)=FREQLY*(EXP(-O2LYXS*COLUMN(2))&
-                        +0.001*EXP(-O2LYXS*CLNITE(2)))
-                    OTHPR2(2)=FREQSR*(EXP(-O2SRXS*COLUMN(2))&
-                        +0.001*EXP(-O2SRXS*CLNITE(2)))
-                    !
-                    !..  wavelength loop begins here  ----------
-                    !..  TAU, TAUN = optical depth for day, night
-                    HEPLS=0.0
-                    DO 6 L=1,LMAX
-                        TAU=0.
-                        TAUN=0.0
-                        DO I=1,3
-                            TAUN=TAUN+SIGABS(I,L)*CLNITE(I)
-                            TAU=TAU+SIGABS(I,L)*COLUMN(I)
-                        ENDDO
-                        !.. evaluate nighttime flux and daytime flux
-                        FLUXN=FNFAC*(F107/75.0)*FNITE(L)*EXP(-TAUN)
-                        FLUX=ZFLUX(L)*EXP(-TAU) + FLUXN
-                        !..WRITE(9,'(I6,1P,22E10.2)') L,COLUMN(1),COLUMN(3),TAU,EXP(-TAU),
-                        !..>    FLUX, ZFLUX(L),FLUXN
-                        !.. he+ production. He+ X-S  = 0.25 N2  X-S. HEPRDN = nite He+
-                        IF(ZLAM(L) < 500.) HEPLS=HEPLS+HE*0.25*SIGION(3,L)*FLUX
-                        !-- hv + N -> N+ + e. ion. freq. Richards et al. JGR 1994 page 8989
-                        DATA XSNPLS/6*0.0,.211,10.294,11.171,10.961,11.244,11.323,12.098&
-                            ,13.265,12.423,11.951,11.212,11.798,11.758,11.778,11.772,11.503&
-                            ,11.016,10.578,9.556,8.15,8.302,7.298,6.413,6.399,5.192,5.725&
-                            ,4.787,3.778,2.3,.878,.286/
-                        OTHPR2(3)=OTHPR2(3)+XSNPLS(L)*1.0E-18*FLUX*N4S
-                        IF(ZLAM(L) >= 600.0) THEN
-                            !...... calculation of total euv absorption-ionization.....
-                            FBSBN=FLUX*(SIGABS(3,L)-SIGION(3,L))*XN(3)
-                            !.. Save energy absorbed in the photodissociative process
-                            OTHPR1(4)=OTHPR1(4)+1.24E+4*FBSBN/ZLAM(L)
-                            !.. production on atomic nitrogen by dissociation
-                            DISN=DISN+FBSBN
-                            !..      IF(J == 1) WRITE(6,95) L,ZLAM(L),TAU,FLUX,FBSBN,DISN,HEPLS
-                            !95   FORMAT(I4,F9.1,1P,22E9.1)
-                            !.. take into account the large n2 absorption of lyman gamma(972.54)
-                            IF(NINT(ZLAM(L)) == 975) THEN
-                                TAUGAM=370E-18*COLUMN(3)
-                                IF(TAUGAM > 70.0)TAUGAM=70.0
-                                FLUXG=UVFAC(34) *0.82E+9 *EXP(-TAUGAM)
-                                DISN=DISN+FLUXG*370E-18*XN(3)
-                            ENDIF
-                        ENDIF
-                        !***** species loop begins here *****
-                        DO 304 I=1,3
-                            XNSIGF=XN(I)*SIGION(I,L)*FLUX
-                            K1=NNI(I)
-                            !.. dspect=# ions formed by w-l l by ionization of k state of species i
-                            DO 302 K=1,K1
-                                DSPECT=XNSIGF*PROB(I,K,L)
-                                !.. store ion production rates .....
-                                EUVION(I,K)=EUVION(I,K)+DSPECT
-                                !.. calculation of ion heating rate......
-                                EUVION(1,10)=EUVION(1,10)+DSPECT*TPOT(I,K)
-                                !p           write(6,'(3I4,1P,9E10.2)') I,K,L,PROB(I,K,L),TPROB(I,K,L)
-                                !p     >     ,XN(I),SIGION(I,L),FLUX,XNSIGF,EUVION(I,K),XSNPLS(1),FNITE(1)
-                                302      CONTINUE
-                                304    CONTINUE
-                                6    CONTINUE
-                                !
-                                !..---   wavelength loop ends here   -----------
-                                !
-                                !.........Store UV disoc of N2 2 atoms produced for every dissociation
-                                OTHPR1(1)=2.0*DISN
-                                !........ Transfer He+ production to storage
-                                OTHPR1(2)=OTHPR1(2)+HEPLS
-                                !p      WRITE(6,*) 'After 6: EUVION(1,1), EUVION(2,1), EUVION(3,1)'
-                                !p      write(6,'(1P,9E10.2)') EUVION(1,1), EUVION(2,1), EUVION(3,1)
-                                777  RETURN
-                            END
-                            !:::::::::::::::::::::::::::: SCOLUM ::::::::::::::::::::::::::::::::::
-                            !.... this routine evaluates the neutral column density for O, O2, and N2
-                            !.... see Smith & Smith JGR 1972 p 3592
-                            !.... chi=solar zenith angle, RE & GE radius and grav constant for earth
-                            !.... Modified by P. Richards January 2010 to eliminate need for calling
-                            !.... the MSIS model at grazing incidence
-SUBROUTINE SCOLUM(J,CHI,Z,TN,XN,COLUMN)
+    EUVION = 1.0E-15
+    DISN   = 0.0
+    OTHPR1 = 1.0E-15
+    OTHPR2 = 1.0E-15
+        
+    !........ Nighttime He+ production is calculated and stored. Attenuated to
+    !........ avoid excess production at low altitudes
+    OTHPR1(2) = 8E-11* EXP( -1.0E-11 * ZN2 ) * HE
+    COLUM(I) = 1.0E+25
+
+    TNJ   = TN
+    XN(1) = ZOX
+    XN(2) = ZO2
+    XN(3) = ZN2
+    ZZ    = Z * 1.0E+5
+    CHI   = SZA
+    
+    !*****  obtain reaction rates from subr rats to get their densities
+    !....... determine if sun is below the horizon ...
+    !---- Must now do calculation for night production - Feb 93
+    ALTG = ( 6371.0 + Z )*SIN(3.1416 - CHI) - 6371.0
+    IF(Z > 1500) RETURN
+
+    !...... get column densities for scattered light at night
+    CALL SCOLUM(IJ, 0.0E0, ZZ, TNJ, XN, CLNITE)
+    
+    !...... evaluate the neutral column density  
+    CALL SCOLUM(IJ, CHI, ZZ, TNJ, XN, COLUMN)
+
+    !........ Store the column densities for the 2-Stream program
+    COLUM = COLUMN
+    
+    !........ O2 dissociation by Schumann-Runge UV.
+    !........ OTHPR1(3)= dissociation rate. OTHPR1(5)= Energy
+    CALL SCHUMN(IJ, Z, ZO2, COLUMN, OTHPR1(3), OTHPR1(5))
+    
+    !---- Calculate hv + NO ion. freq. from Lyman-a (Brasseur & Solomon)
+    !---- OTHPR2(2) is photodissociation of NO in the SR bands.
+    !---- A small night production from scattered light is included. FREQLY
+    !---- varies with solar activity using Richards et al. 1994 page 8981
+    !---- LY_a=2.5E11 (Lean), sigi(NO)=2.0E-18 (Brasseur & Solomon page 329)
+    DATA O2LYXS,O2SRXS,FREQSR /1.0E-20,1.0E-21,5.0E-6/
+    FREQLY = 5.0E-7*( 1 + 4.0E-3*( 0.5*( F107 + F107A ) - 80.0 ) )
+    OTHPR2(1) = FREQLY*( EXP( -O2LYXS*COLUMN(2) ) &
+                         + 0.001*EXP( -O2LYXS*CLNITE(2) ) )
+    OTHPR2(2) = FREQSR*( EXP( -O2SRXS*COLUMN(2) ) &
+                         + 0.001*EXP( -O2SRXS*CLNITE(2) ) )
+    
+    HEPLS=0.0
+    DO L=1,LMAX ! wavelength loop
+        !..  TAU, TAUN = optical depth for day, night
+        TAUN = SUM(SIGABS(:,L)*CLNITE)
+        TAU  = SUM(SIGABS(:,L)*COLUMN)
+
+        !.. evaluate nighttime flux and daytime flux
+        FLUXN= FNFAC * (F107/75.0) * FNITE(L) * EXP(-TAUN)
+        FLUX = ZFLUX(L)*EXP(-TAU) + FLUXN
+
+        !.. he+ production. He+ X-S  = 0.25 N2  X-S. HEPRDN = nite He+
+        IF(ZLAM(L) < 500.) HEPLS = HEPLS + HE*0.25*SIGION(3,L)*FLUX
+
+        !-- hv + N -> N+ + e. ion. freq. Richards et al. JGR 1994 page 8989
+        DATA XSNPLS/6*0.0,.211,10.294,11.171,10.961,11.244,11.323,12.098&
+            ,13.265,12.423,11.951,11.212,11.798,11.758,11.778,11.772,11.503&
+            ,11.016,10.578,9.556,8.15,8.302,7.298,6.413,6.399,5.192,5.725&
+            ,4.787,3.778,2.3,.878,.286/
+
+        OTHPR2(3) = OTHPR2(3) + XSNPLS(L)*1.0E-18*FLUX*N4S
+
+        IF(ZLAM(L) >= 600.0) THEN
+            !...... calculation of total euv absorption-ionization.....
+            FBSBN = FLUX*( SIGABS(3,L) - SIGION(3,L) )*XN(3)
+            !.. Save energy absorbed in the photodissociative process
+            OTHPR1(4) = OTHPR1(4) + 1.24E+4*FBSBN/ZLAM(L)
+            !.. production on atomic nitrogen by dissociation
+            DISN = DISN + FBSBN
+
+            !.. take into account the large n2 absorption of lyman gamma(972.54)
+            IF(NINT(ZLAM(L)) == 975) THEN
+                TAUGAM = 370E-18*COLUMN(3)
+                IF(TAUGAM > 70.0) TAUGAM = 70.0
+                FLUXG  = UVFAC(34) * 0.82E+9 * EXP(-TAUGAM)
+                DISN   = DISN + FLUXG*370E-18*XN(3)
+            ENDIF
+        ENDIF
+
+        !***** species loop begins here *****
+        DO I=1,3
+            XNSIGF = XN(I) * SIGION(I,L) * FLUX
+            K1 = NNI(I)
+
+            DO K=1,K1
+                !.. # ions formed by w-l l by ionization of k state of species i
+                DSPECT = XNSIGF * PROB(I,K,L)
+                !.. store ion production rates .....
+                EUVION(I,K)  = EUVION(I,K) + DSPECT
+                !.. calculation of ion heating rate......
+                EUVION(1,10) = EUVION(1,10) + DSPECT*TPOT(I,K)
+            end do
+        end do
+    end do ! wavelength loop ends here
+    
+    !.........Store UV disoc of N2 2 atoms produced for every dissociation
+    OTHPR1(1) = 2.0 * DISN
+
+    !........ Transfer He+ production to storage
+    OTHPR1(2) = OTHPR1(2) + HEPLS
+
+    RETURN
+end subroutine PRIMPR
+
+
+!:::::::::::::::::::::::::::: SCOLUM ::::::::::::::::::::::::::::::::::
+!.... this routine evaluates the neutral column density for O, O2, and N2
+!.... see Smith & Smith JGR 1972 p 3592
+!.... chi=solar zenith angle, RE & GE radius and grav constant for earth
+!.... Modified by P. Richards January 2010 to eliminate need for calling
+!.... the MSIS model at grazing incidence
+subroutine SCOLUM(J,CHI,Z,TN,XN,COLUMN)
     IMPLICIT NONE
-    INTEGER I,J
-    REAL ZG,CHI,Z,TNJ,ALTG,GE,GR,RE,RP
-    REAL SH,XP,Y,ERFY2,CHAPFN,RG,HG,XG,EM,F,G,A,B,C,D,GL
-    REAL TN,XI,TINF,GTN
-    REAL XN(3),COLUMN(3),SN(3),M(3),DG(9),T(2),GN(3)
-    DATA A,B,C,D,F,G/1.0606963,0.55643831,1.0619896,1.7245609&
-        ,0.56498823,0.06651874/
+
+    ! Variable declarations
+    INTEGER I, J
+    REAL ZG, CHI, Z, TNJ, ALTG, GE, GR, RE, RP
+    REAL SH, XP, Y, ERFY2, CHAPFN, RG, HG, XG, EM, F, G, A, B, C, D, GL
+    REAL TN, XI, TINF, GTN
+    REAL XN(3), COLUMN(3), SN(3), M(3), DG(9), T(2), GN(3)
+
+    ! Variable Initialization
+    DATA A, B, C, D, F, G&
+        /1.0606963,0.55643831,1.0619896,1.7245609,0.56498823,0.06651874/
     DATA SN/0.0,0.0,0.0/
-    DATA    EM   ,   M(1) , M(2) , M(3) ,  RE   , GE&
+    DATA EM, M(1), M(2), M(3), RE, GE&
         / 1.662E-24 ,   16. ,  32. ,  28. ,6.357E8, 980/
-    DATA T,ALTG,ERFY2/0.0,0.0,0.0D0,0.0D0/
+    DATA T, ALTG, ERFY2/0.0,0.0,0.0D0,0.0D0/
     DATA DG/9*0.0/
-    DO I=1,3
-        SN(I)=0.0
-        COLUMN(I)=1.E+25
-    ENDDO
-    TNJ=TN     !.. Avoids changing Tn at grazing incidence
-    IF(CHI < 1.5708) GO  TO 2938      !.. is sza>90.0 degrees
-    !..Grazing incidence parameters
-    ALTG=(6371.0E5+Z)*SIN(3.1416-CHI)-6371.0E5
-    IF(ALTG >= 85*1.0E5) THEN
-        ZG=ALTG*1.E-5
-        !.. Bates-Walker temperature
-        XI=(ZG-120.0)*(6357.0+120.0)/(6357.0+ZG)
-        TINF=MAX(TN,500.0)   !.. Crude TINF
-        GTN=MAX(TINF-(TINF-300.0)*EXP(-0.025*XI),180.0)
-        !.. Neutral densities are extrapolated from altitude to grazing
-        !.. altitude. Weighted average Tn and GTn is used
-        GR=GE*(RE/(RE+Z))**2   !.. gravity
-        DO I=1,3
-            GN(I)=XN(I)*EXP((Z-ALTG)/&
-                ((1.38E-16*(TN+GTN*2)/3)/(EM*M(I)*GR)))
-        ENDDO
-        !..   WRITE(88,'(6F8.2,1P,22E10.2)') Z/1.0E5,ZG,CHI*180/3.1416,TN,GTN
-        !.. >      ,TNJ,((XN(I),GN(I),SN(I)),I=1,3)
-        !.. Make sure that grazing incidence density is not lower than MSIS
-        !.. This is for using non MSIS densities like CTIPe
-        TNJ=GTN
-        DO I=1,3
-            SN(I)=GN(I)
-            IF(SN(I) < XN(I)) SN(I)=XN(I)
-        ENDDO
-    ELSE
-        RETURN
-    ENDIF
+
+    SN     = 0.0
+    COLUMN = 1.E+25
+
+    TNJ = TN     !.. Avoids changing Tn at grazing incidence
+    IF(CHI >= 1.5708) then      !.. is sza>90.0 degrees
+        !..Grazing incidence parameters
+        ALTG = (6371.0E5 + Z) * SIN(3.1416 - CHI) - 6371.0E5
+        IF(ALTG >= 85*1.0E5) THEN
+            ZG = ALTG*1.E-5
+
+            !.. Bates-Walker temperature
+            XI   = (ZG - 120.0) * (6357.0 + 120.0) / (6357.0 + ZG)
+            TINF = MAX(TN, 500.0)   !.. Crude TINF
+            GTN  = TINF - ( TINF - 300.0 )*EXP(-0.025*XI)
+            if(GTN < 180.0) GTN = 180.0
+
+            !.. Neutral densities are extrapolated from altitude to grazing
+            !.. altitude. Weighted average Tn and GTn is used
+            GR = GE * ( RE/(RE + Z) )**2   !.. gravity
+            GN = XN*EXP( 3*EM*M*GR*(Z - ALTG)/( 1.38E-16*(TN + 2*GTN) ) )
+
+            !.. Make sure that grazing incidence density is not lower than MSIS
+            !.. This is for using non MSIS densities like CTIPe
+            TNJ = GTN
+            SN = MAX(GN,XN) ! Note, this is per element of each array
+        ELSE
+            RETURN
+        ENDIF
+    end if
+
     !.. sn(1)=o , sn(2)=o2 , sn(3)=n2 , tnj=tn,  gr=gravity, rp=distance
     !.. to pt p, sh=scale height, rg=distance to pt g, hg=scale height at g
-    2938 CONTINUE
-    GR=GE*(RE/(RE+Z))**2
-    RP=RE+Z
+    GR = GE * ( RE/(RE+Z) )**2
+    RP = RE + Z
+
     !.. Calculate column densities for each species
-    DO 10 I=1,3
-        SH=(1.38E-16*TNJ)/(EM*M(I)*GR)
-        XP=RP/SH
-        Y=SQRT(0.5*XP)*ABS(COS(CHI))
+    DO I=1,3
+        SH = (1.38E-16*TNJ)/(EM*M(I)*GR)
+        XP = RP/SH
+        Y  = SQRT(0.5*XP)*ABS(COS(CHI))
+
         IF(Y > 100.0) WRITE(6,100) I,Z/1.0E5,CHI*57.3,TNJ,EM,M(I),GR,RP
-        100    FORMAT('WARNING, Y IN COLUMN(I) > 100',I4,1P,9E10.2)
-        IF(Y > 8) ERFY2=F/(G+Y)
-        IF(Y < 8) ERFY2=(A+B*Y)/(C+D*Y+Y*Y)
-        4      IF(CHI > 1.5708)GO  TO 2
-        CHAPFN=SQRT(0.5*3.1416*XP)*ERFY2
-        COLUMN(I)=XN(I)*SH*CHAPFN
-        GO TO 10
-        2      RG=RP*SIN(3.1416-CHI)
-        HG=1.38E-16*TNJ/&
-            (EM*M(I)*980.*(6371.E5/(6371.E5+ALTG))**2)
-        XG=RG/HG
-        COLUMN(I)=SQRT(0.5*3.1416*XG)*HG*(2.0*SN(I)-XN(I)*ERFY2)
-        10   CONTINUE
-        RETURN
-    END
-    !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE PARAMS(ISW,LMAX)
-    !........ this program determines the cross sections, solar fluxes, and
-    !........ given in m. torr et al g.r.l 1979 p771, table 2 and 3. but
-    !........ the longer wavelengths come first
+        IF(Y > 8) ERFY2 = F/(G + Y)
+        IF(Y < 8) ERFY2 = (A + B*Y)/(C + D*Y + Y**2)
+        IF(CHI <= 1.5708) then
+            CHAPFN    = SQRT( 0.5*3.1416*XP )*ERFY2
+            COLUMN(I) = XN(I)*SH*CHAPFN
+            exit
+        end if
+        RG = RP*SIN(CHI)
+        HG = 1.38E-16*TNJ/( EM*M(I)*980. ) * (1. + ALTG/6371.E5)**2
+        XG = RG/HG
+        COLUMN(I) = SQRT(0.5*3.1416*XG) * HG * ( 2.0*SN(I) - XN(I)*ERFY2 )
+    end do
+
+    RETURN
+
+! format statements
+100 FORMAT('WARNING, Y IN COLUMN(I) > 100',I4,1P,9E10.2)
+end subroutine SCOLUM
+
+
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!........ this program determines the cross sections, solar fluxes, and
+!........ given in m. torr et al g.r.l 1979 p771, table 2 and 3. but
+!........ the longer wavelengths come first
+subroutine PARAMS(ISW,LMAX)
     IMPLICIT NONE
-    INTEGER  I,IN,IS,ISW,J,L,LAMAX,LMAX,NNI
-    REAL EUV,FFAC, SIGABS,SIGION,TPOT,UVFAC,ZFLUX,ZLAM
-    REAL  X1(111),X2(111),X3(18),ZLX(37),ZFX(37)
-    COMMON/SIGS/ZFLUX(37),SIGABS(3,37),ZLAM(37),SIGION(3,37),&
-        TPOT(3,10),NNI(3),LAMAX
-    COMMON/SOL/UVFAC(59),EUV
-    !
+
+    INTEGER  I, IN, IS, ISW, J, L, LAMAX, LMAX, NNI
+    REAL EUV, FFAC,  SIGABS, SIGION, TPOT, UVFAC, ZFLUX, ZLAM
+    REAL X1(111), X2(111), X3(18), ZLX(37), ZFX(37)
+    COMMON/SIGS/ZFLUX(37), SIGABS(3, 37), ZLAM(37), SIGION(3, 37), &
+                TPOT(3, 10), NNI(3), LAMAX
+    COMMON/SOL/UVFAC(59), EUV
+    
     !....... ionization potentials for o,o2 and n2 see kirby et al note the
     !....... o2 2(pi)u and 2(sigma-)u , and n2 f2(sigma)u pots are guesses
     !....... the sixth n2 potential is for dissociation
@@ -1882,60 +1921,69 @@ SUBROUTINE PARAMS(ISW,LMAX)
         ,23.339,23.37,22.79,22.787&
         ,22.4,24.13,24.501,23.471,23.16,21.675,16.395,16.91,13.857&
         ,11.7,11.67,10.493,10.9,10.21,8.392,4.958,2.261,0.72/
-    !
-    NNI(1)=5
-    NNI(2)=5
-    NNI(3)=6
-    LMAX=37
+    
+    NNI(1) = 5
+    NNI(2) = 5
+    NNI(3) = 6
+    LMAX   = 37
     IF(ISW /= 0) WRITE(17,95)
-    95   FORMAT(/5X,'EUV fluxes, Photoabsorption, and Photoionization ',&
-        'Cross sections',&
-        /4X,'I',5X,'lam',5X,'flux',4X,'sigaOX',3X,'sigaO2'&
-        ,3X,'sigaN2',3X,'sigiOX',3X,'sigiO2',3X,'sigiN2',3X,'UVfac')
-    !
-    DO 20 L=1,LMAX
-        ZLAM(L)=ZLX(L)
-        FFAC=UVFAC(LMAX+1-L)
-        IF(ZFX(L) < 100) ZFLUX(L)=ZFX(L)*1.0E+9*FFAC
+    
+    DO L=1,LMAX
+        ZLAM(L) = ZLX(L)
+        FFAC    = UVFAC( LMAX + 1 - L )
+        IF(ZFX(L) < 100) ZFLUX(L) = ZFX(L)*1.0E+9*FFAC
+
         !..- setting up ionization potentials
         IF(L <= 6)THEN
-            TPOT(1,L)=X3(L)
-            TPOT(2,L)=X3(6+L)
-            TPOT(3,L)=X3(12+L)
+            TPOT(1,L) = X3(L)
+            TPOT(2,L) = X3(6+L)
+            TPOT(3,L) = X3(12+L)
         ENDIF
+
         !..- setting up cross sections
-        DO 10 IS=1,3
-            IN=LMAX*(IS-1)+L
-            SIGABS(IS,L)=X1(IN)*1.0E-18
-            SIGION(IS,L)=X2(IN)*1.0E-18
-            IF(SIGABS(IS,L) < SIGION(IS,L)) SIGABS(IS,L)=SIGION(IS,L)
-            10   CONTINUE
-            !
-            IF(ISW == 0) GO TO 20
-            WRITE(17,90) L,ZLAM(L),ZFLUX(L),(SIGABS(I,L),I=1,3)&
-                ,(SIGION(I,L),I=1,3),FFAC
-            20   CONTINUE
-            !
-            IF(ISW == 0) RETURN
-            WRITE(17,94)
-            94   FORMAT(/5X,' Ionization potentials for O, O2, N2'&
-                ,/2X,'4S   2D   2P   4P   2P*  -   X2   a+A  b4   B2   dis  -'&
-                ,'  X2   A2   B2   C2   F2   2s')
-            60   WRITE(17,91) ((TPOT(I,J),J=1,6),I=1,3)
-            !
-            RETURN
-            90   FORMAT(1X,I4,F9.2,1P,22E9.2)
-            91   FORMAT(22F5.1)
-        END
-        !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE PROBS(ISW,PROB,ZLAM,LMAX,NNI)
-    !.... program for finding branching ratios (probabilities for various ion
-    !.... and molecular states) of o,o2,n2
-    !.... ---refs--- m. torr et al grl 1979 page 771, kirby et al atomic data
-    !.... and nuclear tables 1979 23,page 63
+        DO IS=1,3
+            IN = LMAX*(IS-1) + L
+            SIGABS(IS,L) = X1(IN)*1.0E-18
+            SIGION(IS,L) = X2(IN)*1.0E-18
+            IF( SIGABS(IS,L) < SIGION(IS,L) ) SIGABS(IS,L) = SIGION(IS,L)
+        end do
+            
+        IF(ISW /= 0) then
+            WRITE(17,90) L,ZLAM(L),ZFLUX(L),(SIGABS(I,L),I=1,3),&
+                         (SIGION(I,L),I=1,3),FFAC
+        end if
+    end do
+    
+    IF(ISW == 0) RETURN
+    WRITE(17,94)
+    WRITE(17,91) ((TPOT(I,J),J=1,6),I=1,3)
+    
+    RETURN
+
+! format statements
+90   FORMAT(1X,I4,F9.2,1P,22E9.2)
+91   FORMAT(22F5.1)
+94   FORMAT(/5X,' Ionization potentials for O, O2, N2',/&
+            /2X,'4S   2D   2P   4P   2P*  -   X2   a+A  b4   B2   dis  -',&
+            '  X2   A2   B2   C2   F2   2s')
+95   FORMAT(/5X,'EUV fluxes, Photoabsorption, and Photoionization ',&
+            'Cross sections',&
+            /4X,'I',5X,'lam',5X,'flux',4X,'sigaOX',3X,'sigaO2',&
+            3X,'sigaN2',3X,'sigiOX',3X,'sigiO2',3X,'sigiN2',3X,'UVfac')
+end subroutine PARAMS
+
+
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!.... program for finding branching ratios (probabilities for various ion
+!.... and molecular states) of o,o2,n2
+!.... ---refs--- m. torr et al grl 1979 page 771, kirby et al atomic data
+!.... and nuclear tables 1979 23,page 63
+subroutine PROBS(ISW,PROB,ZLAM,LMAX,NNI)
     IMPLICIT NONE
+
     INTEGER I,IS,ISW,J,L,LL,LMAX,NNI(3)
-    REAL YO(37,5),PROB(3,6,37),ZLAM(37),SUM
+    REAL YO(37,5),PROB(3,6,37),ZLAM(37),YSUM
+
     !...... coefficients of o ionization cross sections from torr et al
     !..... table 2
     DATA YO/.19,.486,.952,1.311,1.539,1.77,1.628,1.92,1.925,2.259&
@@ -1948,45 +1996,54 @@ SUBROUTINE PROBS(ISW,PROB,ZLAM,LMAX,NNI)
         ,3.15,3.494,3.62,3.23,2.956,0.664,14*0.0,  .062,.163,.348,.508&
         ,.598,.71,.637,.691,.693,.815,.787,.859,.541,24*0.0, .049,.13&
         ,.278,.366,.412,.35,.383,.307,.308,28*0.0/
-    !
+
     !....... production of o states from torr et al table 2 (yo array)
     !....... need to reverse order of yo to correspond with lambda
-    DO 10 L=1,LMAX
-        LL=LMAX+1-L
-        SUM=YO(LL,1)+YO(LL,2)+YO(LL,3)+YO(LL,4)+YO(LL,5)
-        DO 20 I=1,5
+    DO L=1,LMAX
+        LL = LMAX + 1 - L
+        YSUM = SUM(YO(LL,:))
+        DO I=1,5
             PROB(1,I,L)=0.0
-            20   IF(SUM /= 0.0) PROB(1,I,L)=YO(LL,I)/SUM
-            10    CONTINUE
-            !
-            !....... call separate subroutines for o2 and n2 probabilities
-            DO 30 L=1,LMAX
-                CALL PROBO2(1,L,ZLAM(L),PROB,NNI(2))
-                CALL PROBN2(1,L,ZLAM(L),PROB,NNI(3))
-                30   CONTINUE
-                !
-                IF(ISW == 0) RETURN
-                WRITE(17,95)
-                95   FORMAT(/5X,' Photoionization branching ratios for O, O2, N2'&
-                    ,/3X,'Lam    4S   2D   2P   4P   2P*   -   X2   a+A  b4   B2 '&
-                    ,'  dis   -  X2   A2   B2   C2   F2   2s')
-                DO 50 L=1,LMAX
-                    50   WRITE(17,90) ZLAM(L),((PROB(IS,J,L),J=1,6),IS=1,3)
-                    90   FORMAT(F8.2,22F5.2)
-                    RETURN
-                END
-                !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+            IF(YSUM /= 0.0) PROB(1,I,L) = YO(LL,I)/YSUM
+        end do
+    end do
+            
+    !....... call separate subroutines for o2 and n2 probabilities
+    DO 30 L=1,LMAX
+        CALL PROBO2(1,L,ZLAM(L),PROB,NNI(2))
+        CALL PROBN2(1,L,ZLAM(L),PROB,NNI(3))
+    end do
+        
+    IF(ISW == 0) RETURN
+
+    WRITE(17,95)
+    DO L=1,LMAX
+        WRITE(17,90) ZLAM(L),((PROB(IS,J,L),J=1,6),IS=1,3)
+    end do
+
+    RETURN
+
+! format statements
+90   FORMAT(F8.2,22F5.2)
+95   FORMAT(/5X,' Photoionization branching ratios for O, O2, N2'&
+    ,/3X,'Lam    4S   2D   2P   4P   2P*   -   X2   a+A  b4   B2 '&
+    ,'  dis   -  X2   A2   B2   C2   F2   2s')
+end subroutine PROBS
+
+
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!...... the n2 probabilities are taken from kirby et al tables b and c
+!...... the yield of n+ is determined first then the remaining portion
+!...... of the cross section is distributed amongst the n2+ ion states
+!...... (x,a,b). the dissociation yield is divided between the 3 higher
+!...... energy states according to wight et al. j.phys. b, 1976
+!...... the 2 other states of kirby et al are not included
 SUBROUTINE PROBN2(ISW,L,ZLAM,PROB,JPTS)
-    !...... the n2 probabilities are taken from kirby et al tables b and c
-    !...... the yield of n+ is determined first then the remaining portion
-    !...... of the cross section is distributed amongst the n2+ ion states
-    !...... (x,a,b). the dissociation yield is divided between the 3 higher
-    !...... energy states according to wight et al. j.phys. b, 1976
-    !...... the 2 other states of kirby et al are not included
-    !
     IMPLICIT NONE
+
     INTEGER I,IPTS,ISW,J,JPTS,L
-    REAL A(6),B(6),X(14),Y(14,6),PROB(3,6,37),SUM,YIELD,YLAM,ZLAM
+    REAL A(6),B(6),X(14),Y(14,6),PROB(3,6,37),PSUM,YIELD,YLAM,ZLAM
+
     DATA IPTS/14/
     DATA X/50.,210.,240.,280.,300.,332.,428.,500.,600.,660.,660.01,&
         720.,747.,796./
@@ -1994,76 +2051,84 @@ SUBROUTINE PROBN2(ISW,L,ZLAM,PROB,JPTS)
         .52,.46,.506,2*.589,.692,.58,2*.0,5*.13,.12,.08,&
         .09,.103,.103,4*0.0,3*0.0,.05,.1,.15,.83,1.,6*.0,3*.0,&
         .3,.4,.79,.17,7*.0,3*1.,.65,.5,.06,8*.0/
-    !
+    
     !...... if zlam is too big set equal to x(max)
-    YLAM=ZLAM
+    YLAM = ZLAM
+
     !.. Prevent divide by zero
-    IF(ZLAM > X(14)) YLAM=X(14)-1
-    IF(ZLAM < X(1)) YLAM=X(1)+1
+    IF(ZLAM > X(14)) YLAM = X(14) - 1
+    IF(ZLAM < X(1))  YLAM = X(1)  + 1
     YIELD=0.0
+
     !...... determine yield of n+, and store in prob array
-    CALL YLDISS(1,YLAM,YIELD)
+    CALL YLDISS(1, YLAM, YIELD)
     !
     DO 10 I=1,IPTS
         ! kjh 6/22/92   NOTE:  I realize the following statement is strange
         !   looking, but its purpose is to prevent the CRAY compiler from
         !   vectorizing this loop.  (Which it does incorrectly).
         if(i == 25)write(6,*)' '
-        IF(YLAM > X(I).AND.YLAM <= X(I+1))  GO TO 20
-        10   CONTINUE
-        20   SUM=0.0
-        !...... fit straight line between points
-        DO 30 J=1,JPTS
-            A(J)=(Y(I+1,J)-Y(I,J))/(X(I+1)-X(I))
-            B(J)=Y(I,J)-A(J)*X(I)
-            30   CONTINUE
-            !...... determine probabilities of n2+ states
-            DO 40 J=1,JPTS
-                IF(J <= 3) PROB(3,J,L)=(A(J)*YLAM+B(J))*(1-YIELD)
-                IF(J > 3) PROB(3,J,L)=(A(J)*YLAM+B(J))*YIELD
-                SUM=SUM+PROB(3,J,L)
-                40   CONTINUE
-                !
-                IF(SUM == 0.0) RETURN
-                !....... normalise probabilities
-                DO 50 J=1,JPTS
-                    50   PROB(3,J,L)=PROB(3,J,L)/SUM
-                    RETURN
-                END
-                !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE YLDISS(ISW,ZLAM,YIELD)
-    !..... determination of dissociative yield of n+, refer to kirby et al
-    !..... page 66 and table b
+        IF(X(I) < YLAM .AND. YLAM <= X(I+1))  exit
+    end do
+
+    PSUM = 0.0
+    !...... fit straight line between points
+    A(1:JPTS) = ( Y(I+1,1:JPTS) - Y(I,1:JPTS) )/( X(I+1) - X(I) )
+    B(1:JPTS) = Y(I,1:JPTS) - A(1:JPTS)*X(I)
+
+    !...... determine probabilities of n2+ states
+    DO J=1,JPTS
+        IF(J <= 3) PROB(3,J,L) = ( A(J)*YLAM + B(J) )*(1-YIELD)
+        IF(J > 3)  PROB(3,J,L) = ( A(J)*YLAM + B(J) )*YIELD
+        PSUM = PSUM + PROB(3,J,L)
+    END DO
+        
+    IF(SUM == 0.0) RETURN
+
+    !....... normalise probabilities
+    PROB(3,1:JPTS,L) = PROB(3,1:JPTS,L) / PSUM
+    RETURN
+end subroutine PROBN2
+
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!..... determination of dissociative yield of n+, refer to kirby et al
+!..... page 66 and table b
+subroutine YLDISS(ISW,ZLAM,YIELD)
     IMPLICIT NONE
     INTEGER ISW,I,IPTS
     REAL X(9),Y(9),ZLAM,YIELD
     DATA IPTS/9/
     DATA X/50.,210.,240.,302.,387.,477.,496.,509.,2000./
     DATA Y/.36,.36,.346,.202,.033,.041,.024,0.0,0.0/
-    !
-    !
-    DO 10 I=1,IPTS
-        ! kjh 6/22/92   NOTE:  I realize the following statement is strange
-        !   looking, but its purpose is to prevent the CRAY compiler from
-        !   vectorizing this loop.  (Which it does incorrectly).
-        if(i == 25)write(6,*)' '
-        IF(ZLAM >= X(I).AND.ZLAM < X(I+1))  GO TO 20
-        10   CONTINUE
-        20   IF(ZLAM > 387.AND.ZLAM < 477) GO TO 40
-        !....... linear interpolation
-        YIELD=(ZLAM-X(I))/(X(I+1)-X(I))*(Y(I+1)-Y(I))+Y(I)
-        GO TO 30
+    
+   
+    IF(387 < ZLAM .AND. ZLAM < 477) then
         !...... parabolic interpolation see formula page 66 kirby et al
-        40   YIELD=.0329+8.13E-6*(ZLAM-442)**2
-        30   RETURN
-    END
-    !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE PROBO2(ISW,L,ZLAM,PROB,JPTS)
-    !....... o2 branching ratios are taken from kirby et al table d
-    !....... columns 4 & 9 are combined. columns 5,6,7&8 are combined
+        YIELD = .0329 + 8.13E-6*( ZLAM - 442 )**2
+    else
+        !....... linear interpolation
+        DO I=1,IPTS
+            ! kjh 6/22/92   NOTE:  I realize the following statement is strange
+            !   looking, but its purpose is to prevent the CRAY compiler from
+            !   vectorizing this loop.  (Which it does incorrectly).
+            if(i == 25)write(6,*)' '
+            IF( X(I) <= ZLAM .AND. ZLAM < X(I+1) ) exit
+        end do
+
+        YIELD = ( ZLAM - X(I) )/( X(I+1) - X(I) )*( Y(I+1) - Y(I) ) + Y(I)
+    end if
+    RETURN
+end subroutine YLDISS
+
+
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!....... o2 branching ratios are taken from kirby et al table d
+!....... columns 4 & 9 are combined. columns 5,6,7&8 are combined
+subroutine PROBO2(ISW,L,ZLAM,PROB,JPTS)
     IMPLICIT NONE
+
     INTEGER ISW,I,IPTS,J,JPTS,L
-    REAL A(5),B(5),X(20),Y(20,5),PROB(3,6,37),SUM,YLAM,ZLAM
+    REAL A(5),B(5),X(20),Y(20,5),PROB(3,6,37),BRSUM,YLAM,ZLAM
     DATA IPTS,X/20,304.,323.,454.,461.,504.,537.,556.,573.,584.,598.&
         ,610.,637.,645.,662.,684.,704.,720.,737.,774.,1026./
     DATA Y/.365,.374,.432,.435,.384,.345,.356,.365,.306,.23,.235,.245,&
@@ -2072,121 +2137,132 @@ SUBROUTINE PROBO2(ISW,L,ZLAM,PROB,JPTS)
         .125,.124,.12,.12,.126,.13,.225,.216,.21,.375,.305,.37,.33,.345,&
         6*.0,.055,.167,.11,.105,.194,.234,.189,.149,.155,.103,.075,.036&
         ,.025,7*0.,.25,.125,.095,.95,.026,15*0./
-    !
+    
     !...... if zlam is too big set equal to x(max)
-    YLAM=ZLAM
+    YLAM = ZLAM
+
     !...... if zlam is outside range of data values set equal to max or min
-    IF(ZLAM > X(20)) YLAM=X(20)
-    IF(ZLAM <= X(1)) YLAM=X(1)+1.E-3
-    !
-    DO 10 I=1,IPTS
+    IF(ZLAM > X(20)) then
+        YLAM = X(20)
+    else if(ZLAM <= X(1)) then
+        YLAM = X(1)+1.E-3
+    end if
+    
+    DO I=1,IPTS
         ! kjh 6/22/92   NOTE:  I realize the following statement is strange
         !   looking, but its purpose is to prevent the CRAY compiler from
         !   vectorizing this loop.  (Which it does incorrectly).
         if(i == 25)write(6,*)' '
-        IF(YLAM > X(I).AND.YLAM <= X(I+1))  GO TO 20
-        10   CONTINUE
-        20   SUM=0.0
-        !
-        DO 30 J=1,JPTS
-            A(J)=(Y(I+1,J)-Y(I,J))/(X(I+1)-X(I))
-            B(J)=Y(I,J)-A(J)*X(I)
-            SUM=SUM+A(J)*YLAM+B(J)
-            30   CONTINUE
-            !
-            DO 40 J=1,JPTS
-                PROB(2,J,L)=(A(J)*YLAM+B(J))/SUM
-                40   CONTINUE
-                !
-                RETURN
-            END
-            !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE SCHUMN(J,Z,ZO2,COLUMN,SCHUPR,SCHUHT)
-    !......... production of o(1d) by schumann-runge bands
-    !......... The fluxes are from Torr et al. GRL 1980 p6063. Scaling is
-    !......... done using UVFAC which may be set according to F10.7 cm flux
-    !......... may be done in FACEUV
+        IF(X(I) < YLAM .AND.YLAM <= X(I+1))  exit
+    end do
+
+    SUM=0.0
+    A(1:JPTS) = ( Y(I+1,1:JPTS) - Y(I,1:JPTS) )/( X(I+1) - X(I) )
+    B(1:JPTS) = Y(I,1:JPTS) - A(1:JPTS)*X(I)
+    BRSUM = SUM(A(1:JPTS)*YLAM + B(1:JPTS))
+       
+    PROB(2,1:JPTS,L) = ( A(1:JPTS)*YLAM + B(1:JPTS) )/BRSUM
+            
+    RETURN
+end subroutine PROB02
+
+
+!:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!......... production of o(1d) by schumann-runge bands
+!......... The fluxes are from Torr et al. GRL 1980 p6063. Scaling is
+!......... done using UVFAC which may be set according to F10.7 cm flux
+!......... may be done in FACEUV
+subroutine SCHUMN(J,Z,ZO2,COLUMN,SCHUPR,SCHUHT)
     IMPLICIT NONE
+
     INTEGER J,JTI,LMAX,LSR
     REAL Z,ZO2,SCHUPR,SCHUHT,HSRX,FLD,EUV,SRXSCT,UVFAC
     COMMON/SOL/UVFAC(59),EUV
     REAL COLUMN(3),SRFLUX(8),SRXS(8),SRLAM(8)
+
     DATA SRFLUX/2.4,1.4,.63,.44,.33,.17,.12,.053/
     DATA SRXS/.5,1.5,3.4,6,10,13,15,12/
     DATA SRLAM/1725,1675,1625,1575,1525,1475,1425,1375/
-    !
+    
     !........ lmax=# of lambdas in sub. primpr: schuht=heating: schupr=o(1d) prod
     LMAX=37
-    !
-    DO 505 LSR=1,8
+
+    DO LSR=1,8
         !......... photoabsorption cross section
-        SRXSCT=1.0E-18*SRXS(LSR)
-        HSRX=SRXSCT*COLUMN(2)
-        IF(HSRX > 70)HSRX=70
+        SRXSCT = 1.0E-18 * SRXS(LSR)
+        HSRX   = SRXSCT * COLUMN(2)
+        IF(HSRX > 70) HSRX = 70
+
         !........ attentuated solar flux
-        FLD=UVFAC(LMAX+LSR)*1.E+11*SRFLUX(LSR)*EXP(-HSRX)
+        FLD = UVFAC(LMAX + LSR) * 1.E+11 * SRFLUX(LSR) * EXP(-HSRX)
+
         !............ neutral heating SCHUHT and photodissociation rate SCHUPR
-        SCHUHT=SCHUHT+1.24E+4*(FLD*SRXSCT)*ZO2/SRLAM(LSR)
-        SCHUPR=SCHUPR+FLD*SRXSCT
-        !IF(JTI == 0) WRITE(24,90) LSR,SRXSCT,FLD,SCHUPR,COLUMN(2),FLD,
-        !>   UVFAC(LMAX+LSR)
-        505  CONTINUE
-        !
-        SCHUPR=ZO2*SCHUPR
-        90   FORMAT(2X,I5,1P,9E9.1)
-        JTI=1
-        RETURN
-    END
-    !:::::::::::::::::::::::::::::::: FACEUV :::::::::::::::::::::::
-SUBROUTINE FACEUV(UVFAC,F107,F107A)
-    !----- This routine uses the EUV scaling from Richards et al.[1994]
-    !----- The EUVAC flux model is based on the F74113 solar reference
-    !----- spectrum and Hinteregger's scaling factors. This subroutine
-    !----- just provides the scaling factors as a function of the proxy
-    !----- (F107+F107A)/2
+        SCHUHT = SCHUHT + 1.24E+4*FLD*SRXSCT*ZO2/SRLAM(LSR)
+        SCHUPR = SCHUPR + FLD*SRXSCT
+    end do
+        
+    SCHUPR = ZO2*SCHUPR
+    JTI = 1
+
+    RETURN
+
+end subroutine SCHUMN
+
+
+!:::::::::::::::::::::::::::::::: FACEUV :::::::::::::::::::::::
+!----- This routine uses the EUV scaling from Richards et al.[1994]
+!----- The EUVAC flux model is based on the F74113 solar reference
+!----- spectrum and Hinteregger's scaling factors. This subroutine
+!----- just provides the scaling factors as a function of the proxy
+!----- (F107+F107A)/2
+subroutine FACEUV(UVFAC,F107,F107A)
     IMPLICIT NONE
+
     INTEGER I
     REAL UVFAC(59),HFG200(37),A,B,C,F107,F107A,F107AV
+
     DATA HFG200/2.202,1.855,2.605,3.334,1.333,17.522,4.176,4.0&
         ,1.4,3.694,1.791,5.385,1.889,1.899,3.427,2.051,1.392,1.619&
         ,1.439,2.941,1.399,2.416,1.512,1.365,1.570,1.462,2.537,1.393&
         ,1.572,1.578,1.681,1.598,1.473,1.530,1.622,1.634,1.525/
+
     !--  Test to see if need to scale - see DATRD2 subroutine
     IF(NINT(UVFAC(58)) == -1.OR.NINT(UVFAC(58)) == -3) THEN
         !........... EUV scaling
-        F107AV=(F107+F107A)*0.5
-        DO 50 I=1,37
-            A=(HFG200(I)-1)/120.0
-            B=1-A*80.0
-            UVFAC(I)=A*F107AV+B
+        F107AV = (F107 + F107A)*0.5
+        DO I=1,37
+            A = (HFG200(I) - 1)/120.0
+            B = 1 - A*80.0
+            UVFAC(I) = A*F107AV + B
             IF(UVFAC(I) < 0.8) UVFAC(I)=0.8
-            50      CONTINUE
-        ENDIF
-        RETURN
-    END
-    !::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-SUBROUTINE FACSR(UVFAC,F107,F107A)
-    !........ The Schumann-Runge factors are scaled according to F10.7
-    !........ from Torr et al. GRL 1980 p6063
+        end do
+    ENDIF
+    RETURN
+end subroutine FACEUV
+
+
+!::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+!........ The Schumann-Runge factors are scaled according to F10.7
+!........ from Torr et al. GRL 1980 p6063
+subroutine FACSR(UVFAC,F107,F107A)
     IMPLICIT NONE
+
     INTEGER I,LSR
     REAL UVFAC(59),SRFLUX(8),SRA(8),SRB(8),F107,F107A
+
     !............. Schumann-Runge scaling
     DATA SRFLUX/2.4,1.4,.63,.44,.33,.17,.12,.053/
     !...... first two SRA and SRB values out of order in Marsha's paper
     DATA SRA/25.5,20.7,13.2,11.6,11.3,7.86,7.68,4.56/
     DATA SRB/222.,129.,53.4,36.0,25.0,11.3,6.35,2.05/
-    !
-    !----  Test to see if need to scale - see DATRD2 subroutine
-    !IF(NINT(UVFAC(58)) == -1.OR.NINT(UVFAC(58)) == -3) THEN
-    !
-    DO 505 I=38,50
-        LSR=I-37
-        UVFAC(I)=1.0
-        IF(LSR <= 8)&
-            UVFAC(I)=(SRA(LSR)*1.0E7*F107+SRB(LSR)*1.0E9)/SRFLUX(LSR)&
-            /1.0E11
-        505     CONTINUE
-        !ENDIF
-        RETURN
-    END
+    
+    DO I=38,50
+        LSR = I - 37
+        UVFAC(I) = 1.0
+        IF(LSR <= 8)then
+            UVFAC(I) = SRA(LSR)*1.0E7*F107 + SRB(LSR)*1.0E9
+            UVFAC(I) = 1.0E11*UVFAC(I)/SRFLUX(LSR)
+        end if
+    end do
+    RETURN
+end subroutine FACSR
