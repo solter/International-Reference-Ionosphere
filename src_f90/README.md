@@ -14,7 +14,7 @@ been performed, only the awk scripts.
 
 Manual refactoring steps indicate the following:
 
-1. Remove all gotos, indentation fixes, and spacing for readability
+1. Remove all gotos, indentation fixes, and readability changes
 
 ## Files
 The are as follows:
