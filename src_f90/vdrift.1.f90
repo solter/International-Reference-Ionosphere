@@ -1,26 +1,20 @@
-!****************************************************************************
+!-------------------------------------------------------------------
+!       SUBROUTINE CALCULATES EQUATORIAL VERTICAL DRIFT AS DESCRIBED 
+!       IN SCHERLIESS AND FEJER, JGR, 104, 6829-6842, 1999
 !
+!       INPUT:   XT: SOLAR LOCAL TIME  [h]
+!                XL: GEOGRAPHIC LONGITUDE (+ EAST) [degrees]
+!               
+!           PARAM: 2-DIM ARRAY (DOY,F10.7CM)
+!                  DOY     :Day of Year has to run from 1 to 365(366)
+!                  F10.7cm : F10.7cm solar flux (daily value)
+!             
+!       OUTPUT:   Y: EQUATORIAL VERTICAL DRIFT [m/s]
+!
+!-------------------------------------------------------------------
 subroutine vdrift(xt,xl,param,y)
-    !-------------------------------------------------------------------
-    !       SUBROUTINE CALCULATES EQUATORIAL VERTICAL DRIFT AS DESCRIBED 
-    !       IN SCHERLIESS AND FEJER, JGR, 104, 6829-6842, 1999
-    !
-    !       INPUT:   XT: SOLAR LOCAL TIME  [h]
-    !                XL: GEOGRAPHIC LONGITUDE (+ EAST) [degrees]
-    !               
-    !           PARAM: 2-DIM ARRAY (DOY,F10.7CM)
-    !                  DOY     :Day of Year has to run from 1 to 365(366)
-    !                  F10.7cm : F10.7cm solar flux (daily value)
-    !             
-    !       OUTPUT:   Y: EQUATORIAL VERTICAL DRIFT [m/s]
-    !
-    !-------------------------------------------------------------------
-    !        IMPLICIT REAL*8 (A-H,O-Z)
     IMPLICIT REAL (A-H,O-Z)
     
-    !        real*8 param(2),coeff(624),coeff1(594),coeff2(30),funct(6)
-    !        real*8 xt,xl,y
-    !        real*8 bspl4,bspl4_time,bspl4_long
     real param(2),coeff(624),coeff1(594),coeff2(30),funct(6)
     real xt,xl,y
     real bspl4,bspl4_time,bspl4_long
@@ -28,7 +22,7 @@ subroutine vdrift(xt,xl,param,y)
     integer index_t,dim_t,index_l,dim_l,index,dim,nfunc
     
     data index_t/13/,dim_t/78/,index_l/8/,dim_l/48/,index/104/,&
-        dim/624/,nfunc/6/
+         dim/624/,nfunc/6/
     data coeff1/&
         -10.80592, -9.63722,-11.52666, -0.05716, -0.06288,  0.03564,&
         -5.80962, -7.86988, -8.50888, -0.05194, -0.05798, -0.00138,&
@@ -135,38 +129,34 @@ subroutine vdrift(xt,xl,param,y)
         -22.61245,-21.24717,-18.09933, -0.05197, -0.07477, -0.05235,&
         -27.09189,-21.85181,-20.34676, -0.05123, -0.05683, -0.07214,&
         -27.09561,-22.76383,-25.41151, -0.10272, -0.02058, -0.16720/
-    do i=1,594 
-        coeff(i)=coeff1(i)
-    enddo
-    do i=1,30 
-        coeff(i+594)=coeff2(i)
-    enddo
+
+    coeff(:594) = coeff1 
+    coeff(595:) = coeff2
+
     call g(param,funct,xl)
+
     y=0.
     do i=1,index_t
         do il=1,index_l
-            kk=index_l*(i-1)+il
+            kk = index_l*(i - 1) + il
             do j=1,nfunc
-                ind=nfunc*(kk-1)+j
-                bspl4=bspl4_time(i,xt)*bspl4_long(il,xl)
-                y=y+bspl4*funct(j)*coeff(ind)
+                ind   = nfunc*(kk - 1) + j
+                bspl4 = bspl4_time(i, xt)*bspl4_long(il, xl)
+                y     = y + bspl4*funct(j)*coeff(ind)
             end do
         end do
     end do
-end
-!
-!
-!        real*8 function bspl4_time(i,x1)
+end subroutine vdrift
+
+
+!       *************************************************
 real function bspl4_time(i,x1)
-    !       *************************************************
-    !        implicit REAL*8 (A-H,O-Z)
     implicit REAL (A-H,O-Z)
     
     integer i,order,j,k
-    !        real*8 t_t(0:39)
-    !        real*8 x,b(20,20),x1
     real t_t(0:39)
-    real x,b(20,20),x1
+    real x, b(20, 20), x1
+
     data t_t/&
         0.00,2.75,4.75,5.50,6.25,&
         7.25,10.00,14.00,17.25,18.00,&
@@ -176,148 +166,153 @@ real function bspl4_time(i,x1)
         45.00,48.00,50.75,52.75,53.50,&
         54.25,55.25,58.00,62.00,65.25,&
         66.00,66.75,67.75,69.00,72.00/
-    order=4
-    x=x1
-    if(i >= 0) then
-        if (x < t_t(i-0)) then
-            x=x+24
+
+    order = 4
+    x = x1
+
+    if( i >= 0) then
+        if( x < t_t(i) ) then
+            x = x + 24
         end if
     end if
+
     do j=i,i+order-1
-        if(x >= t_t(j).and.x < t_t(j+1)) then
-            b(j,1)=1
+        if( t_t(j) <= x .and. x < t_t(j+1) ) then
+            b(j,1) = 1
         else
-            b(j,1)=0
+            b(j,1) = 0
         end if
     end do
+
     do j=2,order
         do k=i,i+order-j
-            b(k,j)=(x-t_t(k))/(t_t(k+j-1)-t_t(k))*b(k,j-1)
-            b(k,j)=b(k,j)+(t_t(k+j)-x)/(t_t(k+j)-t_t(k+1))*&
-                b(k+1,j-1)
+            b(k,j) = ( x - t_t(k) )/( t_t(k+j-1) - t_t(k) ) * b(k,j-1) 
+            b(k,j) = b(k,j) + ( t_t(k+j) - x )/( t_t(k+j) - t_t(k+1) ) * b(k+1,j-1) 
         end do
     end do
-    bspl4_time=b(i,order)
-end
-!
-!
+
+    bspl4_time = b(i,order)
+end function bspl4_time
+
+
 real function bspl4_long(i,x1)
-    !        real*8 function bspl4_long(i,x1)
-    !       *************************************************
-    !       implicit real*8 (A-H,O-Z) 
     implicit real (A-H,O-Z) 
+
     integer i,order,j,k
-    !        real*8 t_l(0:24)
-    !        real*8 x,b(20,20),x1
     real t_l(0:24)
     real x,b(20,20),x1
+
     data t_l/&
         0,10,100,190,200,250,280,310,&
         360,370,460,550,560,610,640,670,&
         720,730,820,910,920,970,1000,1030,1080/
     
-    order=4
-    x=x1
+    order = 4
+    x = x1
     if(i >= 0) then
-        if (x < t_l(i-0)) then
-            x=x+360
+        if (x < t_l(i)) then
+            x = x + 360
         end if
     end if
+
     do j=i,i+order-1
-        if(x >= t_l(j).and.x < t_l(j+1)) then
-            b(j,1)=1
+        if( t_l(j) <= x .and. x < t_l(j+1) ) then
+            b(j,1) = 1
         else
-            b(j,1)=0
+            b(j,1) = 0
         end if
     end do
+
     do j=2,order
         do k=i,i+order-j
-            b(k,j)=(x-t_l(k))/(t_l(k+j-1)-t_l(k))*b(k,j-1)
-            b(k,j)=b(k,j)+(t_l(k+j)-x)/(t_l(k+j)-t_l(k+1))*&
-                b(k+1,j-1)
+            b(k,j) = ( x - t_l(k) )/( t_l(k+j-1) - t_l(k) ) * b(k,j-1)
+            b(k,j) = b(k,j) + ( t_l(k+j) - x )/( t_l(k+j) - t_l(k+1) ) * b(k+1,j-1)
         end do
     end do
-    bspl4_long=b(i,order)
-end
-!
-!
+
+    bspl4_long = b(i,order)
+end function bspl4_long
+
+
 subroutine g(param,funct,x)
-    !       *************************************************
-    !        implicit real*8 (A-H,O-Z)
     implicit real (A-H,O-Z)
+
     integer i
-    !        real*8 param(2),funct(6)
-    !        real*8 x,a,sigma,gauss,flux,cflux
     real param(2),funct(6)
     real x,a,sigma,gauss,flux,cflux
-    !       *************************************************
-    flux=param(2)
-    if(param(2) <= 75)  flux=75.
-    if(param(2) >= 230) flux=230.
-    cflux=flux
-    a=0.
-    if((param(1) >= 120).and.(param(1) <= 240)) a=170.
-    if((param(1) >= 120).and.(param(1) <= 240)) sigma=60
-    if((param(1) <= 60).or.(param(1) >= 300)) a=170.
-    if((param(1) <= 60).or.(param(1) >= 300)) sigma=40
-    if((flux <= 95).and.(a /= 0)) then
-        gauss=exp(-0.5*((x-a)**2)/sigma**2)
-        cflux=gauss*95.+(1-gauss)*flux
+
+    if( param(2) <= 75 ) then
+        flux = 75.
+    else if ( 75 < param(2) < 230 ) then
+        flux = param(2)
+    else
+        flux = 230
     end if
-    !       *************************************************
-    !       *************************************************
-    do i=1,6
-        funct(i)=0.
-    end do
-    !       *************************************************
-    !       *************************************************
-    if((param(1) >= 135).and.(param(1) <= 230)) funct(1)=1
-    if((param(1) <= 45).or.(param(1) >= 320)) funct(2)=1
-    if((param(1) > 75).and.(param(1) < 105)) funct(3)=1
-    if((param(1) > 260).and.(param(1) < 290)) funct(3)=1
-    !       *************************************************
-    if((param(1) >= 45).and.(param(1) <= 75)) then  ! W-E
-    funct(2)=1.-(param(1)-45.)/30.
-    funct(3)=1-funct(2)
-end if
-if((param(1) >= 105).and.(param(1) <= 135)) then  ! E-S
-funct(3)=1.-(param(1)-105.)/30.
-funct(1)=1-funct(3)
-end if
-if((param(1) >= 230).and.(param(1) <= 260)) then  ! S-E
-funct(1)=1.-(param(1)-230.)/30.
-funct(3)=1-funct(1)
-end if
-if((param(1) >= 290).and.(param(1) <= 320)) then  ! E-W
-funct(3)=1.-(param(1)-290.)/30.
-funct(2)=1-funct(3)
-end if
-!       *************************************************
-funct(4)=(cflux-140)*funct(1)
-funct(5)=(cflux-140)*funct(2)
-funct(6)=(flux-140)*funct(3)
-!       *************************************************
-end
-!
-!
+
+    cflux = flux
+
+    a = 0.
+    if( 120 <= param(1) .and. param(1) <= 240 ) then
+        a = 170.
+        sigma = 60.
+    else if ( param(1) <= 60 .or. 300 <= param(1) )then
+        a = 170.
+        sigma = 40.
+    end if
+
+    if( flux <= 95 .and. a /= 0 ) then
+        gauss = exp( -0.5*( (x-a)/sigma )**2 )
+        cflux = gauss*95. + (1 - gauss)*flux
+    end if
+
+    funct = 0
+    if (      param(1)  < 45  .or.  320  < param(1) ) then ! N
+        funct(2) = 1
+    else if (  45 <= param(1) .and. param(1) <= 75  ) then ! N-E
+        funct(2) = 1 - (param(1) - 45.)/30.
+        funct(3) = 1 - funct(2)
+    else if (  75 <  param(1) .and. param(1) <  105 ) then ! E
+        funct(3) = 1
+    else if ( 105 <= param(1) .and. param(1) <= 135 ) then ! E-S
+        funct(3) = 1 - (param(1) - 105.)/30.
+        funct(1) = 1 - funct(3)
+    else if ( 135 <  param(1) .and. param(1) <  230 ) then ! S
+        funct(1) = 1
+    else if ( 230 <= param(1) .and. param(1) <= 260 ) then ! S-W
+        funct(1) = 1 - (param(1) - 230.)/30.
+        funct(3) = 1 - funct(1)
+    else if ( 260 <  param(1) .and. param(1) <  290 ) then ! W
+        funct(3) = 1
+    else if ( 290 <= param(1) .and. param(1) <= 320 ) then ! W-N
+        funct(3) = 1 - (param(1) - 290.)/30.
+        funct(2) = 1 - funct(3)
+    end if
+
+    funct(4) = (cflux - 140)*funct(1)
+    funct(5) = (cflux - 140)*funct(2)
+    funct(6) = (flux  - 140)*funct(3)
+
+end function bspl4_long
+
+
+! *******************************************************************
+!  Empirical vertical disturbance drifts model
+!  After Fejer and Scherliess, JGR, 102, 24047-24056,1997
+!*********************************************************************
+!  INPUT:
+!    AE: AE(in nT) in 1 hour or 15 minute resolution;
+!    SLT: Local time(in hrs) for wanted Vd;
+!  OUTPUT:
+!    PromptVd: Prompt penetration vertical drifts at given conditions;
+!    DynamoVd: Disturbane dynamo vertical drifts at given conditions;
+!    Vd: PromptVd+DynamoVd;
+!*********************************************************************
 SUBROUTINE StormVd(FLAG,iP,AE,SLT,PromptVd,DynamoVd,Vd)
-    ! *******************************************************************
-    !  Empirical vertical disturbance drifts model
-    !  After Fejer and Scherliess, JGR, 102, 24047-24056,1997
-    !*********************************************************************
-    !  INPUT:
-    !    AE: AE(in nT) in 1 hour or 15 minute resolution;
-    !    SLT: Local time(in hrs) for wanted Vd;
-    !  OUTPUT:
-    !    PromptVd: Prompt penetration vertical drifts at given conditions;
-    !    DynamoVd: Disturbane dynamo vertical drifts at given conditions;
-    !    Vd: PromptVd+DynamoVd;
-    !*********************************************************************
-    !       IMPLICIT REAL*8(A-H,O-Z)
     IMPLICIT REAL(A-H,O-Z)
-    !       REAL*8 AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
+
     REAL AE(1:366*24*4),Coff1(1:5,1:9),Coff15(1:6,1:9)
     INTEGER FLAG 
+
     DATA Coff1/&
         0.0124,-0.0168,-0.0152,-0.0174,-0.0704,&
         -0.0090,-0.0022,-0.0107, 0.0152,-0.0674,&
@@ -338,218 +333,190 @@ SUBROUTINE StormVd(FLAG,iP,AE,SLT,PromptVd,DynamoVd,Vd)
         -0.0070,-0.0053,-0.0090, 0.0086, 0.0149, 0.2637,&
         -0.0326,-0.0101, 0.0076, 0.0117, 0.0099, 0.3002,&
         -0.0470,-0.0455,-0.0274, 0.0338, 0.0099, 0.0746/
-    !CCCCCCCCCCCCCCCC**Define to variables**CCCCCCCCCCCCCCCCCCCCC
-    ! To 1 h time resolution:
-    ! dAEt_30=AE(t)-AE(t-1 hour);
-    ! dAEt_90=AE(t-1 hour)-AE(t-2 hour);
-    !C
-    ! To 15 MIN time resolution :
-    ! dAEt_7P5=AE(t)-AE(t-15min);
-    ! dAEt_30=AE(t-15)-AE(t-45min);
-    ! dAEt_75=AE(t-45)-AE(t-105min);
-    !C
-    !  Following variables are the same to two resolution: 
-    ! AE1_6=average(AE(1-6hours));
-    ! AE7_12=average(AE(7-12hours));
-    ! AE1_12=average(AE(1-12hours));
-    ! AEd1_6=average(X(AE(1-6hours)-130 nT));
-    ! AEd7_12=average(X(AE(7-12hours)-130 nT));
-    ! AEd1_12=average(X(AE(1-12hours)-130 nT));
-    ! AEd22_28=average(X(AE(22-28hours)-130 nT));
-    ! Here X(a)=a, a>0; =0, a<=0;
-    ! Alfa=0,            AE1_6<200 nT;
-    !      AE1_6/100-2, 200 nT<AE1_6<200 nT;
-    !      1,            AE1_6>300 nT;
-    ! Beta=exp(-AE1_12/90),  AE1_12>=70nT;
-    !      0.46,              AE1_12<70 nT;
-    !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCccccccc
-    !*****************************************************
-    !C        FLAG>0--> 1 h time resolution
-    !**************************************************** 
+
     IF (FLAG > 0) THEN
-        ! 
-        dAEt_30=AE(iP)-AE(iP-1)
-        dAEt_90=AE(iP-1)-AE(iP-2)
-        !
-        AE1_6=0.0D0
-        AEd1_6=0.0D0
+        !*****************************************************
+        !        1 hour time resolution
+        !***************************************************** 
+
+        dAEt_30 = AE(iP)   - AE(iP-1)
+        dAEt_90 = AE(iP-1) - AE(iP-2)
+
+        AE1_6  = 0.0D0
+        AEd1_6 = 0.0D0
         DO i=-1,-6,-1
-            AE1_6=AE1_6+AE(iP+i)
-            AEd1_6S=AE(iP+i)-130.0D0
-            IF (AEd1_6S <= 0.0D0) AEd1_6S=0.0D0
-            AEd1_6=AEd1_6+AEd1_6S
+            AE1_6   = AE1_6    + AE(iP+i)
+            AEd1_6S = AE(iP+i) - 130.0D0
+            IF (AEd1_6S <= 0.0D0) AEd1_6S = 0.0D0
+            AEd1_6  = AEd1_6 + AEd1_6S
         END DO
-        AE1_6=AE1_6/6.0D0
-        AEd1_6=AEd1_6/6.0D0
-        !
-        AEd7_12=0.0D0
+        AE1_6  = AE1_6 /6.0D0
+        AEd1_6 = AEd1_6/6.0D0
+        
+        AEd7_12 = 0.0D0
         DO i=-7,-12,-1
-            AEd7_12S=AE(iP+i)-130.0D0
-            IF (AEd7_12S <= 0.0D0) AE7_12S=0.0D0
-            AEd7_12=AEd7_12+AEd7_12S
+            AEd7_12S = AE(iP+i) - 130.0D0
+            IF (AEd7_12S <= 0.0D0) AE7_12S = 0.0D0
+            AEd7_12  = AEd7_12 + AEd7_12S
         END DO
-        AEd7_12=AEd7_12/6.0D0
-        !
-        AE1_12=0.0D0
+        AEd7_12 = AEd7_12/6.0D0
+        
+        AE1_12 = 0.0D0
         DO i=-1,-12,-1
-            AE1_12=AE1_12+AE(iP+i)
+            AE1_12 = AE1_12 + AE(iP+i)
         END DO
-        AE1_12=AE1_12/12.0D0
-        !
-        AEd22_28=0.0D0
+        AE1_12 = AE1_12/12.0D0
+        
+        AEd22_28 = 0.0D0
         DO i=-22,-28,-1
-            AEd22_28S=AE(iP+i)-130.0D0
-            IF (AED22_28S <= 0.0D0) AEd22_28S=0.0D0
-            AEd22_28=AEd22_28+AEd22_28S 
+            AEd22_28S = AE(iP+i) - 130.0D0
+            IF (AED22_28S <= 0.0D0) AEd22_28S = 0.0D0
+            AEd22_28  = AEd22_28 + AEd22_28S 
         END DO
-        AEd22_28=AEd22_28/7.0D0
-        AEd22_28P=AEd22_28-200.0D0
-        IF (AEd22_28P <= 0.0D0) AEd22_28P=0.0D0
-        !C
+        AEd22_28  = AEd22_28/7.0D0
+        AEd22_28P = AEd22_28 - 200.0D0
+        IF (AEd22_28P <= 0.0D0) AEd22_28P = 0.0D0
+        
         IF (AE1_6 > 300.0D0) THEN  
-            Alfa=1.0D0
+            Alfa = 1.0D0
         ELSE IF (AE1_6 > 200.0D0) THEN
-            ALfa=AE1_6/100.0D0-2.0D0
+            ALfa = AE1_6/100.0D0 - 2.0D0
         ELSE 
-            ALfa=0.0D0
+            ALfa = 0.0D0
         ENDIF
-        !C
+        
         IF (AE1_12 >= 70.0D0) THEN
-            Beta=dexp(-AE1_12/90.0D0)
+            Beta = dexp(-AE1_12/90.0D0)
         ELSE
-            Beta=0.46D0
+            Beta = 0.46D0
         END IF
-        PromptVd=0.0D0
-        DO J=1,9
-            PromptVd=PromptVd +(Coff1(1,J)*dAEt_30 +Coff1(2,J)*dAEt_90&
-                )*bspl4_ptime(J,SLT)
-        END DO
+
+        PromptVd = 0.0D0
         DynamoVd=0.0D0
         DO J=1,9
-            DynamoVd=DynamoVd+&
-                (Coff1(3,J)*AEd1_6+Coff1(4,J)*Alfa*AEd7_12&
-                +Coff1(5,J)*Beta*AEd22_28P)*bspl4_ptime(J,SLT)
+            ptime = bspl4_ptime(J,SLT)
+            PromptVd = PromptVd + ptime * (&
+                                    Coff1(1,J)*dAEt_30 &
+                                  + Coff1(2,J)*dAEt_90 )
+            DynamoVd = DynamoVd + ptime * (&
+                                    Coff1(3,J)*AEd1_6 &
+                                  + Coff1(4,J)*Alfa*AEd7_12 &
+                                  + Coff1(5,J)*Beta*AEd22_28P )
         END DO
-        Vd=PromptVd+DynamoVd
-        RETURN
-        ! 1 h time resolution end;
+
+    ELSE
         !********************************************************************
         !                  15 min time resolution
         !********************************************************************
-    ELSE
-        dAEt_7P5=AE(iP)-AE(iP-1)
-        dAEt_30=AE(iP-1)-AE(iP-3)
-        dAEt_75=AE(iP-3)-AE(iP-7)
-        AE1_6=0.0D0
-        AEd1_6=0.0D0
+        dAEt_7P5 = AE(iP)   - AE(iP-1)
+        dAEt_30  = AE(iP-1) - AE(iP-3)
+        dAEt_75  = AE(iP-3) - AE(iP-7)
+
+        AE1_6  = 0.0D0
+        AEd1_6 = 0.0D0
         DO i=-4,-24,-1
-            AE1_6=AE1_6+AE(iP+i)
-            AEd1_6s=AE(iP+i)-130.
-            IF (AEd1_6s <= 0.0) AEd1_6s=0.0
-            AEd1_6=AEd1_6+AEd1_6S
+            AE1_6   = AE1_6 + AE(iP+i)
+            AEd1_6s = AE(iP+i) - 130.
+            IF (AEd1_6s <= 0.0) AEd1_6s = 0.0
+            AEd1_6  = AEd1_6 + AEd1_6S
         ENDDO
-        AE1_6=AE1_6/21.0D0
-        AEd1_6=AEd1_6/21.0D0
-        !C
-        AEd7_12=0.0D0 
+        AE1_6  = AE1_6/21.0D0
+        AEd1_6 = AEd1_6/21.0D0
+        
+        AEd7_12 = 0.0D0 
         DO i=-28,-48,-1
-            AEd7_12s=AE(iP+i)-130.0
-            IF (AEd7_12s <= 0) AEd7_12s=0.0
-            AEd7_12=AEd7_12+AEd7_12S
+            AEd7_12s = AE(iP+i) - 130.0
+            IF (AEd7_12s <= 0) AEd7_12s = 0.0
+            AEd7_12  = AEd7_12 + AEd7_12S
         ENDDO
-        AEd7_12=AEd7_12/21.0D0
-        !C
-        AE1_12=0.0D0
+        AEd7_12 = AEd7_12/21.0D0
+        
+        AE1_12 = 0.0D0
         DO i=-4,-48,-1
-            AE1_12=AE1_12+AE(iP+i)
+            AE1_12 = AE1_12 + AE(iP+i)
         END DO
-        AE1_12=AE1_12/45.0D0
-        !C 
-        AEd22_28=0.0D0
+        AE1_12 = AE1_12/45.0D0
+         
+        AEd22_28 = 0.0D0
         DO i=-88,-112,-1
-            AEd22_28s=AE(iP+i)-130.
+            AEd22_28s = AE(iP+i) - 130.
             IF (AEd22_28s <= 0) AEd22_28s=0.0
-            AEd22_28=AEd22_28+AEd22_28s
+            AEd22_28  = AEd22_28 + AEd22_28s
         ENDDO
-        AEd22_28=AEd22_28/25.0D0
-        AEd22_28P=AEd22_28-200.0D0
-        IF (AEd22_28P <= 0.0D0) AEd22_28P=0.0D0
-        !         AE1_6=0.0D0
-        !         AEd1_6=0.0D0
-        !         AEd7_12=0.0D0 
-        !         AEd22_28P=0.0D0
-        !         AE1_12=0.0D0
-        !         dAEt_7P5=400.D0
-        !         dAEt_30=0.D0
-        !         dAEt_75=0.D0
-        !C
+        AEd22_28  = AEd22_28/25.0D0
+        AEd22_28P = AEd22_28 - 200.0D0
+        IF (AEd22_28P <= 0.0D0) AEd22_28P = 0.0D0
+        
         IF (AE1_6 > 300.0D0) THEN  
-            Alfa=1.0D0
+            Alfa = 1.0D0
         ELSE IF (AE1_6 > 200.0D0) THEN
-            ALfa=AE1_6/100.0D0-2.0D0
+            ALfa = AE1_6/100.0D0 - 2.0D0
         ELSE 
             ALfa=0.0D0
         ENDIF
-        !C
+        
         IF (AE1_12 >= 70.0D0) THEN
-            Beta=dexp(-AE1_12/90.0D0)
+            Beta = dexp(-AE1_12/90.0D0)
         ELSE
-            Beta=0.46D0
+            Beta = 0.46D0
         END IF
-        !C
+        
         PromptVd=0.0D0
-        DO J=1,9
-            PromptVd=PromptVd+(Coff15(1,J)*dAEt_7P5+Coff15(2,J)*dAEt_30&
-                +Coff15(3,J)*dAEt_75)*bspl4_ptime(J,SLT)
-        END DO
         DynamoVd=0.0D0
         DO J=1,9
-            DynamoVd=DynamoVd +(Coff15(4,J)*AEd1_6+&
-                Coff15(5,J)*Alfa*AEd7_12+&
-                Coff15(6,J)*Beta*AEd22_28P&
-                )*bspl4_ptime(J,SLT)
+            ptime = bspl4_ptime(J,SLT)
+            PromptVd = PromptVd + ptime * (&
+                                    Coff15(1,J)*dAEt_7P5 &
+                                  + Coff15(2,J)*dAEt_30 &
+                                  + Coff15(3,J)*dAEt_75 )
+            DynamoVd = DynamoVd + ptime * (&
+                                    Coff15(4,J)*AEd1_6 &
+                                  + Coff15(5,J)*Alfa*AEd7_12 &
+                                  + Coff15(6,J)*Beta*AEd22_28P )
         END DO
-        Vd=PromptVd+DynamoVd
+
     ENDIF
+
+    Vd = PromptVd + DynamoVd
     RETURN
-END                     
-!
-!
+END SUBROUTINE StormVd
+
+
 real function bspl4_ptime(i,x1)
-    !       real*8 function bspl4_ptime(i,x1)
-    ! *************************************************
-    !       IMPLICIT REAL*8 (A-H,O-Z)
     IMPLICIT REAL (A-H,O-Z)
+
     integer i,order,j,k
-    !       real*8 t_t(0:27)
-    !       real*8 x,b(20,20),x1
     real t_t(0:27)
     real x,b(20,20),x1
+
     data t_t/0.00,3.00,4.50,6.00,9.00,12.0,15.0,18.0,21.0,&
         24.0,27.0,28.5,30.0,33.0,36.0,39.0,42.0,45.0,&
         48.0,51.0,52.5,54.0,57.0,60.0,63.0,66.0,69.0,72.0/
-    !
-    order=4
-    x=x1
-    if(i >= 0) then
-        if (x < t_t(i-0)) then
+    
+    order = 4
+
+    x = x1
+    if( i >= 0 ) then
+        if ( x < t_t(i) ) then
             x=x+24
         end if
     end if
+
     do j=i,i+order-1
-        if(x >= t_t(j).and.x < t_t(j+1)) then
+        if( t_t(j) <= x .and. x < t_t(j+1) ) then
             b(j,1)=1
         else
             b(j,1)=0
         end if
     end do
-    !
+    
     do j=2,order
         do k=i,i+order-j
-            b(k,j)=(x-t_t(k))/(t_t(k+j-1)-t_t(k))*b(k,j-1)
-            b(k,j)=b(k,j)+(t_t(k+j)-x)/(t_t(k+j)-t_t(k+1))*b(k+1,j-1)
+            b(k,j) = ( x - t_t(k) )/( t_t(k+j-1) - t_t(k) ) * b(k,j-1)
+            b(k,j) = b(k,j) + ( t_t(k+j) - x )/( t_t(k+j) - t_t(k+1) ) * b(k+1,j-1)
         end do
     end do
-    bspl4_ptime=b(i,order)
+
+    bspl4_ptime = b(i,order)
     return
-end
+end function bspl4_ptime
