@@ -65,7 +65,7 @@ FUNCTION XE1(H)
     eptr1 = eptr(x, beta, 394.5) - eptr(x0, beta, 394.5)
     eptr2 = eptr(x, 100., 300.0) - eptr(x0, 100., 300.0) 
     y     = BETA * ETA * eptr1 + ZETA * (100. * eptr2 - xmx0)
-    y     *= dxdh
+    y     = y*dxdh
 
     if ( abs(y) > argmax ) y = sign(argmax, y)
 
@@ -97,7 +97,7 @@ real function TOPQ(h, No, hmax, Ho)
     g1 = g * dh
     z  = rfac*Ho + g1
     z  = 1 + rfac * g1 / z
-    z *= Ho
+    z  = z*Ho
     z  = dh / z
 
     if (z > 40) then
@@ -267,7 +267,7 @@ real function XE_1(H)
         XE_1 = XE1(H)     
     else if(H >= HMF1) then
         XE_1 = XE2(H)       
-    else if (H >= HZ) ten
+    else if (H >= HZ) then
         XE_1 = XE3_1(H)       
     else if (H >= HEF) then
         XE_1 = XE4_1(H)       

@@ -2009,7 +2009,7 @@ subroutine PROBS(ISW,PROB,ZLAM,LMAX,NNI)
     end do
             
     !....... call separate subroutines for o2 and n2 probabilities
-    DO 30 L=1,LMAX
+    DO L=1,LMAX
         CALL PROBO2(1,L,ZLAM(L),PROB,NNI(2))
         CALL PROBN2(1,L,ZLAM(L),PROB,NNI(3))
     end do
@@ -2063,7 +2063,7 @@ SUBROUTINE PROBN2(ISW,L,ZLAM,PROB,JPTS)
     !...... determine yield of n+, and store in prob array
     CALL YLDISS(1, YLAM, YIELD)
     !
-    DO 10 I=1,IPTS
+    DO I=1,IPTS
         ! kjh 6/22/92   NOTE:  I realize the following statement is strange
         !   looking, but its purpose is to prevent the CRAY compiler from
         !   vectorizing this loop.  (Which it does incorrectly).
@@ -2083,7 +2083,7 @@ SUBROUTINE PROBN2(ISW,L,ZLAM,PROB,JPTS)
         PSUM = PSUM + PROB(3,J,L)
     END DO
         
-    IF(SUM == 0.0) RETURN
+    IF(PSUM == 0.0) RETURN
 
     !....... normalise probabilities
     PROB(3,1:JPTS,L) = PROB(3,1:JPTS,L) / PSUM
@@ -2156,7 +2156,6 @@ subroutine PROBO2(ISW,L,ZLAM,PROB,JPTS)
         IF(X(I) < YLAM .AND.YLAM <= X(I+1))  exit
     end do
 
-    SUM=0.0
     A(1:JPTS) = ( Y(I+1,1:JPTS) - Y(I,1:JPTS) )/( X(I+1) - X(I) )
     B(1:JPTS) = Y(I,1:JPTS) - A(1:JPTS)*X(I)
     BRSUM = SUM(A(1:JPTS)*YLAM + B(1:JPTS))
@@ -2164,7 +2163,7 @@ subroutine PROBO2(ISW,L,ZLAM,PROB,JPTS)
     PROB(2,1:JPTS,L) = ( A(1:JPTS)*YLAM + B(1:JPTS) )/BRSUM
             
     RETURN
-end subroutine PROB02
+end subroutine PROBO2
 
 
 !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

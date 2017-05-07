@@ -243,7 +243,7 @@ subroutine g(param,funct,x)
 
     if( param(2) <= 75 ) then
         flux = 75.
-    else if ( 75 < param(2) < 230 ) then
+    else if ( 75 < param(2) .and. param(2) < 230 ) then
         flux = param(2)
     else
         flux = 230
@@ -292,7 +292,7 @@ subroutine g(param,funct,x)
     funct(5) = (cflux - 140)*funct(2)
     funct(6) = (flux  - 140)*funct(3)
 
-end function bspl4_long
+end subroutine g
 
 
 ! *******************************************************************

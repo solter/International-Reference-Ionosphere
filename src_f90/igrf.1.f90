@@ -132,7 +132,7 @@ SUBROUTINE SHELLG(GLAT, GLON, ALT, FL, ICODE, B0)
     COMMON/CONST/     UMR, PI
     COMMON/IGRF1/     ERA, AQUAD, BQUAD, DIMO
 
-    DIMENSION 
+    DIMENSION :: V(3), U(3,3), P(8,100), SP(3)
     
     ! Convert Geodetic to Cartesian
     RLAT = GLAT*UMR
@@ -146,7 +146,7 @@ SUBROUTINE SHELLG(GLAT, GLON, ALT, FL, ICODE, B0)
     X(1) = X(1)*COS(RLON)
 
     ! Call into the ShellC subroutine
-    call SHELLC(X, FL, ICODE, B0, DIMO)
+    call SHELLC(X, DIMO, FL, ICODE, B0)
 
 END SUBROUTINE SHELLG
 
@@ -181,7 +181,7 @@ END SUBROUTINE SHELLG
 SUBROUTINE SHELLC(V, DIMO, FL, ICODE, B0)
 
     logical           finished
-    DIMENSION         V(3), U(3, 3), P(8, 100), SP(3)
+    DIMENSION         V(3), U(3, 3), P(8, 100), SP(3), ZZ(7)
     COMMON/IGRF2/     X(3), H(196)
     COMMON/FIDB0/     SP    
 
@@ -225,14 +225,14 @@ SUBROUTINE SHELLC(V, DIMO, FL, ICODE, B0)
     CALL STOER(P(1:7,3), BQ3, R3)
 
     !*****INVERT SENSE IF REQUIRED
-    IF(BQ3 > BQ1)GOTO 2
+    IF(BQ3 > BQ1) THEN
         STEP = -STEP
         R3 = R1
         BQ3 = BQ1
         ZZ = P(1:7,1)
         P(1:7,1) = P(1:7,3)
-        P(1:7,3 = ZZ
-    endif
+        P(1:7,3) = ZZ
+    end if
 
     !*****SEARCH FOR LOWEST MAGNETIC FIELD STRENGTH
     IF(BQ1 < BEQU) THEN
@@ -417,7 +417,7 @@ END SUBROUTINE SHELLC
 !                                                                  *
 !*******************************************************************
 SUBROUTINE STOER(P,BQ,R)
-    DIMENSION         P(7), U(3,3), DX(3), DXM(3), XM(3)
+    DIMENSION         P(7), U(3,3), DX(3), DM(3), XM(3)
     COMMON/IGRF2/     XI(3), H(196)
 
     !*****XM,YM,ZM  ARE GEOMAGNETIC CARTESIAN INVERSE CO-ORDINATES
@@ -445,16 +445,16 @@ SUBROUTINE STOER(P,BQ,R)
     DX(3) = 2*H(2) + Q*XI(3)
 
     !*****TRANSFORM BACK TO GEOMAGNETIC CO-ORDINATE SYSTEM
-    DXM = matmul(DX, U)
+    DM = matmul(DX, U)
     DR  = dot_product(XM, DM)/R
 
     !*****FORM SLOWLY VARYING EXPRESSIONS
-    P(4) = ( WR*DXM(1) - 0.5*P(1)*DR )/(R*DXM(3))
-    P(5) = ( WR*DXM(2) - 0.5*P(2)*DR )/(R*DXM(3))
+    P(4) = ( WR*DM(1) - 0.5*P(1)*DR )/(R*DM(3))
+    P(5) = ( WR*DM(2) - 0.5*P(2)*DR )/(R*DM(3))
     DSQ  = RQ*dot_product(DM, DM)
     BQ   = DSQ*RQ**2
     P(6) = SQRT( DSQ/( RQ + 3.*XM(3)**2 ) )
-    P(7) = P(6)*( RQ + XM(3)**2 )/(RQ*DXM(3))
+    P(7) = P(6)*( RQ + XM(3)**2 )/(RQ*DM(3))
     RETURN
 END SUBROUTINE STOER
 
@@ -606,7 +606,7 @@ SUBROUTINE FELDI
 
             IF (I == 1) then
                 H(IL+2) = G(IL+2) &
-                          + X*H(IH+4)
+                          + X*H(IH+4) &
                           - Y*( H(IH+3) + H(IH) ) &
                           + Z*H(IH+2)
                 H(IL+1) = G(IL+1) &
@@ -945,7 +945,7 @@ FUNCTION fmodip(xlat)
     call igrf_dip(xlat,xlong,year,300.,dec,dip,dipl,ymodip)
     fmodip=ymodip
     return
-END FUNCTION fmoddip
+END FUNCTION fmodip
 
 
 !  =====================================================================
@@ -1183,7 +1183,7 @@ SUBROUTINE GEOCGM01(ICOR,IYEAR,HI,DAT,PLA,PLO)
         !  End of loop j = 1,icount
     enddo
     RETURN
-END GEOCGM01
+END SUBROUTINE GEOCGM01
 
 
 !  *********************************************************************
@@ -1997,7 +1997,6 @@ SUBROUTINE CORGEO(SLA,SLO,RH,DLA,DLO,CLA,CLO,PMI)
         SAQ = SQRT(SAA)
         SCLA = ATAN(SAQ)
         IF(CLA < 0) SCLA = PI - SCLA
-        GOTO 3
     else
         SCLA = PI/2
         R0 = RFI
@@ -2771,7 +2770,6 @@ SUBROUTINE IGRF(IY,NM,R,T,F,BR,BT,BF)
           -160.5,   251.7,  -536.8,     0.0,   286.4,  -211.2,   164.4,&
           -309.2,     0.0,    44.7,   188.9,  -118.1,     0.1,   100.9,&
              0.0,   -20.8,    44.2,    61.5,   -66.3,     3.1,    54.9,&
-             0.0,   -20.8,    44.2,    61.5,   -66.3,     3.1,    54.9,&
              0.0,   -57.8,   -21.2,     6.6,    24.9,     7.0,   -27.7,&
             -3.4,     0.0,    10.9,   -20.0,    11.9,   -17.4,    16.7,&
              7.1,   -10.8,     1.7,     0.0,   -20.5,    11.6,    12.8,&
@@ -2959,7 +2957,7 @@ SUBROUTINE IGRF(IY,NM,R,T,F,BR,BT,BF)
             W  = E*Y + HH*X
             BBR = BBR + B(N)*W*Q
             BBT = BBT - AN*W*Z
-            IF(M / =  1) then
+            IF(M /=  1) then
                 QQ = Q
                 IF(S < 1.E-5) QQ = Z
                 BI = BI + AN*(E*X - HH*Y)*QQ
@@ -2975,7 +2973,7 @@ SUBROUTINE IGRF(IY,NM,R,T,F,BR,BT,BF)
 
         D = S*D + C*P
         P = S*P
-        IF(M / =  1) then
+        IF(M /=  1) then
             BI = BI*MM
             BBF = BBF + BI
         endif
@@ -3344,11 +3342,12 @@ SUBROUTINE SPHCAR(R,THETA,PHI,X,Y,Z,J)
         IF (PHI < 0.) PHI = PHI + 2.*PI
     else
         PHI = 0.
-        IF (Z < 0.) THEN GOTO 1
+        IF (Z < 0.) THEN
             THETA = PI
         ELSE
             THETA=0.
         ENDIF
+    ENDIF
     RETURN
 END SUBROUTINE SPHCAR
 

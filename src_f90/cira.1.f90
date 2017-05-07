@@ -552,7 +552,7 @@ FUNCTION VTST7(IYD,SEC,GLAT,GLONG,STL,F107A,F107,AP,IC)
         GLAT /= GLATL(IC) .or. GLONG /= GLL(IC) .or.&
         STL /= STLL(IC) .or. F107A /= FAL(IC) .or. &
         F107 /= FL(IC) .or. any(ap /= APL(:,IC)) .or.&
-        any(sw /= swl(:,IC) .or. any(swc /= swcl(:,IC) ) then 
+        any(sw /= swl(:,IC)) .or. any(swc /= swcl(:,IC)) ) then 
 
         ! record that things changed
         VTST7 = 1
@@ -1086,14 +1086,11 @@ FUNCTION GLOBE7(YRD,SEC,LAT,LONG,TLOC,F107A,F107,AP,P)
     ! 3hr Magnetic activity functions
 
     ! Eq. A24d
-    G0(A) = A - 4. + ( EXP( -ABS(P(25))*( A - 4. ) ) - 1. )/ABS(P(25))
-    G0(A) = A - 4. + ( P(26) - 1. )*G0(A)
+    G0(A) = G0_func(A)
     ! Eq. A24c
-    SUMEX(EX) = 1. + ( 1. - EX**19 )/( 1. - EX ) * EX**(.5)
+    SUMEX(EX) = SumEx_func(EX)
     ! Eq. A24a
-    SG0(EX) = G0(AP(2)) + G0(AP(3))*EX + G0(AP(4))*EX**2 + G0(AP(5))*EX**3 &
-              + ( G0(AP(6))*EX**4 + G0(AP(7))*EX**12 )*( 1. - EX**8 )/( 1. - EX )
-    SG0(EX) = SG0(EX)/SUMEX(EX)
+    SG0(EX) = SG0_func(EX, AP)
 
     T(1:14) = 0
     IF(SW(9) > 0) SW9=1.
@@ -1294,6 +1291,39 @@ FUNCTION GLOBE7(YRD,SEC,LAT,LONG,TLOC,F107A,F107,AP,P)
 
     GLOBE7 = TINF
     RETURN
+
+CONTAINS
+    ! 3hr Magnetic activity functions
+    ! Eq. A24d
+    function G0_func(A) result(ret_val)
+        real, intent(in) :: A
+        !real :: ret_val
+
+        ret_val = A - 4. + ( EXP( -ABS(P(25))*( A - 4. ) ) - 1. )/ABS(P(25))
+        ret_val = A - 4. + ( P(26) - 1. )*ret_val
+    end function G0_func
+    ! Eq. A24c
+    function SumEx_func(EX) result(ret_val)
+        real, intent(in) :: EX
+        !real :: ret_val
+
+        ret_val = 1. + ( 1. - EX**19 )/( 1. - EX ) * EX**(.5)
+    end function SumEx_func
+    ! Eq. A24a
+    function SG0_func(EX0, AP) result(ret_val)
+        real, intent(in) :: EX0, AP(7)
+        !real :: ret_val
+
+        ret_val = G0(AP(6))*EX**4 + G0(AP(7))*EX**12
+        ret_val = ret_val * ( 1. - EX**8 )
+        ret_val = ret_val / ( 1. - EX )
+        ret_val = ret_val + G0(AP(5))*EX**3 
+        ret_val = ret_val + G0(AP(4))*EX**2 
+        ret_val = ret_val + G0(AP(3))*EX 
+        ret_val = ret_val + G0(AP(2)) 
+
+        ret_val = ret_val/SUMEX(EX)
+    end function SG0_func
 END FUNCTION GLOBE7
 
 
@@ -1788,7 +1818,7 @@ FUNCTION DNET(DD, DM, ZHM, XMM, XM)
         else if (DM > 0 .AND. DD == 0) then
             DNET = DM
             return
-        else if (DM == 0 .AND. DD == 0 then
+        else if (DM == 0 .AND. DD == 0) then
             DNET = 1
             return
         endif
@@ -1846,7 +1876,7 @@ FUNCTION  CCOR2(ALT,  R, H1, ZH, H2)
     E2 = (ALT-ZH)/H2
     IF(E1 > 70. .OR. E2 > 70.) then
         CCOR2 = 0.
-    else IF(E1 < -70. .AND. E2 < -70) GO TO 10
+    else IF(E1 < -70. .AND. E2 < -70) THEN
         CCOR2 = R
     else
         EX1 = EXP(E1)
@@ -2274,26 +2304,19 @@ BLOCK DATA GTD7BK
         1.20000E+02, 2.40000E+02, 1.87000E+02,-2.00000E+00, 0.00000E+00/
     DATA PDM/&
         2.45600E+07, 6.71072E-06, 1.00000E+02, 0.00000E+00, 1.10000E+02,&
-        1.00000E+01, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,&
         8.59400E+10, 1.00000E+00, 1.05000E+02,-8.00000E+00, 1.10000E+02,&
-        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,&
         2.81000E+11, 0.00000E+00, 1.05000E+02, 2.80000E+01, 2.89500E+01,&
-        0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,&
         3.30000E+10, 2.68270E-01, 1.05000E+02, 1.00000E+00, 1.10000E+02,&
-        1.00000E+01, 1.10000E+02,-1.00000E+01, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 1.10000E+02,-1.00000E+01, 0.00000E+00, 0.00000E+00,&
         1.33000E+09, 1.19615E-02, 1.05000E+02, 0.00000E+00, 1.10000E+02,&
-        1.00000E+01, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 0.00000E+00, 0.00000E+00, 0.00000E+00, 0.00000E+00,&
         1.76100E+05, 1.00000E+00, 9.50000E+01,-8.00000E+00, 1.10000E+02,&
-        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,&
         1.00000E+07, 1.00000E+00, 1.05000E+02,-8.00000E+00, 1.10000E+02,&
-        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,
-    !&
+        1.00000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 0.00000E+00,&
         1.00000E+06, 1.00000E+00, 1.05000E+02,-8.00000E+00, 5.50000E+02,&
         7.60000E+01, 9.00000E+01, 2.00000E+00, 0.00000E+00, 4.00000E+03/
     !         TN1(2)

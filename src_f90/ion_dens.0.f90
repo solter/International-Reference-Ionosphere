@@ -1,8 +1,6 @@
 !*************************************************************                  
 !************* ION RELATIVE PRECENTAGE DENSITY *****************                
 !*************************************************************                  
-!
-!
 REAL FUNCTION RPID (H, H0, N0, M, ST, ID, XS)
     !------------------------------------------------------------------
     ! D.BILITZA,1977,THIS ANALYTIC FUNCTION IS USED TO REPRESENT THE                
@@ -285,23 +283,23 @@ end
 !
 !
 Subroutine ionco2(hei,xhi,it,F,R1,R2,R3,R4)
-    *----------------------------------------------------------------
-    *     INPUT:
-    *      hei  -  altitude in km
-    *      xhi  -  solar zenith angle in degree
-    *      it   -  seasonal month (Northern Hemisphere January 
-    *              is ismo=1 and so is Southern Hemisohere July)
-    *      F    -  10.7cm solar radio flux (12-month running mean)
-    *     OUTPUT:
-    *     R1 -  NO+ concentration (in percent)
-    *     R2 -  O2+ concentration (in percent) 
-    *     R3 -  Cb+ concentration (in percent) 
-    *     R4 -  O+  concentration (in percent) 
-    *
-    *  A.D. Danilov and N.V. Smirnova, Improving the 75 to 300 km ion 
-    *  composition model of the IRI, Adv. Space Res. 15, #2, 171-177, 1995.
-    *
-    *-----------------------------------------------------------------
+    !----------------------------------------------------------------
+    !     INPUT:
+    !      hei  -  altitude in km
+    !      xhi  -  solar zenith angle in degree
+    !      it   -  seasonal month (Northern Hemisphere January 
+    !              is ismo=1 and so is Southern Hemisohere July)
+    !      F    -  10.7cm solar radio flux (12-month running mean)
+    !     OUTPUT:
+    !     R1 -  NO+ concentration (in percent)
+    !     R2 -  O2+ concentration (in percent) 
+    !     R3 -  Cb+ concentration (in percent) 
+    !     R4 -  O+  concentration (in percent) 
+    !
+    !  A.D. Danilov and N.V. Smirnova, Improving the 75 to 300 km ion 
+    !  composition model of the IRI, Adv. Space Res. 15, #2, 171-177, 1995.
+    !
+    !-----------------------------------------------------------------
     dimension j1ms70(7),j2ms70(7),h1s70(13,7),h2s70(13,7),&
         R1ms70(13,7),R2ms70(13,7),rk1ms70(13,7),rk2ms70(13,7),&
         j1ms140(7),j2ms140(7),h1s140(13,7),h2s140(13,7), &
@@ -1895,8 +1893,8 @@ SUBROUTINE IONLOW(INVDIP,MLT,ALTI,DDD,D,ION,NION)
     !     coefficients for mirroring
     DO I=1,49
         D(1,3,I)=D(1,2,I)*MIRREQ(I)
-        D(2,3,I)=D(2,2,I)*MIRREQ(I)&
-            (3,3,I)=D(3,2,I)*MIRREQ(I)
+        D(2,3,I)=D(2,2,I)*MIRREQ(I)
+        D(3,3,I)=D(3,2,I)*MIRREQ(I)
     end do
     !      IF (CRD  ==  1) THEN
     !       INVDP=INVDPC(FL,DIMO,B0,DIPL)
@@ -2078,8 +2076,8 @@ SUBROUTINE IONHIGH(INVDIP,MLT,ALTI,DDD,D,ION,NION)
     DO I=1,49
         D(1,3,I)=D(1,2,I)*MIRREQ(I)
         D(2,3,I)=D(2,2,I)*MIRREQ(I)
-        D(3,3,I)=D(3,2,I)*MIRREQ(I)&
-            (4,3,I)=D(4,2,I)*MIRREQ(I)
+        D(3,3,I)=D(3,2,I)*MIRREQ(I)
+        D(4,3,I)=D(4,2,I)*MIRREQ(I)
     end do
     !      IF (CRD  ==  1) THEN
     !       INVDP=INVDPC(FL,DIMO,B0,DIPL)
@@ -2168,8 +2166,8 @@ SUBROUTINE IONHIGH(INVDIP,MLT,ALTI,DDD,D,ION,NION)
     N0A250=0.0
     N0B250=0.0
     DO I=1,49
-        N0A250=N0A250+C(I)*D(4,SEZAI,I)&
-            0B250=N0B250+C(I)*D(4,SEZBI,I)
+        N0A250=N0A250+C(I)*D(4,SEZAI,I)
+        N0B250=N0B250+C(I)*D(4,SEZBI,I)
     end do
     N250A=N0A250
     N250B=N0B250
@@ -2249,5 +2247,3 @@ REAL FUNCTION INVDPC(FL,DIMO,B0,DIPL)
     INVDPC=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
     RETURN
 END
-!
-
