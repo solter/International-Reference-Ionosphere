@@ -5,3 +5,8 @@ Update History (starting 4/28/2015)
 07/28/2015   00_iri2012.tar, irifun.for, cira.for
 02/04/2016   00_iri2016.tar, irifun.for, irisub.for, iritest.for, mcsat%%.dat
 02/17/2016   00_iri2016.tar, igrf.for
+06/12/2016   00_iri2016.tar, irifun.for, irisub.for, iritest.for
+09/23/2016   00_iri2016.tar, irifun.for, irisub.for, iritest.for, iriflip.for
+10/30/2016   00_iri2016.tar, irifun.for, irisub.for
+02/23/2017   00_iri2016.tar, irifun.for, irisub.for, iritest.for
+11/03/2017   00_iri2016.tar, irifun.for, irisub.for, iritest.for, igrf.for

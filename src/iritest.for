@@ -38,6 +38,8 @@ C 2015.01 07/12/15 output of ion density/composition now with 3 digits
 C 2015.01 07/12/15 call read_ig_rz readapf107
 C 2015.02 08/13/15 delete COMMON/CONST2
 C 2015.02 08/13/15 ursifo=jf(5) just before IRI_SUB call
+C 2016.01 06/01/16 User specified B0 when jf(43)=false
+C 2016.02 08/22/16 Allow user input options for F10.7D and F10.7_81
 C
       INTEGER           pad1(6),jdprof(77),piktab
       DIMENSION         outf(20,1000),oar(100,1000),jfi(6)
@@ -49,9 +51,9 @@ C
       CHARACTER*6       pna(86)
       CHARACTER*7       popt
       CHARACTER*8       bopt,topt
-      CHARACTER*9       pname(6)
+      CHARACTER*9       pname(7)
       CHARACTER*10      dopt,hopt
-      CHARACTER*11      iopt,rzopt,igopt,f8opt
+      CHARACTER*11      iopt,rzopt,igopt,f8opt,fdopt
       CHARACTER*16      f1opt
 
       DATA  IMZ  /' km ','GEOD','GEOD','yyyy',' mm ',' dd ','YEAR',
@@ -135,32 +137,35 @@ c
           if(piktab.eq.4) jf(24)=.false.
         if(jchoice.eq.0) then
 c defaults for jf(1:50)
-c          jf(1)=.false.      ! f=no electron densities 
-c          jf(2)=.false.      ! f=no temperatures 
-c          jf(3)=.false.      ! f=no ion composition 
+c          jf(1)=.false.      ! f=no electron densities (t) 
+c          jf(2)=.false.      ! f=no temperatures (t)
+c          jf(3)=.false.      ! f=no ion composition (t)
           jf(4)=.false.      ! t=B0table f=other models (f)
           jf(5)=.false.      ! t=CCIR  f=URSI foF2 model (f)
-          jf(6)=.false.      ! t=DS95+DY85   f=RBV10+TTS03 (f)
+          jf(6)=.false.      ! t=DS95+DY85   f=RBV10+TBT15 (f)
 c          jf(7)=.false.      ! t=tops f10.7<188 f=unlimited (t)
           jf(21)=.false.     ! f=ion drift not computed (f)
 c          jf(22)=.false.     ! ion densities in m-3 (t)
-          jf(23)=.false.     ! t=AEROS/ISIS f=TTS Te with PF10.7
+          jf(23)=.false.     ! t=AEROS/ISIS f=TTS Te with PF10.7 (f)
 c          jf(24)=.false.     ! t=D-reg-IRI-1990 f=FT-2001 (t)
 c          jf(26)=.false.	  ! f=STORM model turned off (t)
           jf(28)=.false.	  ! f=spread-F not computed (f)
           jf(29)=.false.     ! t=old  f=New Topside options (f)
           jf(30)=.false.     ! t=corr f=NeQuick topside (f)
 c          jf(31)=.false.     ! t=B0ABT f=Gulyaeva (t)
-          jf(33)=.false. 	  ! f=auroral boundary off (f)
-c          jf(34)=.false. 	  ! t=messages on 
-          jf(35)=.false. 	  ! f=auroral E-storm model off
-c          jf(36)=.false. 	  ! t=hmF2 w/out foF2_storm f=with
-c          jf(37)=.false. 	  ! t=topside w/out foF2_storm f=with
-c          jf(38)=.false. 	  ! t=WRITEs off in IRIFLIP f=on 
-          jf(39)=.false. 	  ! new hmF2 models 
-c          jf(40)=.false. 	  ! t=AMTB-model, f=Shubin-COSMIC model 
-c          jf(41)=.false. 	  ! COV=f(IG12) (IRI before Oct 2015) 
-c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance 
+c          jf(33)=.false. 	  ! f=auroral boundary off (f)
+          jf(33)=.true. 	  ! f=auroral boundary off (f)
+c          jf(34)=.false. 	  ! t=messages on f= off (t)
+          jf(35)=.false. 	  ! f=auroral E-storm model off (f)
+c          jf(36)=.false. 	  ! t=hmF2 w/out foF2_storm f=with (t)
+c          jf(37)=.false. 	  ! t=topside w/out foF2_storm f=with (t)
+c          jf(38)=.false. 	  ! t=WRITEs off in IRIFLIP f=on (t)
+          jf(39)=.false. 	  ! t=M3000F2 model f=new hmF2 models (f)
+c          jf(40)=.false. 	  ! t=AMTB-model, f=Shubin-COSMIC model (t) 
+c          jf(41)=.false. 	  ! t:COV=F10.7_386 f:COV=f(IG12) (t) 
+c          jf(42)=.false. 	  ! t/f=Te w/o PF10.7 dependance (t)
+c          jf(43)=.false. 	  ! t= B0 model f= B0 user input (t)
+c          jf(44)=.false. 	  ! t= B1 model f= B1 user input (t)
         else
           print *,'Compute Ne, T, Ni? (enter: t,t,t  if you want all)'
           read(5,*) jf(1),jf(2),jf(3)
@@ -200,8 +205,11 @@ c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance
      &            'f=other options {f}.'
               read(5,*) jf(4)
               print *,'Bottomside thickness B0: t=ABT-2009, ',
-     &            'f= Gul-1987 {t}.'
+     &            'f= Gul-1987 {t}.'     
               read(5,*) jf(31)
+              print *,'Bottomside thickness B0: t=model, ',
+     &            'f=user input {t}.'     
+              read(5,*) jf(43)
               print *,'F1 peak density or foF1: t=model, ',
      &            'f=user input {t}'
               read(5,*) jf(13)
@@ -233,7 +241,7 @@ c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance
               read(5,*) jf(42)
           endif
         if(jf(3)) then
-              print *,'Ion comp. model: t=DS95/DY85, f=RBV10/TTS05 {f}' 
+              print *,'Ion comp. model: t=DS95/DY85, f=RBV10/TBT15 {f}' 
               read(5,*) jf(6)
               if(.not.jf(6)) then
               	print *,'IRIFLIP: t=messages off, f=on {t}' 
@@ -249,7 +257,7 @@ c          jf(42)=.false. 	  ! Te w/o PF10.7 dependance
            print *,'Spread-F probability: t=computed, ',
      &            'f=not computed {t}'
               read(5,*) jf(28)
-           print *,'COV: t=F10.7_12, f=func(IG12) (before Oct 2015).{t}'
+           print *,'COV: t: COV=F10.7_365, f: COV=func(IG12).  {t}'
               read(5,*) jf(41)
            print *,'Sunspot index: t=from file, f=user input.  {t}'
               read(5,*) jf(17)
@@ -309,7 +317,7 @@ c change defaults for computation of specific parameters
       endif
        
 c option to enter measured values for NmF2, hmF2, NmF1, hmF1, NmE, hmE,
-c N(300), N(400), N(600) if available; 
+c B0, N(300), N(400), N(600) if available; 
 c
           print *,' '
           print *,' '
@@ -318,7 +326,7 @@ c
               if(ivar.eq.1) numstp=1
        if(jf(1)) then
          if(.not.jf(8).or..not.jf(9).or..not.jf(13).or..not.jf(14).or.
-     &      .not.jf(15).or..not.jf(16)) then
+     &      .not.jf(15).or..not.jf(16).or..not.jf(43)) then
             var=vbeg
             i=1
 2234        if(.not.jf(8)) then
@@ -359,6 +367,16 @@ c
               print *,'hmE/km for ',itext(ivar),'=',var
               read(5,*) oar(6,i)
               pname(6)='hmE/km'
+              endif
+            if(.not.jf(43)) then
+              print *,'B0/km for ',itext(ivar),'=',var
+              read(5,*) oar(10,i)
+              pname(7)='B0/km '
+              endif
+            if(.not.jf(44)) then
+              print *,'B1 for ',itext(ivar),'=',var
+              read(5,*) oar(87,i)
+              pname(7)='B1    '
               endif
             i=i+1
             var=var+vstp
@@ -413,6 +431,22 @@ c
                                     enddo
                         endif
 
+            if(.not.jf(25)) then
+                        print *,'User input for F10.7D'
+                        read(5,*) oar(41,1)
+                        do i=2,100
+                                    oar(41,i)=oar(41,1)
+                                    enddo
+                        endif
+
+            if(.not.jf(32)) then
+                        print *,'User input for F10.7_81d'
+                        read(5,*) oar(46,1)
+                        do i=2,100
+                                    oar(46,i)=oar(46,1)
+                                    enddo
+                        endif
+
 c end of user input
 c
 
@@ -452,7 +486,7 @@ c
              endif
         endif
 
-        iopt='RBV10+TTS05'
+        iopt='RBV10+TBT15'
         if(jf(6)) iopt='DS95 + DY85'
 
         dopt='FT01+DRS95'
@@ -479,6 +513,8 @@ c
         if(jf(17)) rzopt=' '
         igopt=' user input'
         if(jf(27)) igopt=' '
+        fdopt=' user input'
+        if(jf(25)) fdopt=' '
         f8opt=' user input'
         if(jf(32)) f8opt=' '
         
@@ -516,6 +552,10 @@ c
                     write(7,402) (oar(j,i),i=1,numi)
                     endif
                 enddo
+                if(.not.jf(43)) then
+                    write(7,302) pname(7)
+                    write(7,402) (oar(10,i),i=1,numi)
+                    endif                
             endif 
 
         if(jf(2)) write(7,3292) topt,tsopt
@@ -535,6 +575,7 @@ c
 
         write(7,223) oar(33,1),rzopt
         write(7,2231) oar(39,1),igopt
+        write(7,2238) oar(41,1),fdopt
         write(7,2237) oar(46,1),f8opt
 
         if(htec_max.gt.50.0) write(7,3914) htec_max
@@ -569,6 +610,8 @@ c
 223     format('Solar Sunspot Number (12-months running mean) Rz12',
      &          4X,F5.1,A11)
 2231    format('Ionospheric-Effective Solar Index IG12',16X,
+     &          F5.1,A11)
+2238    format('Solar radio flux F10.7 (daily)',24X,
      &          F5.1,A11)
 2237    format('Solar radio flux F10.7 (81-day average)',15X,
      &          F5.1,A11)
