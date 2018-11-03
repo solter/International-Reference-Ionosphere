@@ -169,7 +169,11 @@ C 2017.03 02/27/17 Using XHI1, XHI2, XHI3, XHI4 and related SAX, SUX
 C 2017.03 02/27/17 No F1 layer if jf(19) and jf(20) are false
 C 2017.04 10/27/17 F10.7Din and not F10.7_81in -> F10.7_81=F10.7Din 
 C 2017.04 10/27/17 F10.7_81in and not F10.7Din -> F10.7D=F10.7_81in 
-C 2017.05 10/30/17 OARR(87,88)=SAX300,SUX300 
+C 2017.05 10/30/17 OARR(87,88)=SAX300,SUX300
+C 2018.01 03/22/18 f107in, f107ino, f107_81in, f107_81ino  M. Butala
+C 2018.01 03/22/18 f107yo -> f107yobs, f10781o -> f10781obs
+C 2018.01 03/22/18 invdip_old for Te elteik() ........... V. Truhlik
+C 2018.01 03/22/18 ELTEIK and CALION use PF107OBS ....... V. Truhlik
 C       
 
 C*****************************************************************
@@ -361,7 +365,8 @@ C*****************************************************************
 C*****************************************************************
       INTEGER    DAYNR,DDO,DO2,SEASON,SEADAY
       REAL       LATI,LONGI,MO2,MO,MODIP,NMF2,MAGBR,INVDIP,IAPO,  
-     &           NMF1,NME,NMD,MM,MLAT,MLONG,NMF2S,NMES,INVDPC
+     &           NMF1,NME,NMD,MM,MLAT,MLONG,NMF2S,NMES,INVDPC,
+     &           INVDIP_OLD,INVDPC_OLD
       CHARACTER  FILNAM*12
 c-web-for webversion
 c      CHARACTER FILNAM*53
@@ -380,7 +385,7 @@ c      CHARACTER FILNAM*53
      &  HMF1IN,FOEIN,HMEIN,RZIN,sam_doy,F1_OCPRO,F1_L_COND,NODEN,
      &  NOTEM,NOION,TENEOP,OLD79,JF(50),URSIFO,igin,igino,mess,
      &  dnight,enight,fnight,fstorm_on,estorm_on,B0IN,B1IN,
-     &  fof2ino,hmf2ino
+     &  fof2ino,hmf2ino,f107in,f107ino,f107_81in,f107_81ino
 
       COMMON /CONST/UMR,PI  /const1/humr,dumr   /ARGEXP/ARGMAX
 c     &	 /const2/icalls,montho,nmono,iyearo,idaynro,ursifo,rzino,
@@ -449,6 +454,8 @@ C
 			idaynro=-1
 			rzino=.true.
 			igino=.true.
+			f107ino=.true.
+			f107_81ino=.true.
 			fof2ino=.true.
 			hmf2ino=.true.
 			ut0=-1
@@ -555,13 +562,15 @@ c
           oarr(39)=-1.
       ENDIF
 
-      IF(.not.jf(25)) THEN
+      F107IN=(.not.jf(25))
+      IF(F107IN) THEN
           f107din=OARR(41)
       else
           oarr(41)=-1.
       ENDIF
 
-      IF(.not.jf(32)) THEN
+      F107_81IN=(.not.jf(32))
+      IF(F107_81IN) THEN
           f10781in=OARR(46)
       else
           oarr(46)=-1.
@@ -882,6 +891,7 @@ c
        		call igrf_sub(lati,longi,ryear,600.0,fl,icode,dipl,babs)
         	if(fl.gt.10.) fl=10.
       		invdip=INVDPC(FL,DIMO,BABS,DIPL)
+      		invdip_old=INVDPC_OLD(FL,DIMO,BABS,DIPL)
 			endif
 
         ABSLAT=ABS(LATI)
@@ -948,8 +958,10 @@ C
         sam_date=(sam_yea.and.sam_doy)
         sam_ut=(hourut.eq.ut0)
         
-        if(sam_date.and..not.rzino.and..not.rzin.
-     &                   and..not.igin.and..not.igino) goto 2910
+        if(sam_date.and..not.rzin.and..not.rzino
+     &   	.and..not.igin.and..not.igino
+     &      .and..not.f107in.and..not.f107ino
+     &		.and..not.f107_81in.and..not.f107_81ino) goto 2910
      
         call tcon(iyear,month,iday,daynr,rzar,arig,ttt,nmonth)
         if(nmonth.lt.0) goto 3330		! jump to end of program
@@ -998,7 +1010,7 @@ C observed (at the ground) value.
         f107y=cov
         f10781=cov
         f107365=cov
-        if(jf(32).or.jf(25)) then
+        if(.not.f107in.or..not.f107_81in) then
         	call APF_ONLY(iyear,month,iday,F107_daily,F107PD,F107_81,
      &      	F107_365,IAP_daily,isdate)
         	if(F107_daily.gt.-11.1) then
@@ -1008,30 +1020,33 @@ C observed (at the ground) value.
             	f107365=f107_365
 				endif
 			endif
-		if(.not.jf(25)) then
+		if(f107in) then
         	f107d=f107din 		! user input: F10.7 daily 
         	f107y=f107din 		! same input: F10.7 previous day
-        	if(jf(32)) then
+        	if(.not.f107_81in) then
         		f10781=f107din 	! same input: F10.7 81-day
         		f107365=f107din ! same input: F10.7 yearly average
 				endif	        		
         	endif
-		if(.not.jf(32)) then
+		if(f107_81in) then
         	f10781=f10781in 	! user input: F10.7 81-day average
         	f107365=f10781in	! same input: F10.7 yearly average
-        	if(jf(25)) then
+        	if(.not.f107in) then
         		f107d=f10781in  ! same input: F10.7 daily	
         		f107y=f10781in  ! same input: F10.7 previous day
 				endif	        		
 			endif		
-		pf107 = (f107d+f10781)/2.
+		pf107=(f107d+f10781)/2.
 
 c Correcting F10.7 adjusted flux from APF107.DAT to flux observed at
-c Earth that is expected by NRLMSIS00 (GTD7) and CHEMION          
+c Earth that is expected by NRLMSIS00 (GTD7) and CHEMION AND TBT-2015
+C (ION COMPOSITION) AND TBT-2012 (ELECTRON TEMPERATURE)          
 
 		f_adj=radj*radj        
-		f107yo=f107y/f_adj
-		f10781o=f10781/f_adj
+		f107yobs=f107y/f_adj
+		f10781obs=f10781/f_adj
+		pf107obs=pf107/f_adj
+
 		       
         if(jf(41)) cov=f107365				
         COVSAT=cov
@@ -1351,6 +1366,8 @@ c SHUBIN-COSMIC model
         idaynro=daynr
         rzino=rzin
         igino=igin
+        f107ino=f107in
+        f107_81ino=f107_81in
         ut0=hourut
         foF2ino=foF2in
         hmF2ino=hmF2in
@@ -1727,8 +1744,8 @@ C
            SWMI(9)=-1.0
       endif           
       CALL TSELEC(SWMI)
-      CALL GTD7(IYD,SEC,HEQUI,LATI,LONGI,HOUR,F10781o,F107Yo,IAPO,0,
-     &        D_MSIS,T_MSIS)
+      CALL GTD7(IYD,SEC,HEQUI,LATI,LONGI,HOUR,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
       TN120=T_MSIS(2)
       IF(HOUR.NE.0.0) THEN
 C         if(jf(18)) then
@@ -1739,8 +1756,8 @@ C             idz=daynr
 C             call ut_lt(1,utni,0.0,longi,iyz,idz)
 C             secni=utni*3600.
 C         endif
-         CALL GTD7(IYD,SECNI,HEQUI,LATI,LONGI,0.0,F10781o,F107Yo,IAPO,0,
-     &        D_MSIS,T_MSIS)
+         CALL GTD7(IYD,SECNI,HEQUI,LATI,LONGI,0.0,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
          TN1NI=T_MSIS(2)         
       ELSE
          TN1NI=T_MSIS(2)
@@ -1763,8 +1780,8 @@ C Te-MAXIMUM based on JICAMARCA and ARECIBO data
       HMAXN=150.
       AHH(2)=HPOL(HOUR,HMAXD,HMAXN,SAX200,SUX200,1.,1.)
       TMAXD=800.*EXP(-(MLAT/33.)**2)+1500.
-      CALL GTD7(IYD,SECNI,HMAXN,LATI,LONGI,0.0,F10781o,F107Yo,IAPO,0,
-     &        D_MSIS,T_MSIS)
+      CALL GTD7(IYD,SECNI,HMAXN,LATI,LONGI,0.0,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
       TMAXN=T_MSIS(2)
       ATE(2)=HPOL(HOUR,TMAXD,TMAXN,SAX200,SUX200,1.,1.)
 
@@ -1818,8 +1835,8 @@ c     &                xl,icode,dipl,babs)
 c                 if(xl.gt.10.) xl=10.                 
 c                 call elteik(1,isa,invdip,xl6,dimo,babs6,dipl6,
 c     &              xmlt,ahh(ijk),daynr,pf107,teh2,sdte)
-                 call elteik(isa,invdip,xmlt,ahh(ijk),daynr,pf107,
-     &              teh2,sdte)
+                 call elteik(isa,invdip_old,xmlt,ahh(ijk),daynr,
+     &              pf107obs,teh2,sdte)
                  ate(ijk)=teh2
                  enddo
           endif
@@ -1833,14 +1850,14 @@ c Option to use Te = f(Ne) relation at ahh(3), ahh(4)
 
 c Te corrected and Te > Tn enforced
 
-      CALL GTD7(IYD,SEC,AHH(2),LATI,LONGI,HOUR,F10781o,F107Yo,IAPO,0,
-     &        D_MSIS,T_MSIS)
+      CALL GTD7(IYD,SEC,AHH(2),LATI,LONGI,HOUR,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
       TNAHH2=T_MSIS(2)
       IF(ATE(2).LT.TNAHH2) ATE(2)=TNAHH2
       STTE1=(ATE(2)-ATE(1))/(AHH(2)-AHH(1))
       DO 1901 I=2,6
-         CALL GTD7(IYD,SEC,AHH(I+1),LATI,LONGI,HOUR,F10781o,F107Yo,
-     &        IAPO,0,D_MSIS,T_MSIS)
+         CALL GTD7(IYD,SEC,AHH(I+1),LATI,LONGI,HOUR,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
          TNAHHI=T_MSIS(2)
          IF(ATE(I+1).LT.TNAHHI) ATE(I+1)=TNAHHI
          STTE2=(ATE(I+1)-ATE(I))/(AHH(I+1)-AHH(I))
@@ -1882,8 +1899,8 @@ c Ti(430km) for specified time using HPOL
 c Tn < Ti < Te enforced
 
       TEN1=ELTE(XSM1)
-      CALL GTD7(IYD,SECNI,XSM1,LATI,LONGI,0.0,F10781o,F107Yo,
-     &        IAPO,0,D_MSIS,T_MSIS)
+      CALL GTD7(IYD,SECNI,XSM1,LATI,LONGI,0.0,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
       TNN1=T_MSIS(2)
       IF(TEN1.LT.TNN1) TEN1=TNN1
       IF(TI1.GT.TEN1) TI1=TEN1
@@ -1892,7 +1909,7 @@ c Tn < Ti < Te enforced
 c Tangent on Tn profile determines HS
 
       HS=200.
-      CALL GTD7(IYD,SEC,HS,LATI,LONGI,HOUR,F10781o,F107Yo,
+      CALL GTD7(IYD,SEC,HS,LATI,LONGI,HOUR,F10781OBS,F107YOBS,
      &        IAPO,0,D_MSIS,T_MSIS)
       TNHS=T_MSIS(2)
       MM(1)=(TI1-TNHS)/(XSM1-HS)
@@ -1976,8 +1993,8 @@ c
 
 330   IF(NOTEM) GOTO 7108
       IF((HEIGHT.GT.HTE).OR.(HEIGHT.LT.HTA)) GOTO 7108
-      CALL GTD7(IYD,SEC,HEIGHT,LATI,LONGI,HOUR,F10781o,F107Yo,
-     &        IAPO,0,D_MSIS,T_MSIS)
+      CALL GTD7(IYD,SEC,HEIGHT,LATI,LONGI,HOUR,F10781OBS,
+     &        F107YOBS,IAPO,0,D_MSIS,T_MSIS)
       TNH=T_MSIS(2)
       TIH=TNH
       if(HEIGHT.GT.HS) then
@@ -2015,7 +2032,7 @@ c     &  	    xl,icode,dipl,babs)
 c        	if(xl.gt.10.) xl=10.
 c			call CALION(1,xinvdip,xl6,dimo,babs6,dipl6,xmlt,
 c     &  	   height,daynr,f107d,xic_O,xic_H,xic_He,xic_N)
-			call CALION(invdip,xmlt,height,daynr,pf107,
+			call CALION(invdip,xmlt,height,daynr,pf107obs,
      &  	   xic_O,xic_H,xic_He,xic_N)
        		rox=xic_O*100.
         	rhx=xic_H*100.
@@ -2025,16 +2042,16 @@ c     &  	   height,daynr,f107d,xic_O,xic_H,xic_He,xic_N)
         	ro2x=0.
         else
 c Richards-Bilitza-Voglozin-2010 IDC model
-            CALL GTD7(IYD,SEC,height,lati,longi,HOUR,f10781o,f107yo,
-     &        IAPO,48,D_MSIS,T_MSIS)
+            CALL GTD7(IYD,SEC,height,lati,longi,HOUR,f10781obs,
+     &        f107yobs,IAPO,48,D_MSIS,T_MSIS)
 			XN4S = 0.5 * D_MSIS(8)
 			EDENS=ELEDE/1.e6
 			jprint=1
 			if(jf(38)) jprint=0
-            CALL CHEMION(jprint,height,F107Yo,F10781o,TEH,TIH,TNH,
-     &       	D_MSIS(2),D_MSIS(4),D_MSIS(3),D_MSIS(1),D_MSIS(7),
-     &       	-1.0,XN4S,EDENS,-1.0,xhi,ro,ro2,rno,rn2,rn,Den_NO,
-     &          Den_N2D,INEWT)                              
+            CALL CHEMION(jprint,height,F107YOBS,F10781OBS,TEH,TIH,
+     &       	TNH,D_MSIS(2),D_MSIS(4),D_MSIS(3),D_MSIS(1),
+     &       	D_MSIS(7),-1.0,XN4S,EDENS,-1.0,xhi,ro,ro2,rno,rn2,
+     &          rn,Den_NO,Den_N2D,INEWT)                              
 			if(INEWT.gt.0) then
 				sumion = edens/100.
         		rox=ro/sumion

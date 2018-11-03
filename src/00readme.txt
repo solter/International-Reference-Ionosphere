@@ -1,4 +1,4 @@
-		International Reference Ionosphere 2017 (IRI2017) Software
+		International Reference Ionosphere 2018 (IRI-2018) Software
 		----------------------------------------------------------
 
 ================================================================================
@@ -27,7 +27,7 @@ same as for IRI2007: CCIR%%, URSI%%
 Directory Contents:
 -----------------------------------------------------------------------------------
 
-00_iri2017.tar	TAR file that includes all files from this directory and that was 
+00_iri2018.tar	TAR file that includes all files from this directory and that was 
                 created in UNIX using 'tar -cvf 00_iri2012.tar *'. UNIX command to 
                 unpack is "tar -xvf 00_iri2012.tar". 
 				 

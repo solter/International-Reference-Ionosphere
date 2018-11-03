@@ -21,7 +21,7 @@ f77 -o iri iritest.for irisub.for irifun.for iritec.for iridreg.for igrf.for
 
 ================================================================================
 IMPORTANT: Please note that the following files have NOT been changed and are the
-same as for IRI2007: CCIR%%, URSI%%
+same as for IRI2007 and IRI2012: CCIR%%, URSI%%
 ================================================================================
  
 Directory Contents:

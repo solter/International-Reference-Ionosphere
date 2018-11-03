@@ -130,15 +130,17 @@ C 2015.03 10/14/15 LEGFUN: replace print * with write(konsol,..)
 C 2015.03 10/14/15 SHAMDB0D,SHAB1D,SCHNEVPD: COMMON/ATB/
 C 2015.03 10/14/15 CLCMLT,DPMTRX --> IGRF.FOR
 C 2015.04 02/01/16 TAL: if(SHBR.le.0.0) -> RETURN
-C 2015.04 02/01/16 IONLOW,IONHIGH: ALT -> ALTI extrapolation [S.R. Zhang]
-C 2016.01 02/24/16 SCHNEVPH: COSD(X) -> COS(X*UMR); CONST/UMR  [W. Toler]
-C 2016.01 02/24/16 SCHNEVP,LEGFUN: COMMON/COST/dfarg,PI        [W. Toler]
-C 2016.02 03/23/16 CALION, IONLOW, IONHIGH, INVDPC  revised  [V. Truhlik]
-C 2016.03 07/19/16 XE3_1: change D1F1 to C1                   [I. Galkin]
+C 2015.04 02/01/16 IONLOW,IONHIGH: ALT -> ALTI extrapolation  [S.R. Zhang]
+C 2016.01 02/24/16 SCHNEVPH: COSD(X) -> COS(X*UMR); CONST/UMR   [W. Toler]
+C 2016.01 02/24/16 SCHNEVP,LEGFUN: COMMON/COST/dfarg,PI         [W. Toler]
+C 2016.02 03/23/16 CALION, IONLOW, IONHIGH, INVDPC  revised   [V. Truhlik]
+C 2016.03 07/19/16 XE3_1: change D1F1 to C1                    [I. Galkin]
 C 2016.04 09/08/16 CALION: Version 2.5 C/NOFS correction      [V. Truhlik]
-C 2016.04 09/08/16 NEW: model_hmF2                            [V. Shubin]
+C 2016.04 09/08/16 NEW: model_hmF2                             [V. Shubin]
 C 2016.05 10/19/16 read_ig_rz: *0.7 for r12_new starting 01/2014
 C 2017.01 02/23/17 SHAB1D: new SCHNEVPDB1 and COMMON/ATB1/ 
+C 2018.01 03/22/18 INVDPC= ... ALFA*SIGN(1.0,DIPL)*INVL       [V. Truhlik]
+C 2018.01 03/22/18 INVDPC_OLD for ELTEIK                      [V. Truhlik]
 C                  
 c- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 c IRI functions and subroutines:
@@ -4666,7 +4668,7 @@ C---------------------------------------------------------------------------
       REAL INVDIP,MLT,ALT,NION
       INTEGER DDD,ION
       DIMENSION  D(4,3,49),MIRREQ(49)
-      REAL INVDP,INVDPC,DTOR
+      REAL INVDP,DTOR
       REAL RMLT,RCOLAT
       REAL C(49),C1(82)
       INTEGER SEZA,SEZB,SEZAI,SEZBI,DDDA,DDDB,DDDD
@@ -4846,7 +4848,7 @@ C---------------------------------------------------------------------------
       REAL INVDIP,MLT,ALT,NION
 	  INTEGER DDD,ION
       DIMENSION  D(4,3,49),MIRREQ(49)
-      REAL INVDP,INVDPC,DTOR
+      REAL INVDP,DTOR
       REAL RMLT,RCOLAT
       REAL C(49),C1(82)
       INTEGER SEZA,SEZB,SEZAI,SEZBI,DDDA,DDDB,DDDD
@@ -5025,9 +5027,39 @@ C      invariant latitude (absolute value)
      &           1.0/(exp((-DIPL-25.0)/2.0)+1.0))
        BETA=1.0/(exp((INVL-25.0)/2.0)+1.0)+
      &      1.0/(exp((-INVL-25.0)/2.0)+1.0)-1.0
-       INVDPC=(ALFA*INVL+BETA*DIPL)/(ALFA+BETA)
+c       INVDPC=(ALFA*INVL+BETA*DIPL)/(ALFA+BETA)
+       INVDPC=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
        RETURN
        END
+C
+C       
+      REAL FUNCTION INVDPC_OLD(FL,DIMO,B0,DIPL)
+C---------------------------------------------------------------------------
+C     calculation of INVDIP from FL, DIMO, BO, and DIPL
+C     invariant latitude calculated by highly
+C     accurate polynomial expansion
+C---------------------------------------------------------------------------
+      REAL FL,DIMO,B0,DIPL
+      DOUBLE PRECISION B(8),A
+      REAL DTOR,ASA,INVL,RINVL,RDIPL,ALFA,BETA
+	  COMMON/CONST/DTOR,PI
+      DATA B/1.259921D0  ,-0.1984259D0 ,-0.04686632D0,-0.01314096D0,
+     &      -0.00308824D0, 0.00082777D0,-0.00105877D0, 0.00183142D0/
+      A=(DIMO/B0)**(1.0D0/3.0D0)/FL
+      ASA=A*(B(1)+B(2)*A+B(3)*A**2+B(4)*A**3+B(5)*A**4+
+     &        B(6)*A**5+B(7)*A**6+B(8)*A**7)
+      IF (ASA .GT. 1.0) ASA=1.0
+      IF (ASA .LT. 0.0) ASA=0.0
+c      invariant latitude (absolute value)
+      RINVL=ACOS(SQRT(ASA))
+      INVL=RINVL/DTOR
+      RDIPL=DIPL*DTOR
+      ALFA=SIN(ABS(RDIPL))**3
+      BETA=COS(RINVL)**3
+      INVDPC_OLD=(ALFA*SIGN(1.0,DIPL)*INVL+BETA*DIPL)/(ALFA+BETA)
+      RETURN
+      END
+
 C
 C                     
 C*************************************************************                  
